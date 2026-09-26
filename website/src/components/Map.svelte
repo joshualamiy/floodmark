@@ -217,9 +217,9 @@
 						clusterMaxZoom: 14,
 						clusterRadius: 50,
 						clusterProperties: {
-							hasFlooded: ["max", ["case", ["==", ["get", "alertStatus"], "flooded"], 1, 0]],
-							hasWet: ["max", ["case", ["==", ["get", "alertStatus"], "wet"], 1, 0]],
-							hasClear: ["max", ["case", ["==", ["get", "alertStatus"], "dry"], 1, 0]],
+							floodedPriority: ["+", ["case", ["==", ["get", "alertStatus"], "flooded"], 100, 0]],
+							wetPriority: ["+", ["case", ["==", ["get", "alertStatus"], "wet"], 10, 0]],
+							clearPriority: ["+", ["case", ["==", ["get", "alertStatus"], "dry"], 1, 0]],
 						},
 					});
 					currentMap.addLayer({
@@ -230,11 +230,32 @@
 						paint: {
 							"circle-color": [
 								"case",
-								[">", ["coalesce", ["get", "hasFlooded"], 0], 0],
+								[
+									"all",
+									[">", ["coalesce", ["get", "floodedPriority"], 0], 0],
+									[
+										">=",
+										["coalesce", ["get", "floodedPriority"], 0],
+										["coalesce", ["get", "wetPriority"], 0],
+									],
+									[
+										">=",
+										["coalesce", ["get", "floodedPriority"], 0],
+										["coalesce", ["get", "clearPriority"], 0],
+									],
+								],
 								"#dc2626",
-								[">", ["coalesce", ["get", "hasWet"], 0], 0],
+								[
+									"all",
+									[">", ["coalesce", ["get", "wetPriority"], 0], 0],
+									[
+										">=",
+										["coalesce", ["get", "wetPriority"], 0],
+										["coalesce", ["get", "clearPriority"], 0],
+									],
+								],
 								"#facc15",
-								[">", ["coalesce", ["get", "hasClear"], 0], 0],
+								[">", ["coalesce", ["get", "clearPriority"], 0], 0],
 								"#00A6AD",
 								"#94a3b8",
 							],
