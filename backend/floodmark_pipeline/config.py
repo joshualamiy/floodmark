@@ -8,13 +8,14 @@ from dataclasses import dataclass
 class Settings:
     database_url: str
     redis_url: str
-    r2_account_id: str
-    r2_access_key_id: str
-    r2_secret_access_key: str
-    r2_bucket: str
+    s3_endpoint_url: str
+    s3_region: str
+    s3_access_key_id: str
+    s3_secret_access_key: str
+    s3_bucket: str
     camera_base_url: str
     download_concurrency: int
-    r2_upload_concurrency: int
+    s3_upload_concurrency: int
     inference_concurrency: int
     database_concurrency: int
     database_pool_size: int
@@ -30,7 +31,7 @@ class Settings:
     @classmethod
     def from_env(cls) -> "Settings":
         required = (
-            "DATABASE_URL", "R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET"
+            "DATABASE_URL", "S3_ENDPOINT_URL", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY", "S3_BUCKET"
         )
         missing = [name for name in required if not os.getenv(name)]
         if missing:
@@ -51,13 +52,14 @@ class Settings:
         return cls(
             database_url=os.environ["DATABASE_URL"],
             redis_url=os.getenv("REDIS_URL", "redis://localhost:6379/0"),
-            r2_account_id=os.environ["R2_ACCOUNT_ID"],
-            r2_access_key_id=os.environ["R2_ACCESS_KEY_ID"],
-            r2_secret_access_key=os.environ["R2_SECRET_ACCESS_KEY"],
-            r2_bucket=os.environ["R2_BUCKET"],
+            s3_endpoint_url=os.environ["S3_ENDPOINT_URL"].rstrip("/"),
+            s3_region=os.getenv("S3_REGION", "us-east-1"),
+            s3_access_key_id=os.environ["S3_ACCESS_KEY_ID"],
+            s3_secret_access_key=os.environ["S3_SECRET_ACCESS_KEY"],
+            s3_bucket=os.environ["S3_BUCKET"],
             camera_base_url=os.getenv("CAMERA_BASE_URL", "https://511ga.org/map/Cctv").rstrip("/"),
             download_concurrency=int(number("DOWNLOAD_CONCURRENCY", "300")),
-            r2_upload_concurrency=int(number("R2_UPLOAD_CONCURRENCY", "32")),
+            s3_upload_concurrency=int(number("S3_UPLOAD_CONCURRENCY", "32")),
             inference_concurrency=int(number("INFERENCE_CONCURRENCY", "4")),
             database_concurrency=int(number("DATABASE_CONCURRENCY", "16")),
             database_pool_size=int(number("DATABASE_POOL_SIZE", "16")),

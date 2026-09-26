@@ -18,7 +18,7 @@ from .inference import model_run
 from .image_quality import InvalidImageError, ensure_usable_image
 from .keys import object_key, skipped_key
 from .queues import CAPTURE_QUEUE_NAME
-from .resources import ByteBudget, content_sha256, download_image, normalize_jpeg, r2_client, upload_object
+from .resources import ByteBudget, content_sha256, download_image, normalize_jpeg, s3_client, upload_object
 
 logger = logging.getLogger(__name__)
 settings = Settings.from_env()
@@ -28,9 +28,9 @@ async def startup(ctx: dict) -> None:
     timeout = aiohttp.ClientTimeout(total=settings.request_timeout_seconds)
     ctx["session"] = aiohttp.ClientSession(timeout=timeout)
     ctx["pool"] = await asyncpg.create_pool(settings.database_url, min_size=1, max_size=settings.database_pool_size)
-    ctx["r2"] = r2_client(settings)
+    ctx["s3"] = s3_client(settings)
     ctx["download_limit"] = asyncio.Semaphore(settings.download_concurrency)
-    ctx["upload_limit"] = asyncio.Semaphore(settings.r2_upload_concurrency)
+    ctx["upload_limit"] = asyncio.Semaphore(settings.s3_upload_concurrency)
     ctx["inference_limit"] = asyncio.Semaphore(settings.inference_concurrency)
     ctx["database_limit"] = asyncio.Semaphore(settings.database_concurrency)
     ctx["byte_budget"] = ByteBudget(settings.max_inflight_bytes)
@@ -47,7 +47,7 @@ async def capture_camera(ctx: dict, payload: dict[str, str]) -> None:
     normalized: bytes | None = None
     total_started = time.perf_counter()
     download_seconds = 0.0
-    r2_seconds = 0.0
+    s3_seconds = 0.0
     processing_seconds = 0.0
     database_seconds = 0.0
     if settings.debug:
@@ -79,7 +79,7 @@ async def capture_camera(ctx: dict, payload: dict[str, str]) -> None:
                 await insert_image(
                     ctx["pool"],
                     job,
-                    settings.r2_bucket,
+                    settings.s3_bucket,
                     skipped_key(job.source_view_id, job.scheduled_at),
                     len(raw),
                     content_sha256(raw),
@@ -99,12 +99,12 @@ async def capture_camera(ctx: dict, payload: dict[str, str]) -> None:
         frame_key = object_key("captures", job.source_view_id, job.scheduled_at)
         async with ctx["upload_limit"]:
             upload_started = time.perf_counter()
-            await upload_object(ctx["r2"], settings.r2_bucket, frame_key, normalized, "image/jpeg")
-            r2_seconds += time.perf_counter() - upload_started
+            await upload_object(ctx["s3"], settings.s3_bucket, frame_key, normalized, "image/jpeg")
+            s3_seconds += time.perf_counter() - upload_started
         async with ctx["database_limit"]:
             database_started = time.perf_counter()
             image_id = await insert_image(
-                ctx["pool"], job, settings.r2_bucket, frame_key, len(normalized), content_sha256(normalized), fetched_at
+                ctx["pool"], job, settings.s3_bucket, frame_key, len(normalized), content_sha256(normalized), fetched_at
             )
             database_seconds += time.perf_counter() - database_started
 
@@ -118,8 +118,8 @@ async def capture_camera(ctx: dict, payload: dict[str, str]) -> None:
             heatmap_key = object_key("heatmaps", job.source_view_id, job.scheduled_at)
             async with ctx["upload_limit"]:
                 upload_started = time.perf_counter()
-                await upload_object(ctx["r2"], settings.r2_bucket, heatmap_key, prediction.heatmap_bytes, "image/png")
-                r2_seconds += time.perf_counter() - upload_started
+                await upload_object(ctx["s3"], settings.s3_bucket, heatmap_key, prediction.heatmap_bytes, "image/png")
+                s3_seconds += time.perf_counter() - upload_started
         completed_at = datetime.now(timezone.utc)
         async with ctx["database_limit"]:
             database_started = time.perf_counter()
@@ -127,12 +127,12 @@ async def capture_camera(ctx: dict, payload: dict[str, str]) -> None:
             database_seconds += time.perf_counter() - database_started
         if settings.debug:
             logger.info(
-                "capture completed capture_id=%s camera_id=%s download_seconds=%.3f r2_seconds=%.3f "
+                "capture completed capture_id=%s camera_id=%s download_seconds=%.3f s3_seconds=%.3f "
                 "processing_seconds=%.3f database_seconds=%.3f total_seconds=%.3f",
                 job.capture_id,
                 job.source_camera_id,
                 download_seconds,
-                r2_seconds,
+                s3_seconds,
                 processing_seconds,
                 database_seconds,
                 time.perf_counter() - total_started,

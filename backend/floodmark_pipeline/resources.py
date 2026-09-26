@@ -68,13 +68,13 @@ def content_sha256(image_bytes: bytes) -> str:
     return sha256(image_bytes).hexdigest()
 
 
-def r2_client(settings: Settings):
+def s3_client(settings: Settings):
     return boto3.client(
         "s3",
-        endpoint_url=f"https://{settings.r2_account_id}.r2.cloudflarestorage.com",
-        aws_access_key_id=settings.r2_access_key_id,
-        aws_secret_access_key=settings.r2_secret_access_key,
-        region_name="auto",
+        endpoint_url=settings.s3_endpoint_url,
+        aws_access_key_id=settings.s3_access_key_id,
+        aws_secret_access_key=settings.s3_secret_access_key,
+        region_name=settings.s3_region,
         config=Config(retries={"max_attempts": 3, "mode": "standard"}),
     )
 
