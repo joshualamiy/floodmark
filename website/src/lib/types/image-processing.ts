@@ -1,8 +1,12 @@
-export const imageProcessingStatuses = [
-	"unprocessed",
-	"processed",
-	"error",
-	"skipped",
-] as const;
+export enum ImageProcessingStatus {
+	Unprocessed = "unprocessed",
+	Processed = "processed",
+	Error = "error",
+	Skipped = "skipped",
+}
 
-export type ImageProcessingStatus = (typeof imageProcessingStatuses)[number];
+export enum PredictionStatus {
+	Dry = "dry",
+	Wet = "wet",
+	Flooded = "flooded",
+}

@@ -11,10 +11,9 @@ import {
 	uniqueIndex,
 	uuid,
 } from "drizzle-orm/pg-core";
-import { imageProcessingStatuses } from "$lib/types/image-processing";
+import { ImageProcessingStatus } from "../types/image-processing";
 
-export const imageProcessingStatus = pgEnum("image_processing_status", imageProcessingStatuses);
-
+export const imageProcessingStatus = pgEnum("image_processing_status", ImageProcessingStatus);
 export const predictionStatus = pgEnum("prediction_status", ["dry", "wet", "flooded"]);
 
 export const cameras = pgTable(
@@ -67,7 +66,7 @@ export const images = pgTable(
 		capturedAt: timestamp("captured_at", { withTimezone: true }),
 		fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull(),
 
-		processingStatus: imageProcessingStatus("processing_status").notNull().default("unprocessed"),
+		processingStatus: imageProcessingStatus("processing_status").notNull().default(ImageProcessingStatus.Unprocessed),
 		processedAt: timestamp("processed_at", { withTimezone: true }),
 		processingError: text("processing_error"),
 
@@ -89,13 +88,26 @@ export const predictions = pgTable(
 			.notNull()
 			.references(() => images.id, { onDelete: "cascade" }),
 
-		modelName: text("model_name").notNull(),
-		modelVersion: text("model_version").notNull(),
+		modelVersion: jsonb("model_version")
+			.$type<{
+				data_version: string;
+				stage_a_run_id: string;
+				stage_b_run_id: string;
+			}>()
+			.notNull(),
 		status: predictionStatus("status").notNull(),
 		confidence: numeric("confidence", { precision: 5, scale: 4 }).notNull(),
+		stageAProbabilities: jsonb("stage_a_probabilities")
+			.$type<Record<"dry" | "wet", number>>()
+			.notNull(),
+		stageBProbabilities: jsonb("stage_b_probabilities")
+			.$type<Record<"not_flooded" | "flooded", number>>()
+			.notNull(),
 		stageProbabilities: jsonb("stage_probabilities")
 			.$type<Record<"dry" | "wet" | "flooded", number>>()
 			.notNull(),
+		thresholds: jsonb("thresholds").$type<{ tA: number; tB: number }>().notNull(),
+		note: text("note"),
 		heatmapR2Key: text("heatmap_r2_key"),
 
 		inferenceStartedAt: timestamp("inference_started_at", { withTimezone: true }),
@@ -103,11 +115,7 @@ export const predictions = pgTable(
 		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
-		uniqueIndex("predictions_image_model_unique").on(
-			table.imageId,
-			table.modelName,
-			table.modelVersion,
-		),
+		uniqueIndex("predictions_image_model_unique").on(table.imageId, table.modelVersion),
 		index("predictions_status_idx").on(table.status),
 	],
 );
