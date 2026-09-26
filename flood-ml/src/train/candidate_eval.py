@@ -106,7 +106,7 @@ def live_false_alarms(
 if __name__ == "__main__":
     import argparse
 
-    from train.data import load_manifest, select_stage_rows
+    from train.data import load_manifest, select_all_rows
     from train.pipeline_eval import load_checkpoint, run_pipeline_selection
 
     ap = argparse.ArgumentParser(description=__doc__)
@@ -126,7 +126,7 @@ if __name__ == "__main__":
     ta, tb = report["tA"], report["tB"]
 
     df = load_manifest()
-    val_rows = select_stage_rows(df, "a", split="val")
+    val_rows = select_all_rows(df, split="val")
     flooded_rows = val_rows[val_rows["label"] == "flooded"].reset_index(drop=True)
 
     stage_a_model = load_checkpoint(args.stage_a_run)

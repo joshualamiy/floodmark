@@ -114,25 +114,27 @@ def write_class_counts_report(rows: list[dict], out_md: Path, out_png: Path) -> 
     lines = ["# Class counts", ""]
     lines.append("## Per split x label")
     lines.append("")
-    lines.append("| split | dry | wet | flooded | total |")
-    lines.append("|---|---|---|---|---|")
+    lines.append("| split | dry | wet | flooded | not_flooded | total |")
+    lines.append("|---|---|---|---|---|---|")
     for split in ("train", "val", "test"):
         d = by_split_label.get((split, "dry"), 0)
         w = by_split_label.get((split, "wet"), 0)
         f = by_split_label.get((split, "flooded"), 0)
-        lines.append(f"| {split} | {d} | {w} | {f} | {d + w + f} |")
+        nf = by_split_label.get((split, "not_flooded"), 0)
+        lines.append(f"| {split} | {d} | {w} | {f} | {nf} | {d + w + f + nf} |")
     lines.append("")
 
     lines.append("## Per source x label")
     lines.append("")
     sources = sorted({s for (s, _l) in by_source_label})
-    lines.append("| source | dry | wet | flooded | total |")
-    lines.append("|---|---|---|---|---|")
+    lines.append("| source | dry | wet | flooded | not_flooded | total |")
+    lines.append("|---|---|---|---|---|---|")
     for s in sources:
         d = by_source_label.get((s, "dry"), 0)
         w = by_source_label.get((s, "wet"), 0)
         f = by_source_label.get((s, "flooded"), 0)
-        lines.append(f"| {s} | {d} | {w} | {f} | {d + w + f} |")
+        nf = by_source_label.get((s, "not_flooded"), 0)
+        lines.append(f"| {s} | {d} | {w} | {f} | {nf} | {d + w + f + nf} |")
     lines.append("")
 
     lines.append("## Per split x source")
@@ -173,8 +175,8 @@ def write_class_counts_report(rows: list[dict], out_md: Path, out_png: Path) -> 
     # bar chart: counts per split, stacked by label. No dataset pixels.
     fig, ax = plt.subplots(figsize=(6, 4))
     splits = ("train", "val", "test")
-    labels = ("dry", "wet", "flooded")
-    colors = {"dry": "#8c8c8c", "wet": "#4C9BE8", "flooded": "#D64545"}
+    labels = ("dry", "wet", "flooded", "not_flooded")
+    colors = {"dry": "#8c8c8c", "wet": "#4C9BE8", "flooded": "#D64545", "not_flooded": "#E8A33D"}
     bottoms = np.zeros(len(splits))
     x = np.arange(len(splits))
     for label in labels:
@@ -216,6 +218,9 @@ SPOTCHECK_TABLE = [
     ("nysdot_road_surface", "dry", "dataset_label, agreement>=0.67, cropped", 29, 15, "~13/15 (87%)", "kept"),
     ("nysdot_road_surface", "wet", "dataset_label, agreement>=0.67, cropped", 30, 15, "~14/15 (93%)", "kept"),
     ("ga511", "dry/wet/unusable", "ai_review (visual, test-split cameras)", 274, 274, "n/a -- this IS the label (167 in the first pass, 107 more after the 511GA sweep finished)", "recorded to ai_review_labels.csv"),
+    ("iowa_rwis", "dry/wet", "manual (user, labels.csv; not a mask rule)", 340, 340, "n/a -- this IS the label (weak precip label never used)", "kept"),
+    ("eu_flood_2013", "flooded/not_flooded", "dataset_label (hydrologist relevance lists) + CLIP road_score>0", None, None, "n/a -- see the road-filter contact sheets in docs/phase_reports/v3_retrain.md", "kept"),
+    ("alleyfloodnet", "flooded/not_flooded", "dataset_label (folder name; not a mask rule)", 1110, None, "n/a -- this IS the label", "kept (INCLUDE_ALLEYFLOODNET switch)"),
 ]
 
 # Sources excluded wholesale (never gathered at all, so they don't appear in

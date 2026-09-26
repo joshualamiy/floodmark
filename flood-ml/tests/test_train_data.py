@@ -19,6 +19,7 @@ from train.data import (
     compute_class_weights,
     compute_sample_weights,
     make_dataset,
+    select_all_rows,
     select_stage_rows,
 )
 
@@ -38,6 +39,54 @@ def _manifest_df():
     for i in range(4):
         rows.append({"path": f"fv{i}.jpg", "label": "flooded", "split": "val"})
     return pd.DataFrame(rows)
+
+
+def _manifest_df_with_not_flooded():
+    df = _manifest_df()
+    extra = pd.DataFrame([
+        {"path": "nf0.jpg", "label": "not_flooded", "split": "train"},
+        {"path": "nf1.jpg", "label": "not_flooded", "split": "train"},
+        {"path": "nfv0.jpg", "label": "not_flooded", "split": "val"},
+    ])
+    return pd.concat([df, extra], ignore_index=True)
+
+
+def test_stage_a_excludes_not_flooded_rows():
+    df = _manifest_df_with_not_flooded()
+    rows = select_stage_rows(df, STAGE_A, split="train")
+    assert "not_flooded" not in set(rows["label"])
+    assert len(rows) == 33  # same count as without not_flooded rows at all
+
+
+def test_stage_b_mixed_treats_not_flooded_as_negative():
+    df = _manifest_df_with_not_flooded()
+    rows = select_stage_rows(df, STAGE_B, VARIANT_MIXED, split="train")
+    assert "not_flooded" in set(rows["label"])
+    nf_mask = rows["label"] == "not_flooded"
+    assert set(rows.loc[nf_mask, "label_bin"]) == {0.0}
+
+
+def test_stage_b_spec_excludes_not_flooded_rows():
+    df = _manifest_df_with_not_flooded()
+    rows = select_stage_rows(df, STAGE_B, VARIANT_SPEC, split="train")
+    assert "not_flooded" not in set(rows["label"])
+
+
+def test_not_flooded_never_gets_wet_upweight():
+    df = _manifest_df_with_not_flooded()
+    rows = select_stage_rows(df, STAGE_B, VARIANT_MIXED, split="train")
+    weights = compute_sample_weights(rows, STAGE_B, VARIANT_MIXED, wet_upweight=5.0)
+    wet_w = weights[(rows["label"] == "wet").to_numpy()]
+    nf_w = weights[(rows["label"] == "not_flooded").to_numpy()]
+    # not_flooded gets the plain balanced class weight, never the wet multiplier
+    assert not np.any(np.isin(nf_w, wet_w))
+
+
+def test_select_all_rows_keeps_every_label():
+    df = _manifest_df_with_not_flooded()
+    rows = select_all_rows(df, split="train")
+    assert "not_flooded" in set(rows["label"])
+    assert len(rows) == len(df[df["split"] == "train"])
 
 
 def test_stage_a_uses_all_rows_and_binarizes_dry_vs_rest():

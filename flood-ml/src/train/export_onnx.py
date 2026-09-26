@@ -211,7 +211,7 @@ def benchmark_latency(onnx_path: str | Path, img_size: int, n_runs: int = 100, i
 if __name__ == "__main__":
     import argparse
 
-    from train.data import load_manifest, select_stage_rows
+    from train.data import load_manifest, select_all_rows
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     parser = argparse.ArgumentParser(description=__doc__)
@@ -233,7 +233,7 @@ if __name__ == "__main__":
     )
 
     df = load_manifest(args.manifest)
-    val_rows = select_stage_rows(df, "a", split="val")  # all val rows regardless of stage
+    val_rows = select_all_rows(df, split="val")  # all val rows regardless of stage
     verification = verify_export(
         keras_model, out_path, val_rows, img_size=args.img_size, mode=args.mode, n_images=args.n_verify,
     )

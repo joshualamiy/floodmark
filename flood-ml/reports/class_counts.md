@@ -2,39 +2,42 @@
 
 ## Per split x label
 
-| split | dry | wet | flooded | total |
-|---|---|---|---|---|
-| train | 1717 | 15 | 783 | 2515 |
-| val | 500 | 6 | 168 | 674 |
-| test | 930 | 10 | 168 | 1108 |
+| split | dry | wet | flooded | not_flooded | total |
+|---|---|---|---|---|---|
+| train | 3050 | 92 | 2530 | 521 | 6193 |
+| val | 826 | 22 | 542 | 112 | 1502 |
+| test | 957 | 31 | 542 | 112 | 1642 |
 
 ## Per source x label
 
-| source | dry | wet | flooded | total |
-|---|---|---|---|---|
-| flood_master_test | 0 | 0 | 62 | 62 |
-| fred | 1294 | 0 | 631 | 1925 |
-| ga511 | 1824 | 1 | 0 | 1825 |
-| nysdot_road_surface | 29 | 30 | 0 | 59 |
-| roadway_flooding | 0 | 0 | 426 | 426 |
+| source | dry | wet | flooded | not_flooded | total |
+|---|---|---|---|---|---|
+| alleyfloodnet | 0 | 0 | 601 | 509 | 1110 |
+| eu_flood_2013 | 0 | 0 | 1894 | 236 | 2130 |
+| flood_master_test | 0 | 0 | 62 | 0 | 62 |
+| fred | 1294 | 0 | 631 | 0 | 1925 |
+| ga511 | 3284 | 1 | 0 | 0 | 3285 |
+| iowa_rwis | 226 | 114 | 0 | 0 | 340 |
+| nysdot_road_surface | 29 | 30 | 0 | 0 | 59 |
+| roadway_flooding | 0 | 0 | 426 | 0 | 426 |
 
 ## Per split x source
 
-| split | flood_master_test | fred | ga511 | nysdot_road_surface | roadway_flooding |
-|---|---|---|---|---|---|
-| train | 0 | 1104 | 1200 | 28 | 183 |
-| val | 0 | 206 | 299 | 15 | 154 |
-| test | 62 | 615 | 326 | 16 | 89 |
+| split | alleyfloodnet | eu_flood_2013 | flood_master_test | fred | ga511 | iowa_rwis | nysdot_road_surface | roadway_flooding |
+|---|---|---|---|---|---|---|---|---|
+| train | 774 | 1494 | 0 | 1104 | 2366 | 244 | 28 | 183 |
+| val | 169 | 317 | 0 | 206 | 593 | 48 | 15 | 154 |
+| test | 167 | 319 | 62 | 615 | 326 | 48 | 16 | 89 |
 
 ## label_source counts
 
 | label_source | count |
 |---|---|
-| weak_precip | 1472 |
+| dataset_label | 3299 |
+| weak_precip | 2932 |
 | sequence_condition | 1236 |
 | mask | 1177 |
-| manual | 351 |
-| dataset_label | 59 |
+| manual | 691 |
 | ai_review | 2 |
 
 ## water_frac_road stats by assigned label
@@ -56,8 +59,11 @@
 
 | source | kept | removed | removed frac |
 |---|---|---|---|
+| alleyfloodnet | 1110 | 0 | 0.0% |
+| eu_flood_2013 | 2130 | 0 | 0.0% |
 | flood_master_test | 567 | 0 | 0.0% |
 | fred | 4680 | 0 | 0.0% |
+| iowa_rwis | 340 | 0 | 0.0% |
 | nysdot_road_surface | 59 | 0 | 0.0% |
 | roadway_flooding | 426 | 3 | 0.7% |
 
@@ -66,7 +72,7 @@
 - thinned_frames: 3260
 - thinning_rule: keep a frame if phash Hamming > 6 from the last *kept* frame, or if 15 consecutive frames have been dropped (resample at least every 16th frame even during a long static stretch)
 - cross_source_duplicates_collapsed: 0
-- n_after: 4306
+- n_after: 9715
 
 | video/sequence group | frames before | frames after |
 |---|---|---|
@@ -92,3 +98,6 @@
 | nysdot_road_surface | dry | dataset_label, agreement>=0.67, cropped | 29 | 15 | ~13/15 (87%) | kept |
 | nysdot_road_surface | wet | dataset_label, agreement>=0.67, cropped | 30 | 15 | ~14/15 (93%) | kept |
 | ga511 | dry/wet/unusable | ai_review (visual, test-split cameras) | 274 | 274 | n/a -- this IS the label (167 in the first pass, 107 more after the 511GA sweep finished) | recorded to ai_review_labels.csv |
+| iowa_rwis | dry/wet | manual (user, labels.csv; not a mask rule) | 340 | 340 | n/a -- this IS the label (weak precip label never used) | kept |
+| eu_flood_2013 | flooded/not_flooded | dataset_label (hydrologist relevance lists) + CLIP road_score>0 | None | None | n/a -- see the road-filter contact sheets in docs/phase_reports/v3_retrain.md | kept |
+| alleyfloodnet | flooded/not_flooded | dataset_label (folder name; not a mask rule) | 1110 | None | n/a -- this IS the label | kept (INCLUDE_ALLEYFLOODNET switch) |

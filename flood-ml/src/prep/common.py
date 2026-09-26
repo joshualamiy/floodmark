@@ -40,7 +40,7 @@ EXTRA_COLUMNS = [
 ]
 MANIFEST_COLUMNS = REQUIRED_COLUMNS + EXTRA_COLUMNS
 
-LABELS = ("dry", "wet", "flooded")
+LABELS = ("dry", "wet", "flooded", "not_flooded")
 LABEL_SOURCES = ("mask", "sequence_condition", "manual", "weak_precip", "dataset_label", "ai_review")
 SPLITS = ("train", "val", "test")
 
@@ -53,6 +53,8 @@ LICENSE_FMD = "Flood Master Database: non-commercial research, no redistribution
 LICENSE_FRED = "CC BY-NC-SA 4.0 (FRED, CMalone-Jupiter/FRED)"
 LICENSE_NYSDOT = "CC BY 4.0 (NYSDOT Road Surface Conditions, Zenodo 10.5281/zenodo.8370665)"
 LICENSE_GA511 = "511GA (Georgia DOT) public traffic camera feed; internal research use"
+LICENSE_IOWA_RWIS = "Public domain (Iowa Environmental Mesonet)"
+LICENSE_ALLEYFLOODNET = "CC BY 4.0 (dataset-level; some photos carry third-party watermarks, per-photo rights unverified)"
 
 # ---------------------------------------------------------------------------
 # Image IO

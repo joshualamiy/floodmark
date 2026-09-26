@@ -334,3 +334,34 @@ Details in `docs/phase_reports/flood_photos.md`.
 - **floodimg**: skipped. 77% of it duplicates eu_flood_2013, and the rest is mostly aerial.
 
 Since "not_flooded" in these sets can mean either dry or wet, those rows get a new label, `not_flooded`. It's used only as a Stage B negative and excluded from Stage A.
+
+## 2026-09-26: v3 data integration (manifest `v1-7251bbd2`)
+
+Details in `docs/phase_reports/v3_retrain.md`.
+
+**New sources:**
+- **iowa_rwis:** 340 rows (226 dry, 114 wet), manual labels only.
+- **eu_flood_2013:** 2,130 rows kept (1,894 flooded, 236 not_flooded) after dropping unlicensed rows. The CLIP road filter (road_score > 0) removed 1,304.
+- **alleyfloodnet:** 1,110 rows, behind the `INCLUDE_ALLEYFLOODNET` switch.
+- No cross-source duplicates.
+
+**New label `not_flooded`:** a Stage B negative only, excluded from Stage A.
+
+**Totals:** 9,337 rows.
+
+| Split | Dry | Wet | Flooded | Not flooded |
+|---|---|---|---|---|
+| Train | 3,050 | 92 | 2,530 | 521 |
+| Val | 826 | 22 | 542 | 112 |
+| Test | 957 | 31 | 542 | 112 |
+
+**The legacy rows are untouched,** which I verified myself against my byte-exact backup `manifest_v1-703f0040.csv`:
+- Every row of every old source is identical: path, label, and split.
+- All 1,825 old 511GA rows keep their split and label.
+- No group, camera, or duplicate cluster spans two splits.
+
+The worker found and fixed a real bug on the way: adding new groups was reshuffling the splits of old groups. The new guard `legacy_forced_splits` pins them.
+
+**Checks:** 348 tests pass, and the CI simulation gives 181 passed and 6 skipped.
+
+**Training** (`train.run_campaign_v3`, detached) is running. Night augmentation screened worse on val, so it's off. Candidates are crop224, letterbox224, and letterbox320. `train.select_v3` will then apply the pre-registered rule.

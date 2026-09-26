@@ -18,6 +18,13 @@ Threshold rule:
 
 Every number that rests on fewer than 30 val examples (the true-wet slice is
 6) is flagged in the returned report, not just quietly computed.
+
+v3: rows labeled "not_flooded" (eu_flood_2013/alleyfloodnet negatives -- dry
+OR rain-wet, unknown which) are meaningless for the dry-vs-wet question, so
+they are excluded from Stage A accuracy/AUC and from the dry/wet/flooded
+confusion table. Only "is it called flooded?" is meaningful for them, so
+their false-flood rate is reported as its own field, the same shape as the
+true-dry and true-wet false-alarm rates.
 """
 from __future__ import annotations
 
@@ -29,7 +36,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from train.data import load_manifest, select_stage_rows
+from train.data import load_manifest, select_all_rows
 from train.train import _youden_threshold  # reuse Stage A's own threshold rule
 
 logger = logging.getLogger(__name__)
@@ -65,6 +72,9 @@ class PipelineReport:
     stage_a_auc_roc: float
     stage_a_auc_pr: float
     stage_a_accuracy: float
+    stage_a_wet_recall: float
+    stage_a_wet_recall_num: int
+    stage_a_wet_recall_den: int
     pipeline_precision_flooded: float
     pipeline_recall_flooded: float
     pipeline_precision_num: int
@@ -77,6 +87,9 @@ class PipelineReport:
     false_alarm_wet_rate: float
     false_alarm_wet_num: int
     false_alarm_wet_den: int
+    false_alarm_not_flooded_rate: float
+    false_alarm_not_flooded_num: int
+    false_alarm_not_flooded_den: int
     small_sample_flags: list[str]
     confusion: dict[str, dict[str, int]]
 
@@ -130,24 +143,44 @@ def sweep_tb_for_precision(
 
 
 def evaluate_pipeline(
-    val_rows: pd.DataFrame, pA: np.ndarray, pB: np.ndarray, target_precision: float = 0.90
+    val_rows: pd.DataFrame, pA: np.ndarray, pB: np.ndarray, target_precision: float = 0.90,
+    tA: float | None = None, tB: float | None = None,
 ) -> PipelineReport:
+    """`tA`/`tB`: pass a FIXED threshold (e.g. the shipped config.json's
+    operating point) to score against it instead of retuning on this val --
+    used for the "shipped, as-is" baseline row (v3), which must be compared
+    at its real deployed operating point, not a hypothetical retuned one.
+    Leave both None (the default) to tune fresh, as every other candidate does.
+    """
     from sklearn.metrics import average_precision_score, roc_auc_score
 
     true_label = val_rows["label"].to_numpy()
     is_dry_true = true_label == "dry"
     is_wet_true = true_label == "wet"
     is_flooded_true = true_label == "flooded"
+    is_not_flooded_true = true_label == "not_flooded"
+    # not_flooded's dry/wet state is unknown -- never trains or evals Stage A.
+    stage_a_mask = ~is_not_flooded_true
 
-    stage_a_true = (~is_dry_true).astype(int)
-    tA = _youden_threshold(stage_a_true, pA)
-    stage_a_auc_roc = float(roc_auc_score(stage_a_true, pA))
-    stage_a_auc_pr = float(average_precision_score(stage_a_true, pA))
-    stage_a_pred = (pA >= tA).astype(int)
+    stage_a_true_full = (~is_dry_true).astype(int)
+    stage_a_true = stage_a_true_full[stage_a_mask]
+    pA_stage_a = pA[stage_a_mask]
+    if tA is None:
+        tA = _youden_threshold(stage_a_true, pA_stage_a)
+    stage_a_auc_roc = float(roc_auc_score(stage_a_true, pA_stage_a))
+    stage_a_auc_pr = float(average_precision_score(stage_a_true, pA_stage_a))
+    stage_a_pred = (pA_stage_a >= tA).astype(int)
     stage_a_accuracy = float(np.mean(stage_a_pred == stage_a_true))
+    # wet recall: of true "wet" rows, how many Stage A calls not-dry (pA>=tA).
+    # Phase 4 found this was 0/10 on the shipped model -- now measurable with
+    # real n (Iowa RWIS + NYSDOT val wet rows) instead of n=6.
+    wet_recall_rate, wet_recall_num, wet_recall_den = _rate(pA >= tA, is_wet_true)
 
-    tB, tB_note = sweep_tb_for_precision(true_label, pA, pB, tA, target_precision=target_precision)
-    status = status_from_probs(pA, pB, tA, tB)
+    if tB is None:
+        tB, tB_note = sweep_tb_for_precision(true_label, pA, pB, tA, target_precision=target_precision)
+    else:
+        tB_note = "fixed threshold, not tuned on this val"
+    status = status_from_probs(pA, pB, tA, tB)  # over ALL rows, including not_flooded
     pred_flooded = status == "flooded"
 
     precision_rate, precision_num, precision_den = _rate(is_flooded_true, pred_flooded)
@@ -156,7 +189,11 @@ def evaluate_pipeline(
 
     far_dry_rate, far_dry_num, far_dry_den = _rate(pred_flooded, is_dry_true)
     far_wet_rate, far_wet_num, far_wet_den = _rate(pred_flooded, is_wet_true)
+    far_nf_rate, far_nf_num, far_nf_den = _rate(pred_flooded, is_not_flooded_true)
 
+    # not_flooded is excluded here: its dry/wet split is unknown, so it has
+    # no place in a dry/wet/flooded confusion table -- only its false-flood
+    # rate above is meaningful.
     confusion: dict[str, dict[str, int]] = {}
     for true_l in ("dry", "wet", "flooded"):
         row_mask = true_label == true_l
@@ -170,6 +207,8 @@ def evaluate_pipeline(
         ("pipeline_recall_flooded", recall_den),
         ("false_alarm_dry_rate", far_dry_den),
         ("false_alarm_wet_rate", far_wet_den),
+        ("false_alarm_not_flooded_rate", far_nf_den),
+        ("stage_a_wet_recall", wet_recall_den),
     ):
         if den < SMALL_SAMPLE_WARN_N:
             flags.append(f"{name} rests on only {den} val examples (<{SMALL_SAMPLE_WARN_N})")
@@ -177,13 +216,59 @@ def evaluate_pipeline(
     return PipelineReport(
         tA=tA, tB=tB, tB_note=tB_note, n_val=len(val_rows),
         stage_a_auc_roc=stage_a_auc_roc, stage_a_auc_pr=stage_a_auc_pr, stage_a_accuracy=stage_a_accuracy,
+        stage_a_wet_recall=wet_recall_rate, stage_a_wet_recall_num=wet_recall_num,
+        stage_a_wet_recall_den=wet_recall_den,
         pipeline_precision_flooded=precision_rate, pipeline_recall_flooded=recall_rate,
         pipeline_precision_num=precision_num, pipeline_precision_den=precision_den,
         pipeline_recall_num=recall_num, pipeline_recall_den=recall_den,
         false_alarm_dry_rate=far_dry_rate, false_alarm_dry_num=far_dry_num, false_alarm_dry_den=far_dry_den,
         false_alarm_wet_rate=far_wet_rate, false_alarm_wet_num=far_wet_num, false_alarm_wet_den=far_wet_den,
+        false_alarm_not_flooded_rate=far_nf_rate, false_alarm_not_flooded_num=far_nf_num,
+        false_alarm_not_flooded_den=far_nf_den,
         small_sample_flags=flags, confusion=confusion,
     )
+
+
+def per_source_breakdown(
+    val_rows: pd.DataFrame, pA: np.ndarray, pB: np.ndarray, tA: float, tB: float,
+) -> dict[str, dict]:
+    """v3: per-source slice of the pipeline report the brief asks for
+    ("overall AND per source"), using an ALREADY-tuned (tA, tB) -- these are
+    tuned once on the whole val set, not re-tuned per source (too few rows
+    per source to tune on). Returns {source: {...}}; every rate carries its
+    own num/den so a small-n source is easy to flag (den < 30) downstream.
+    """
+    true_label = val_rows["label"].to_numpy()
+    source = val_rows["source"].to_numpy()
+    status = status_from_probs(pA, pB, tA, tB)
+    pred_flooded = status == "flooded"
+
+    out: dict[str, dict] = {}
+    for src in sorted(set(source)):
+        m = source == src
+        is_flooded_true = (true_label == "flooded") & m
+        is_dry_true = (true_label == "dry") & m
+        is_wet_true = (true_label == "wet") & m
+        is_nf_true = (true_label == "not_flooded") & m
+
+        precision_rate, precision_num, precision_den = _rate(is_flooded_true, pred_flooded & m)
+        recall_rate, recall_num, recall_den = _rate(pred_flooded, is_flooded_true)
+        far_dry_rate, far_dry_num, far_dry_den = _rate(pred_flooded, is_dry_true)
+        far_wet_rate, far_wet_num, far_wet_den = _rate(pred_flooded, is_wet_true)
+        far_nf_rate, far_nf_num, far_nf_den = _rate(pred_flooded, is_nf_true)
+
+        out[src] = {
+            "n": int(m.sum()),
+            "pipeline_precision_flooded": precision_rate,
+            "pipeline_precision_num": precision_num, "pipeline_precision_den": precision_den,
+            "pipeline_recall_flooded": recall_rate,
+            "pipeline_recall_num": recall_num, "pipeline_recall_den": recall_den,
+            "false_alarm_dry_rate": far_dry_rate, "false_alarm_dry_num": far_dry_num, "false_alarm_dry_den": far_dry_den,
+            "false_alarm_wet_rate": far_wet_rate, "false_alarm_wet_num": far_wet_num, "false_alarm_wet_den": far_wet_den,
+            "false_alarm_not_flooded_rate": far_nf_rate, "false_alarm_not_flooded_num": far_nf_num,
+            "false_alarm_not_flooded_den": far_nf_den,
+        }
+    return out
 
 
 def load_checkpoint(run_id: str, models_root: str = "models"):
@@ -231,7 +316,7 @@ def run_pipeline_selection(
     `img_size` must match the geometry both checkpoints were trained with.
     """
     df = load_manifest(manifest)
-    val_rows = select_stage_rows(df, "a", split="val")  # all val rows, any label
+    val_rows = select_all_rows(df, split="val")  # all val rows, any label (including not_flooded)
 
     stage_a_model = load_checkpoint(stage_a_run, models_root)
     pA = predict_probs(stage_a_model, val_rows, img_size, mode=mode)

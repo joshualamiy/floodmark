@@ -241,6 +241,7 @@ def run_training(args: argparse.Namespace) -> dict:
     train_ds = make_dataset(
         train_rows, stage=args.stage, variant=args.variant, training=True,
         batch_size=args.batch_size, img_size=args.img_size, mode=args.mode, seed=args.seed,
+        night_aug=not args.no_night_aug,
     )
     val_rows_for_ds = val_rows.copy()
     val_rows_for_ds["sample_weight"] = 1.0
@@ -329,7 +330,10 @@ def run_training(args: argparse.Namespace) -> dict:
         ),
         "train_time_s": f"{train_time_s:.1f}",
         "logdir": str(logdir_root),
-        "notes": f"mode={args.mode}; {val_metrics.threshold_note}; {args.notes}".strip("; "),
+        "notes": (
+            f"mode={args.mode}; night_aug={not args.no_night_aug}; "
+            f"{val_metrics.threshold_note}; {args.notes}"
+        ).strip("; "),
     }
     append_run_row(row, Path(args.runs_csv))
     logger.info("run complete: %s", json.dumps(row, indent=2))
@@ -356,6 +360,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--batch-size", type=int, default=32)
     p.add_argument("--img-size", type=int, default=224)
     p.add_argument("--mode", choices=MODES, default=MODE_CROP, help="input geometry: crop/squash/letterbox")
+    p.add_argument("--no-night-aug", action="store_true", help="disable the dark/glare augmentation op")
     p.add_argument("--dropout", type=float, default=0.3)
     p.add_argument("--wet-upweight", type=float, default=8.0)
     p.add_argument("--patience", type=int, default=4)

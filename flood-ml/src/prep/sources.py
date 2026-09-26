@@ -20,10 +20,12 @@ import re
 from pathlib import Path
 
 from prep.common import (
+    LICENSE_ALLEYFLOODNET,
     LICENSE_FLOOD_AREA_SEGMENTATION,
     LICENSE_FMD,
     LICENSE_FRED,
     LICENSE_GA511,
+    LICENSE_IOWA_RWIS,
     LICENSE_NYSDOT,
     LICENSE_ROADWAY_FLOODING,
     RAW_ROOT,
@@ -37,9 +39,28 @@ FLOOD_AREA_DIR = RAW_ROOT / "flood_area_segmentation"
 FRED_DIR = RAW_ROOT / "fred"
 NYSDOT_DIR = RAW_ROOT / "nysdot_road_surface"
 FMD_INDEX_PATH = RESTRICTED_ROOT / "flood_master" / "index.csv"
+IOWA_RWIS_DIR = Path("data/othercams/iowa_rwis")
+EU_FLOOD_2013_DIR = RAW_ROOT / "eu_flood_2013"
+ALLEYFLOODNET_DIR = RAW_ROOT / "alleyfloodnet"
 
 # Datasets excluded per Phase 1 findings (no license grant / no road scenes).
 EXCLUDED_FMD_SOURCES = {"Water Dataset"}
+
+# v3: CLIP road-scene margin cutoff for eu_flood_2013's candidates.csv
+# (road_score = best_positive - best_negative, same convention as
+# clip_filter.score_batch's is_road = pos > neg). Chosen by viewing contact
+# sheets (reports/eu_flood_*_contact_sheet.png, local only): score <= -0.10
+# is reliably pure river/lake/aerial/indoor content with no road in frame;
+# score >= +0.10 is reliably a real street/road scene; the band in between is
+# genuinely mixed (river-adjacent plazas, bridges, courtyards). 0.0 is the
+# same "is this a road" decision boundary already used elsewhere in this
+# pipeline, and it reproduces the acquisition-time report's own numbers
+# exactly (61.0% of flooded rows, 72.2% of not_flooded rows score > 0).
+EU_FLOOD_ROAD_SCORE_THRESHOLD = 0.0
+
+# v3: single switch to drop alleyfloodnet easily (per-photo origin/rights
+# unverified for some images -- see docs/phase_reports/flood_photos.md).
+INCLUDE_ALLEYFLOODNET = True
 
 
 def load_fmd_index() -> list[dict]:
@@ -380,6 +401,146 @@ def iter_ga511(frames_csv: Path, user_labels: dict[str, dict], ai_review_labels:
             "notes": notes,
             "frame_id": frame_id,
         })
+    return rows
+
+
+def iter_iowa_rwis() -> list[dict]:
+    """Iowa DOT RWIS webcam frames (data/othercams/iowa_rwis/), matched
+    wet/dry pairs from the same camera. Only the user's manual labels count
+    (dry/wet/flooded kept, unusable dropped); weak_label (precip-based) is
+    never used as a label, only carried through for reference.
+    """
+    frames_csv = IOWA_RWIS_DIR / "frames.csv"
+    labels_csv = IOWA_RWIS_DIR / "labels.csv"
+    if not frames_csv.exists():
+        return []
+    user_labels = load_labels_csv(labels_csv)
+    rows = []
+    with open(frames_csv, newline="") as f:
+        text_rows = list(csv.DictReader(f))
+    for r in text_rows:
+        if not r.get("frame_id") or not r.get("camera_id"):
+            continue
+        if r.get("dead_reason"):
+            continue
+        fid = r["frame_id"]
+        ul = user_labels.get(fid)
+        if not ul or not ul.get("label"):
+            continue
+        label = ul["label"]
+        if label not in ("dry", "wet", "flooded"):
+            continue  # "unusable" (or anything else) -- drop
+        path = r.get("path") or ""
+        if not path:
+            continue
+        img_path = IOWA_RWIS_DIR / path
+        if not img_path.exists():
+            continue
+        camera_id = r["camera_id"]
+        rows.append({
+            "source": "iowa_rwis",
+            "orig_path": str(img_path),
+            "mask_path": None,
+            "mask_kind": None,
+            "label": label,
+            "label_source": "manual",
+            "group_id": camera_id,
+            "camera_id": camera_id,
+            "view_type": "ground",
+            "license": LICENSE_IOWA_RWIS,
+            "restricted": False,
+            "weak_label": r.get("weak_label") or None,
+            "notes": "",
+            "frame_id": fid,
+        })
+    return rows
+
+
+def iter_eu_flood_2013(road_score_threshold: float = EU_FLOOD_ROAD_SCORE_THRESHOLD) -> list[dict]:
+    """European Flood 2013 (Wikimedia Commons, cvjena). Keeps only rows with
+    a verified per-image Wikimedia license (drops the unlicensed "pollution"
+    residual and the "unknown" relevance label), labeled flooded/not_flooded,
+    passing the CLIP road-scene margin filter (see EU_FLOOD_ROAD_SCORE_THRESHOLD).
+    group_id is the Wikimedia uploader (already in candidates.csv).
+    """
+    candidates_csv = EU_FLOOD_2013_DIR / "candidates.csv"
+    if not candidates_csv.exists():
+        return []
+    rows = []
+    with open(candidates_csv, newline="") as f:
+        for r in csv.DictReader(f):
+            label = r.get("label")
+            if label not in ("flooded", "not_flooded"):
+                continue
+            license_str = r.get("license") or ""
+            if "unverified" in license_str.lower():
+                continue
+            try:
+                road_score = float(r["road_score"])
+            except (TypeError, ValueError):
+                continue
+            if road_score <= road_score_threshold:
+                continue
+            img_path = Path(r["path"])
+            if not img_path.exists():
+                continue
+            group_id = r.get("group_id") or "euflood_unknown"
+            rows.append({
+                "source": "eu_flood_2013",
+                "orig_path": str(img_path),
+                "mask_path": None,
+                "mask_kind": None,
+                "label": label,
+                "label_source": "dataset_label",
+                "group_id": group_id,
+                "camera_id": None,
+                "view_type": "ground",
+                "license": license_str,
+                "restricted": False,
+                "weak_label": None,
+                "notes": f"road_score={road_score:.4f}",
+            })
+    return rows
+
+
+def iter_alleyfloodnet(include: bool = INCLUDE_ALLEYFLOODNET) -> list[dict]:
+    """AlleyFloodNet ground-level alley/lowland flood photos. No usable
+    grouping key in the source data, so group_id is left None here and
+    filled in by build_manifest's post-dedup pHash-cluster fallback (same
+    rule as roadway_flooding/flood_area_segmentation), per the brief.
+    `include=False` (or INCLUDE_ALLEYFLOODNET=False) drops this source
+    entirely -- some images carry third-party watermarks with unverified
+    per-photo rights (see docs/phase_reports/flood_photos.md).
+    """
+    if not include:
+        return []
+    candidates_csv = ALLEYFLOODNET_DIR / "candidates.csv"
+    if not candidates_csv.exists():
+        return []
+    rows = []
+    with open(candidates_csv, newline="") as f:
+        for r in csv.DictReader(f):
+            label = r.get("label")
+            if label not in ("flooded", "not_flooded"):
+                continue
+            img_path = Path(r["path"])
+            if not img_path.exists():
+                continue
+            rows.append({
+                "source": "alleyfloodnet",
+                "orig_path": str(img_path),
+                "mask_path": None,
+                "mask_kind": None,
+                "label": label,
+                "label_source": "dataset_label",
+                "group_id": None,
+                "camera_id": None,
+                "view_type": "ground",
+                "license": LICENSE_ALLEYFLOODNET,
+                "restricted": False,
+                "weak_label": None,
+                "notes": "",
+            })
     return rows
 
 

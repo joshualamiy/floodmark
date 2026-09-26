@@ -194,7 +194,9 @@ def _timestamp_overlay(img: np.ndarray, rng: np.random.Generator) -> np.ndarray:
     return out
 
 
-def camera_style(img: np.ndarray, rng: np.random.Generator, *, label: str | None = None) -> np.ndarray:
+def camera_style(
+    img: np.ndarray, rng: np.random.Generator, *, label: str | None = None, night_aug: bool = True,
+) -> np.ndarray:
     """Apply the domain-randomization pipeline. `img` must be uint8 HxWx3
     (RGB). Returns a uint8 HxWx3 array of the same shape. `label` (optional,
     keyword-only, defaults to None so old callers/tests are unaffected) raises
@@ -213,7 +215,7 @@ def camera_style(img: np.ndarray, rng: np.random.Generator, *, label: str | None
         out = _color_shift(out, rng)
     if rng.random() < P_BLUR:
         out = _blur(out, rng)
-    if rng.random() < P_NIGHT:
+    if night_aug and rng.random() < P_NIGHT:
         out = _night_style(out, rng)
     if rng.random() < P_GAUSSIAN_NOISE:
         out = _gaussian_noise(out, rng)
@@ -231,10 +233,12 @@ def camera_style(img: np.ndarray, rng: np.random.Generator, *, label: str | None
     return out.astype(np.uint8)
 
 
-def tf_camera_style(image, label=None):
+def tf_camera_style(image, label=None, night_aug: bool = True):
     """`image`: a tf.uint8 tensor, HxWx3, static or dynamic shape. `label`:
     an optional tf.string scalar tensor (the row's "dry"/"wet"/"flooded"
     label), forwarded to `camera_style` for its label-aware overlay rate.
+    `night_aug=False` disables the dark/glare op (v3: lets a candidate be
+    trained with/without it to check whether it actually helps this data).
     Returns a tf.uint8 tensor of the same shape, via `tf.numpy_function`
     wrapping `camera_style` with a freshly seeded RNG per call (fine for
     training-time augmentation, which doesn't need cross-call determinism).
@@ -244,7 +248,7 @@ def tf_camera_style(image, label=None):
     def _apply(np_img, np_label):
         rng = np.random.default_rng()
         lbl = np_label.decode("utf-8") if isinstance(np_label, (bytes, bytearray)) else np_label
-        return camera_style(np_img, rng, label=lbl or None)
+        return camera_style(np_img, rng, label=lbl or None, night_aug=night_aug)
 
     label_tensor = label if label is not None else tf.constant(b"")
     out = tf.numpy_function(func=_apply, inp=[image, label_tensor], Tout=tf.uint8)

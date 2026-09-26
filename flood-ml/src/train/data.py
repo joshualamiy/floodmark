@@ -5,13 +5,15 @@ Stage / variant row selection (PLAN.md section 3, overridden for Stage B by
 the Phase 3 brief -- wet-but-not-flooded has only 15 train / 6 val rows, so
 we train and compare two Stage B variants rather than one):
 
-- Stage A: every row. label_bin = 0 if label == "dry" else 1.
+- Stage A: every row EXCEPT label == "not_flooded" (v3: eu_flood_2013/
+  alleyfloodnet negatives -- dry or rain-wet, unknown which, so excluded
+  from the dry-vs-wet task). label_bin = 0 if label == "dry" else 1.
 - Stage B "spec" (PLAN.md as written): wet + flooded rows only.
   label_bin = 1 if label == "flooded" else 0 (i.e. wet == 0).
 - Stage B "mixed": every row. label_bin = 1 if label == "flooded" else 0, so
-  "not flooded" = wet + dry. Wet rows get an extra sample-weight multiplier
-  (`wet_upweight`) so the rare wet class still pulls its weight against the
-  much larger dry negative pool.
+  "not flooded" = wet + dry + the v3 not_flooded label. Wet rows get an
+  extra sample-weight multiplier (`wet_upweight`) so the rare wet class
+  still pulls its weight against the much larger dry negative pool.
 
 Images on disk already have short side ~256 (a few sources are a little
 under that, e.g. cropped NYSDOT frames), so the pipeline re-resizes the
@@ -95,7 +97,10 @@ def select_stage_rows(
         df = df[df["split"] == split]
 
     if stage == STAGE_A:
-        rows = df.copy()
+        # not_flooded rows (eu_flood_2013/alleyfloodnet negatives) can be
+        # dry OR rain-wet -- their dry/wet state is unknown, so Stage A
+        # (dry vs wet-or-flooded) must never train or eval on them.
+        rows = df[df["label"] != "not_flooded"].copy()
         rows["label_bin"] = (rows["label"] != "dry").astype("float32")
     else:
         if variant not in VARIANTS:
@@ -106,6 +111,18 @@ def select_stage_rows(
             rows = df.copy()
         rows["label_bin"] = (rows["label"] == "flooded").astype("float32")
 
+    return rows.reset_index(drop=True)
+
+
+def select_all_rows(df: pd.DataFrame, split: str | None = None) -> pd.DataFrame:
+    """Every manifest row regardless of label (including "not_flooded"),
+    optionally restricted to one split. For callers that need the full row
+    set -- pipeline evaluation in particular, which must still report
+    not_flooded's false-flood rate even though Stage A itself excludes it.
+    """
+    rows = df.copy()
+    if split is not None:
+        rows = rows[rows["split"] == split]
     return rows.reset_index(drop=True)
 
 
@@ -184,6 +201,7 @@ def _letterbox_resize(image, size: int, pad_value: float = LETTERBOX_PAD_VALUE):
 
 def _load_and_prep(
     path, label, weight, raw_label, *, augment: bool, img_size: int, mode: str, repo_root: str,
+    night_aug: bool = True,
 ):
     import tensorflow as tf
 
@@ -198,7 +216,7 @@ def _load_and_prep(
         image = _resize_short_side(image, short_side=precrop)
         image = tf.cast(tf.clip_by_value(image, 0.0, 255.0), tf.uint8)
         if augment:
-            image = tf_camera_style(image, raw_label)
+            image = tf_camera_style(image, raw_label, night_aug=night_aug)
             image = tf.image.random_crop(image, [img_size, img_size, 3])
             image = tf.image.random_flip_left_right(image)
         else:
@@ -207,7 +225,7 @@ def _load_and_prep(
         image = _squash_resize(image, img_size) if mode == MODE_SQUASH else _letterbox_resize(image, img_size)
         image = tf.cast(tf.clip_by_value(image, 0.0, 255.0), tf.uint8)
         if augment:
-            image = tf_camera_style(image, raw_label)
+            image = tf_camera_style(image, raw_label, night_aug=night_aug)
             image = tf.image.random_flip_left_right(image)
 
     image = tf.cast(image, tf.float32)
@@ -229,13 +247,15 @@ def make_dataset(
     repo_root: str | None = None,
     wet_upweight: float = WET_UPWEIGHT_DEFAULT,
     num_parallel_calls=None,
+    night_aug: bool = True,
 ):
     """Builds a batched `tf.data.Dataset` of (image[0..255] float32, label,
     sample_weight) from an already-selected rows DataFrame (see
     `select_stage_rows`). `repo_root` lets callers run from any cwd; paths in
     the manifest are relative to flood-ml/, so pass that directory's
     absolute path when cwd isn't already flood-ml/. `mode` in MODES picks the
-    input geometry (see the MODE_* constants above).
+    input geometry (see the MODE_* constants above). `night_aug=False` drops
+    the dark/glare augmentation op for training-time comparison (v3).
     """
     import tensorflow as tf
 
@@ -262,6 +282,7 @@ def make_dataset(
     def _map(path, label, weight, raw_label):
         return _load_and_prep(
             path, label, weight, raw_label, augment=training, img_size=img_size, mode=mode, repo_root=root,
+            night_aug=night_aug,
         )
 
     ds = ds.map(_map, num_parallel_calls=num_parallel_calls)
