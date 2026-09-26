@@ -23,6 +23,8 @@
 
 	setWorkerUrl(maplibreWorkerUrl);
 
+	let { onCameraSelect }: { onCameraSelect?: () => void } = $props();
+
 	const mapState = useMapState();
 	let map: MapLibreMap | undefined;
 	let filter = $state<MapFilterValue>("all");
@@ -287,6 +289,7 @@
 						const properties = feature.properties as {
 							id: string;
 						};
+						onCameraSelect?.();
 						mapState.setActiveCameraId(properties.id);
 					});
 					currentMap.on(
@@ -344,7 +347,7 @@
 		aria-label="Interactive map of Atlanta"
 	></div>
 
-	<div class="absolute bottom-6 left-6 flex flex-col gap-2">
+	<div class="absolute bottom-12 left-6 z-20 flex flex-col gap-2 sm:bottom-6">
 		<MapFilter bind:filter bind:freshness bind:availability />
 		<Button size="icon" class="rounded-full" aria-label="Zoom in" onclick={zoomIn}>
 			<Plus />

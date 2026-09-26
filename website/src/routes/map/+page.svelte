@@ -5,12 +5,17 @@
 	import Logo from "$components/logo.svelte";
 	import CameraCard from "$components/camera-card.svelte";
 	import CameraList from "$components/camera-list.svelte";
-	import Map from "$components/map.svelte";
+	import Map from "$components/Map.svelte";
 	import Sidebar from "$components/sidebar.svelte";
 	import { useMapState } from "$lib/state/map.svelte";
 	import { toast } from "svelte-sonner";
 
 	const map = useMapState();
+	let mobileDrawerOpen = $state(false);
+
+	function openMobileDrawer() {
+		mobileDrawerOpen = true;
+	}
 
 	onMount(() => {
 		const notification = page.url.searchParams.get("notification");
@@ -35,13 +40,13 @@
 
 <main class="h-dvh w-full">
 	<Logo />
-	<Sidebar>
+	<Sidebar bind:open={mobileDrawerOpen}>
 		{#if map.activeCamera}
 			{@const camera = map.activeCamera}
 			<CameraCard {camera} />
 		{:else}
-			<CameraList />
+			<CameraList onCameraSelect={openMobileDrawer} />
 		{/if}
 	</Sidebar>
-	<Map />
+	<Map onCameraSelect={openMobileDrawer} />
 </main>
