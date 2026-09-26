@@ -1,6 +1,4 @@
-"""Camera location maps: an interactive folium map and a plain scatter PNG.
-Neither embeds any camera image, only lat/lon + text metadata.
-"""
+# camera maps (folium html + scatter png)
 from __future__ import annotations
 
 import argparse
@@ -27,7 +25,7 @@ def build_folium_map(rows: list[dict], out_path=MAP_OUT_PATH) -> None:
         lons = [float(r["lon"]) for r in rows]
         center = [sum(lats) / len(lats), sum(lons) / len(lons)]
     else:
-        center = [33.79, -84.39]  # Atlanta fallback
+        center = [33.79, -84.39]
     fmap = folium.Map(location=center, zoom_start=10, tiles="OpenStreetMap")
     for r in rows:
         try:
@@ -88,3 +86,4 @@ def _main() -> None:
 
 if __name__ == "__main__":
     _main()
+

@@ -1,3 +1,4 @@
+# how much cam energy lands on water
 from __future__ import annotations
 
 import argparse
@@ -36,7 +37,6 @@ def to_crop(mask: np.ndarray, size: int = 224, short: int = 256) -> np.ndarray:
 
 
 def to_letterbox(mask: np.ndarray, img_wh: tuple[int, int], size: int = 320) -> tuple[np.ndarray, np.ndarray]:
-    # same geometry as inference.preprocess._letterbox_resize; returns (mask, content)
     w, h = img_wh
     sc = size / max(w, h)
     nw, nh = max(1, round(w * sc)), max(1, round(h * sc))
@@ -68,7 +68,6 @@ def peak_in(cam: np.ndarray, region: np.ndarray) -> bool:
 
 
 def mask_energy(tag: str | None = None) -> dict:
-    # tag None = first run (v1 files in reports/eval/)
     base = local(tag) if tag else LOCAL
     spec = preproc_spec(load_config(model_dir(tag) if tag else MODELS / "v1"))
     d = pd.read_csv(base / "test_preds.csv")
@@ -167,3 +166,4 @@ if __name__ == "__main__":
     ap.add_argument("--tag", default=None, choices=["v1", "v3"])
     a = ap.parse_args()
     mask_energy(a.tag) if a.what == "energy" else review_sample()
+

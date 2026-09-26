@@ -1,11 +1,4 @@
-"""v3 candidate selection: shipped baseline (as-is + retuned) vs
-crop224/letterbox224/letterbox320 trained on the new manifest. Applies the
-pre-registered selection rule literally, val-only (never test, per PLAN.md
-rule 4). Reads run_ids from reports/eval/campaign_v3_runs.json (written by
-run_campaign_v3.py) and the shipped run_ids from models/config.json.
-
-    PYTHONPATH=src ../my_env/bin/python -m train.select_v3
-"""
+# v3 candidate selection on val (rule fixed before looking)
 from __future__ import annotations
 
 import json
@@ -90,7 +83,6 @@ def main():
         results[tag] = _candidate_report(a_run, b_run, mode, size, tag)
         logger.info("done %s: %s", tag, json.dumps(results[tag]["pipeline_report"]))
 
-    # --- selection rule (pre-registered, applied literally) ---
     baseline = results["baseline_asis"]
     baseline_far_dry = baseline["pipeline_report"]["false_alarm_dry_rate"]
     baseline_live_flooded = baseline["live_false_alarms"]["flooded"]
@@ -139,3 +131,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

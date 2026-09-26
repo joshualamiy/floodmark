@@ -1,4 +1,3 @@
-"""CLI on a temp folder of synthetic frames."""
 from __future__ import annotations
 
 import json
@@ -42,7 +41,7 @@ def test_cli_text_output(model_dir, frames_dir, capsys):
     rc = cli.run([str(frames_dir), "--camera-id", "cam1"])
     assert rc == 0
     lines = capsys.readouterr().out.strip().splitlines()
-    assert len(lines) == 3  # the .txt file is ignored
+    assert len(lines) == 3
     assert "raw=" in lines[0] and "smoothed=" in lines[0] and "moved=" in lines[0]
 
 
@@ -54,7 +53,7 @@ def test_cli_json_output(model_dir, frames_dir, capsys):
     for line in lines:
         row = json.loads(line)
         assert "status" in row and "raw_status" in row and "moved" in row
-        assert row["heatmap_png"] is None  # not requested
+        assert row["heatmap_png"] is None
 
 
 def test_cli_save_heatmaps(model_dir, frames_dir, tmp_path):
@@ -66,7 +65,6 @@ def test_cli_save_heatmaps(model_dir, frames_dir, tmp_path):
 
 
 def test_cli_smoothing_reaches_flooded_after_n(model_dir, frames_dir, capsys):
-    # stage_b bias 0.95 > threshold 0.5, stage_a bias 0.9 > 0.5 -> every frame raw "flooded"
     cli.run([str(frames_dir), "--camera-id", "cam1", "--smooth-n", "3", "--json"])
     rows = [json.loads(line) for line in capsys.readouterr().out.strip().splitlines()]
     assert [r["raw_status"] for r in rows] == ["flooded"] * 3
@@ -80,3 +78,4 @@ def test_cli_blocklist_suppresses_flooded(model_dir, frames_dir, capsys):
               "--blocklist", "cam1", "--json"])
     rows = [json.loads(line) for line in capsys.readouterr().out.strip().splitlines()]
     assert all(r["smoothed_status"] != "flooded" for r in rows)
+

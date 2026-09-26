@@ -1,7 +1,3 @@
-"""Unit tests for train.candidate_eval: perturbation flip-rate and live
-false-alarm helpers, on tiny weights=None models and synthetic data (no
-downloads, no real dataset, no real 511GA frames).
-"""
 from __future__ import annotations
 
 import numpy as np
@@ -102,3 +98,4 @@ def test_live_false_alarms_counts_status_on_synthetic_frames(tmp_path, tiny_mode
     assert out["n"] == 4
     assert out["n_train_cams"] + out["n_val_cams"] == 4
     assert 0 <= out["flooded"] <= 4
+

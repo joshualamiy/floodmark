@@ -1,15 +1,4 @@
-"""improve_v2 training campaign: runs every training job for the geometry
-(crop/squash/letterbox @ 224/320) and night-augmentation experiments as ONE
-long-lived detached process, so an interrupted foreground session can't kill
-mid-run training (see docs/phase_reports/improve_v2.md). Meant to be started
-with `subprocess.Popen([...], start_new_session=True)` and polled via
-`logs/jobs/campaign_status.json`.
-
-Stages: 4 screening runs (squash@224, letterbox@224, head-only) -> pick the
-better mode by pipeline recall at precision>=0.90 -> full two-phase runs
-(head+ft) for crop@224 (isolates the new augmentation alone), the winning
-mode @224, and the winning mode @320.
-"""
+# improve_v2 training campaign (detached)
 from __future__ import annotations
 
 import json
@@ -24,7 +13,7 @@ STATUS_PATH = Path("logs/jobs/campaign_status.json")
 RESULTS_PATH = Path("reports/eval/campaign_runs.json")
 
 HEAD_ONLY = {"epochs_head": 8, "epochs_ft": 0}
-FULL = {"epochs_head": 6, "epochs_ft": 10, "ft_layers": 30}  # matches the shipped fine-tune recipe
+FULL = {"epochs_head": 6, "epochs_ft": 10, "ft_layers": 30}
 
 
 def _status(**kw) -> None:
@@ -94,7 +83,6 @@ def main():
     all_runs["winner_mode"] = winner_mode
     _status(phase="full_training", winner_mode=winner_mode, done=list(all_runs.keys()))
 
-    # crop@224 + the new augmentation only (isolates augmentation from geometry)
     a_run = _train(stage="a", mode="crop", img_size=224, tag="crop224newaug", recipe=FULL, variant=None,
                     notes="new camera_style: night op + label-aware overlay rate")
     b_run = _train(stage="b", mode="crop", img_size=224, tag="crop224newaug", recipe=FULL, variant="mixed",
@@ -123,3 +111,4 @@ if __name__ == "__main__":
         logger.exception("campaign failed")
         _status(phase="failed")
         raise
+

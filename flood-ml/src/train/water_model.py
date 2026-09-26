@@ -1,4 +1,4 @@
-"""Small frozen ImageNet encoder and a shallow trainable skip decoder."""
+# small water segmentation model
 from pathlib import Path
 
 import keras
@@ -36,7 +36,6 @@ def build_water_model(size=320, weights_path=None):
 
 
 def masked_loss(target, probability):
-    """Per-image BCE + soft Dice, ignoring padding in both terms."""
     truth, valid = target[..., :1], target[..., 1:]
     probability = tf.clip_by_value(probability, 1e-6, 1 - 1e-6)
     axes = (1, 2, 3)
@@ -47,3 +46,4 @@ def masked_loss(target, probability):
     denom = tf.reduce_sum((truth + probability) * valid, axes)
     dice_loss = 1 - (2 * intersection + 1) / (denom + 1)
     return tf.reduce_mean(bce + dice_loss)
+

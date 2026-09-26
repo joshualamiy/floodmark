@@ -1,4 +1,4 @@
-"""Binary pixel metrics, independent of classification."""
+# pixel iou / dice
 from collections import defaultdict
 
 import numpy as np
@@ -47,3 +47,4 @@ def canvas_metrics(probabilities, targets, rows, threshold):
             p[..., 0] >= threshold, target[..., 0], target[..., 1])}
         for p, target, row in zip(probabilities, targets, rows)
     ])
+

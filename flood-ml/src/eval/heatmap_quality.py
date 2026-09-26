@@ -1,8 +1,4 @@
-"""Validation-only raw CAM localization and occlusion diagnostics.
-
-Run from flood-ml with PYTHONPATH=src ../my_env/bin/python -B -m eval.heatmap_quality.
-Outputs stay in reports/heatmap_quality/ (ignored); models and labels are read-only.
-"""
+# val-only raw cam localization + occlusion checks
 from __future__ import annotations
 
 import argparse
@@ -118,7 +114,6 @@ def load_water_mask(path, source, restricted=False):
 
 
 def align_mask(mask, geom):
-    """Map native full-frame classes into the exact inference input geometry."""
     mask = np.asarray(mask, dtype=bool)
     if mask.ndim != 2 or not all(mask.shape):
         raise ValueError("mask must be nonempty and 2D")
@@ -626,3 +621,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

@@ -1,4 +1,4 @@
-"""Bounded water-only training. Run from flood-ml with the existing Python."""
+# train the water segmentation model
 from __future__ import annotations
 
 import argparse
@@ -210,7 +210,6 @@ def main():
         "note": "Water segmentation only; road=false. Not flooded-roadway extent or classifier CAM.",
     }
     (checkpoint_dir / "config.json").write_text(json.dumps(config, indent=2))
-    # Publish only after the selected weights/threshold have passed validation parity.
     (model_dir / "water.onnx").write_bytes(onnx_path.read_bytes())
     (model_dir / "config.json").write_text(json.dumps(config, indent=2))
     report = {
@@ -250,3 +249,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

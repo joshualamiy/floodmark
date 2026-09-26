@@ -101,3 +101,4 @@ def test_mask_classes_are_source_specific(tmp_path):
     assert h.load_water_mask(path, "fred").tolist() == [[False, False, True]]
     with pytest.raises(ValueError, match="binary"):
         h.load_water_mask(path, "roadway_flooding")
+

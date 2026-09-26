@@ -1,7 +1,3 @@
-"""Unit tests for ga511.ratelimit: the cross-process limiter and redact().
-No network; uses a temp state file and a fake clock/sleep so tests are fast
-and deterministic.
-"""
 from ga511.ratelimit import RateLimiter, redact
 
 
@@ -57,7 +53,7 @@ def test_limiter_allows_up_to_max_calls_without_waiting(tmp_path):
     )
     for _ in range(8):
         limiter.acquire()
-    assert clock.sleeps == []  # no waiting needed for the first 8 calls
+    assert clock.sleeps == []
 
 
 def test_limiter_blocks_the_9th_call_until_window_clears(tmp_path):
@@ -72,15 +68,12 @@ def test_limiter_blocks_the_9th_call_until_window_clears(tmp_path):
     for _ in range(8):
         limiter.acquire()
     start = clock.now
-    limiter.acquire()  # 9th call must wait for the window to roll over
+    limiter.acquire()
     assert clock.sleeps, "expected the limiter to sleep before granting the 9th call"
-    assert clock.now - start >= 59.5  # waited close to the full window
+    assert clock.now - start >= 59.5
 
 
 def test_limiter_is_cross_process_via_shared_state_file(tmp_path):
-    """Two independent RateLimiter instances pointed at the same state file
-    share the same budget (simulating separate processes).
-    """
     clock = FakeClock()
     state_path = tmp_path / "shared_state.json"
     limiter_a = RateLimiter(
@@ -94,7 +87,6 @@ def test_limiter_is_cross_process_via_shared_state_file(tmp_path):
     for _ in range(4):
         limiter_b.acquire()
     assert clock.sleeps == []
-    # the 9th call system-wide (via limiter_a this time) must wait
     limiter_a.acquire()
     assert clock.sleeps
 
@@ -115,3 +107,4 @@ def test_limiter_raises_timeout_when_max_wait_exceeded(tmp_path):
     except TimeoutError:
         raised = True
     assert raised
+

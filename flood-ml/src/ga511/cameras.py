@@ -1,6 +1,4 @@
-"""Filter 511GA cameras to the Atlanta metro bbox and write the working
-camera/view table used by every other ga511 module.
-"""
+# atlanta bbox filter -> cameras_atlanta.csv
 from __future__ import annotations
 
 import argparse
@@ -32,9 +30,6 @@ _COUNTY_RE = re.compile(r"\(([^()]+)\)\s*$")
 
 
 def parse_county(location: str | None) -> str | None:
-    """Pull the county name out of a Location string's trailing parens, e.g.
-    "I-75 NB at Spring St (Fulton)" -> "Fulton". Returns None if not found.
-    """
     if not location:
         return None
     m = _COUNTY_RE.search(location.strip())
@@ -54,9 +49,6 @@ class CameraSummary:
 
 
 def build_atlanta_rows(cameras: list) -> tuple[list[dict], CameraSummary]:
-    """Filter `cameras` (raw API dicts) to the Atlanta bbox and enabled
-    views. Returns (rows, summary) where rows match CSV_FIELDS.
-    """
     summary = CameraSummary()
     rows: list[dict] = []
     for cam in cameras:
@@ -137,3 +129,4 @@ def _main() -> None:
 
 if __name__ == "__main__":
     _main()
+

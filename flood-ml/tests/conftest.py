@@ -1,4 +1,4 @@
-# put src/ on the path (ci runs pytest from the repo root, so pyproject's pythonpath doesn't apply)
+# puts src on the path; ci skips tests whose training deps aren't installed
 import importlib.util
 import sys
 from pathlib import Path
@@ -15,8 +15,6 @@ def _has(mod):
         return False
 
 
-# ci only installs requirements.txt (inference runtime), so skip test files
-# that need the training/data stack when it isn't there
 NEEDS = {
     "test_flood_master.py": ("imagehash", "pandas"),
     "test_ga511_cameras.py": ("requests", "dotenv"),
@@ -33,3 +31,4 @@ collect_ignore_glob = [pat for pat, mods in NEEDS.items() if not all(_has(m) for
 def pytest_report_header(config):
     if collect_ignore_glob:
         return "skipped, training deps not installed: " + ", ".join(collect_ignore_glob)
+

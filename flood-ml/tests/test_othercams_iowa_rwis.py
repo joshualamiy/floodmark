@@ -26,7 +26,7 @@ FIXTURE_SITES = {
 
 def test_parse_camera_options():
     opts = m.parse_camera_options(FIXTURE_HTML)
-    assert len(opts) == 3  # the "-1" placeholder option is not matched
+    assert len(opts) == 3
     assert opts[0] == {
         "view_id": "IDOT-000-02", "group": "IDOT-000",
         "label": "Adair I80 Bridge Deck", "first_seen": "2009-12-20",
@@ -77,27 +77,26 @@ def test_build_camera_table_matches_and_picks_view():
     sites = m.parse_site_features(FIXTURE_SITES)
     rows = m.build_camera_table(opts, sites)
     by_group = {r["camera_id"]: r for r in rows}
-    assert by_group["IDOT-000"]["view_id"] == "IDOT-000-03"  # not the bridge deck
+    assert by_group["IDOT-000"]["view_id"] == "IDOT-000-03"
     assert by_group["IDOT-000"]["lat"] == 41.4963
     assert by_group["IDOT-088"]["county"] == "Washington"
 
 
 def test_pick_target_days_wet_and_dry():
     series = [
-        ("2026-01-15", 15.0),  # winter: excluded from wet months
+        ("2026-01-15", 15.0),
         ("2026-06-01", 0.0),
         ("2026-06-02", 0.0),
-        ("2026-06-03", 0.0),  # dry: 2 prior days also 0
-        ("2026-06-04", 12.0),  # wet: >= WET_DAY_MIN_MM
-        ("2026-06-05", 4.0),  # also wet, less than 06-04
+        ("2026-06-03", 0.0),
+        ("2026-06-04", 12.0),
+        ("2026-06-05", 4.0),
     ]
     picked = m.pick_target_days(series)
-    assert picked["wet"] == ["2026-06-04", "2026-06-05"]  # wettest first
+    assert picked["wet"] == ["2026-06-04", "2026-06-05"]
     assert picked["dry"] == ["2026-06-03"]
 
 
 def test_pick_target_days_requires_prior_days_present():
-    # 06-01 has no data for 05-30/05-31, so it must not count as a safe dry day
     series = [("2026-06-01", 0.0)]
     picked = m.pick_target_days(series)
     assert picked["dry"] == []
@@ -179,3 +178,4 @@ def test_collection_lock_preserves_existing_collector(tmp_path, monkeypatch):
     with pytest.raises(RuntimeError, match="already running"), jobs.collection_lock(pid):
         pass
     assert jobs.read_pid(pid) == 123456
+

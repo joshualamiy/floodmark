@@ -1,7 +1,4 @@
-"""Per-camera temporal smoothing: N consecutive raw "flooded" frames before
-reporting flooded, plus a blocklist for cameras with known false-alarm views
-(e.g. 511GA camera 11372 -- reports/EVALUATION.md).
-"""
+# per-camera smoothing: n flooded frames in a row before alerting
 from __future__ import annotations
 
 from typing import NamedTuple
@@ -36,8 +33,8 @@ class TemporalSmoother:
             return SmoothedStatus("wet", f"flooded frame {streak}/{self.n}; awaiting confirmation")
         return SmoothedStatus(status)
 
+    # skipped frames (camera moved) don't count and don't reset the streak
     def skip(self, camera_id: str) -> None:
-        # e.g. camera moved: registers the camera but doesn't touch its streak
         self._streaks.setdefault(camera_id, 0)
 
     def to_dict(self) -> dict:
@@ -48,3 +45,4 @@ class TemporalSmoother:
         obj = cls(n=d.get("n", 3), blocklist=d.get("blocklist", ()))
         obj._streaks = dict(d.get("streaks", {}))
         return obj
+

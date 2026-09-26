@@ -1,25 +1,4 @@
-"""Group-aware split assignment.
-
-Two independent mechanisms, per PLAN.md section 3 and the Phase 2 brief:
-
-- `ga511_camera_splits`: 511GA cameras get a *persisted, stable* split from
-  a salted hash of `camera_id`, so re-running the manifest build after new
-  frames (or even new cameras) arrive never moves a camera that was already
-  assigned. About 20% of cameras land in test; the rest split ~80/20
-  train/val. A camera already known (at the time it is first assigned) to
-  have a manually- or ai_review-confirmed wet/flooded frame is preferentially
-  pulled into test, up to a cap, so the held-out set isn't all-dry by luck.
-
-- `greedy_group_stratified_split`: external data groups (FRED locations,
-  NYSDOT camera sites, still-image dedup clusters) are packed into
-  train/val/test at ~70/15/15 with a greedy per-label-deficit heuristic,
-  after any `forced` groups (Flood Master test videos, the held-out FRED
-  test location) are pinned to their split.
-
-Both are deterministic given the same inputs, and `assert_disjoint` checks
-the final invariant: no `group_id`, `camera_id`, or `dup_cluster` spans two
-splits.
-"""
+# group-aware train/val/test splits
 from __future__ import annotations
 
 from collections import Counter, defaultdict
@@ -37,12 +16,6 @@ def ga511_camera_splits(
     val_frac_of_nontest: float = 0.20,
     max_test_frac: float = 0.30,
 ) -> dict[str, str]:
-    """Returns camera_id -> split for every camera in `camera_ids`. Cameras
-    already present in `existing` keep their split unchanged. New cameras
-    get a deterministic hash-based split, except that a new camera with a
-    known wet/flooded review is pulled into test if test is still under
-    `max_test_frac` of all cameras seen so far.
-    """
     existing = dict(existing or {})
     reviewed_positive_cameras = reviewed_positive_cameras or set()
 
@@ -77,14 +50,6 @@ def greedy_group_stratified_split(
     forced: dict[str, str] | None = None,
     target_fracs: dict[str, float] | None = None,
 ) -> dict[str, str]:
-    """`group_labels`: group_id -> Counter(label -> count). `forced`:
-    group_id -> split, pinned before the greedy pass (e.g. Flood Master test
-    videos, the held-out FRED test location). Remaining groups are visited
-    largest-first (deterministic tie-break by group_id) and each is assigned
-    to whichever split has the largest current deficit against its target
-    fraction, summed over the group's own label mix so common labels don't
-    get starved in one split.
-    """
     target_fracs = target_fracs or {"train": 0.70, "val": 0.15, "test": 0.15}
     forced = forced or {}
     splits = list(target_fracs.keys())
@@ -121,9 +86,6 @@ def greedy_group_stratified_split(
 
 
 def assert_disjoint(rows: list[dict], keys: tuple[str, ...] = ("group_id", "camera_id", "dup_cluster")) -> list[str]:
-    """Returns a list of human-readable violation messages (empty if none).
-    Does not raise, so callers can log-and-fix or hard-fail as appropriate.
-    """
     violations = []
     for key in keys:
         by_value: dict[str, set[str]] = defaultdict(set)
@@ -138,3 +100,4 @@ def assert_disjoint(rows: list[dict], keys: tuple[str, ...] = ("group_id", "came
             if len(splitset) > 1:
                 violations.append(f"{key}={v!r} spans splits {sorted(splitset)}")
     return violations
+

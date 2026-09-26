@@ -1,10 +1,4 @@
-"""Generates the contact sheets used to manually spot-check the mask-based
-road-region labeling rule and the CLIP road-scene filter (Phase 2 brief,
-tasks 2 and 3). Deterministic given a seed, so re-running reproduces the
-same sample. Run with:
-
-    cd flood-ml && PYTHONPATH=src ../my_env/bin/python -m prep.spotcheck
-"""
+# contact sheets for spot-checking labels
 from __future__ import annotations
 
 import math
@@ -28,10 +22,6 @@ def _caption(r: dict) -> str:
 
 
 def _entry_item(r: dict):
-    """The contact-sheet item for one row: the NYSDOT-cropped image (so the
-    sheet reflects what actually lands in the manifest and never shows the
-    label-leaking weather header) or, for everything else, the raw path.
-    """
     if r.get("needs_nysdot_crop"):
         from PIL import Image
         return nysdot_crop(Image.open(r["orig_path"]).convert("RGB"))
@@ -108,3 +98,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

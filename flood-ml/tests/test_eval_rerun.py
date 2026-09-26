@@ -1,4 +1,3 @@
-# v3 rerun: model-aware eval (letterbox parity, not_flooded metrics, smoothing, stress edits)
 import numpy as np
 import pytest
 from PIL import Image
@@ -62,11 +61,11 @@ def test_set_metrics_not_flooded_only_counts_as_flood_negative():
                       "pA": [0.1, 0.9, 0.1, 0.95, 0.9], "pB": [0.0, 0.9, 0.0, 0.99, 0.95],
                       "boot_group": list("abcde")})
     m = set_metrics(d, 0.8, 0.5)
-    assert m["per_class"]["flooded"]["precision"]["n"] == 3  # nf row called flooded counts
-    assert m["per_class"]["dry"]["precision"]["n"] == 1  # nf row called dry does not
+    assert m["per_class"]["flooded"]["precision"]["n"] == 3
+    assert m["per_class"]["dry"]["precision"]["n"] == 1
     assert m["false_flood"]["not_flooded"]["k"] == 1 and m["false_flood"]["not_flooded"]["n"] == 2
     assert m["false_flood"]["wet"]["k"] == 1
-    assert m["stage_a"]["n"] == 3  # nf rows excluded from stage A
+    assert m["stage_a"]["n"] == 3
     assert m["confusion"]["not_flooded"] == {"dry": 1, "wet": 0, "flooded": 1}
 
 
@@ -112,3 +111,4 @@ def test_stress_edits():
 def test_error_type_not_flooded():
     assert error_type("not_flooded", "flooded").startswith("not_flooded -> flooded")
     assert error_type("not_flooded", "wet") is None
+

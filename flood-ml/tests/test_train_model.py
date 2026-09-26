@@ -1,7 +1,3 @@
-"""Unit tests for train.model: head structure, trainable-layer freezing,
-and Grad-CAM plumbing (make_grad_model, dense_kernel). Builds real but tiny
-(weights=None, small input) backbones -- no downloads, no real data.
-"""
 import keras
 import numpy as np
 import pytest
@@ -19,7 +15,7 @@ from train.model import (
     set_backbone_trainable,
 )
 
-INPUT_SIZE = 96  # small for test speed; still >= backbones' minimum
+INPUT_SIZE = 96
 
 
 @pytest.mark.parametrize("backbone_name", BACKBONES)
@@ -29,8 +25,6 @@ def test_build_model_head_is_gap_dropout_dense(backbone_name):
     assert GAP_LAYER_NAME in layer_names
     assert DROPOUT_LAYER_NAME in layer_names
     assert DENSE_LAYER_NAME in layer_names
-    # GAP must come before Dropout, which must come before Dense (order matters:
-    # a linear head straight after GAP is what makes the CAM shortcut valid).
     assert layer_names.index(GAP_LAYER_NAME) < layer_names.index(DROPOUT_LAYER_NAME) < layer_names.index(DENSE_LAYER_NAME)
 
     dense = built.model.get_layer(DENSE_LAYER_NAME)
@@ -72,7 +66,6 @@ def test_set_backbone_trainable_keeps_batchnorm_frozen_when_finetuning():
     bn_layers = [l for l in built.backbone.layers if isinstance(l, keras.layers.BatchNormalization)]
     assert len(bn_layers) > 0
     assert all(l.trainable is False for l in bn_layers)
-    # some non-BN layer near the top should now be trainable
     non_bn_top = [l for l in built.backbone.layers[-10:] if not isinstance(l, keras.layers.BatchNormalization)]
     assert any(l.trainable for l in non_bn_top)
 
@@ -85,7 +78,6 @@ def test_make_grad_model_outputs_conv_map_and_prob_connected():
     assert conv_out.shape[0] == 2
     assert conv_out.shape[-1] == dense_kernel(built)[0].shape[0]
     assert prob.shape == (2, 1)
-    # must match a direct forward pass through the original model
     direct = built.model(x, training=False).numpy()
     assert np.allclose(prob.numpy(), direct, atol=1e-5)
 
@@ -106,3 +98,4 @@ def test_make_grad_model_survives_save_and_reload(tmp_path):
     conv_out, prob = grad_model(x, training=False)
     assert np.all(np.isfinite(conv_out.numpy()))
     assert np.all(np.isfinite(prob.numpy()))
+

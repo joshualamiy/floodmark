@@ -44,3 +44,4 @@ def test_to_crop_and_energy():
     cam = np.zeros((7, 7))
     cam[:, 5:] = 1
     assert energy_in(cam, r) > 0.9 and peak_in(cam, r)
+

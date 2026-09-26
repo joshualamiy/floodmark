@@ -1,4 +1,3 @@
-"""Preprocessing geometry: resize-short-side guard, crop/pad, jpeg round-trip."""
 from __future__ import annotations
 
 import numpy as np
@@ -19,7 +18,7 @@ from inference.preprocess import (
 def test_resize_short_side_no_op_when_small():
     img = Image.fromarray(uniform_image(100, size=(200, 240)))
     out = resize_short_side(img, short_side=256)
-    assert out.size == (200, 240)  # min(200,240)=200 <= 256 -> unchanged
+    assert out.size == (200, 240)
 
 
 def test_resize_short_side_resizes_when_large():
@@ -41,7 +40,6 @@ def test_preprocess_pads_small_images():
     img = Image.fromarray(uniform_image(50, size=(100, 100)))
     arr, geom = preprocess(img, do_jpeg_roundtrip=False)
     assert arr.shape == (CROP_SIZE, CROP_SIZE, 3)
-    # crop box extends beyond the (unresized, since 100<=256) image -> padding
     left, top, _right, _bottom = geom["crop_box_resized"]
     assert left < 0 and top < 0
 
@@ -60,16 +58,16 @@ def test_jpeg_roundtrip_changes_pixels_slightly_but_keeps_size():
     arr_plain, _ = preprocess(img, do_jpeg_roundtrip=False)
     arr_rt, _ = preprocess(img, do_jpeg_roundtrip=True)
     assert arr_plain.shape == arr_rt.shape
-    assert np.abs(arr_plain - arr_rt).max() < 5  # flat image survives q95 almost exactly
+    assert np.abs(arr_plain - arr_rt).max() < 5
 
 
 def test_squash_ignores_aspect_and_fills_the_whole_canvas():
-    img = Image.fromarray(uniform_image(100, size=(500, 200)))  # wide frame
+    img = Image.fromarray(uniform_image(100, size=(500, 200)))
     arr, geom = preprocess(img, mode=MODE_SQUASH, size=64, do_jpeg_roundtrip=False)
     assert arr.shape == (64, 64, 3)
     assert geom["mode"] == "squash"
     assert geom["orig_size"] == (500, 200)
-    assert "crop_box_orig" not in geom  # nothing was cropped out
+    assert "crop_box_orig" not in geom
 
 
 def test_letterbox_pads_a_wide_frame_top_and_bottom():
@@ -77,15 +75,15 @@ def test_letterbox_pads_a_wide_frame_top_and_bottom():
     arr, geom = preprocess(img, mode=MODE_LETTERBOX, size=64, do_jpeg_roundtrip=False)
     assert arr.shape == (64, 64, 3)
     left, top, right, bottom = geom["content_box_canvas"]
-    assert right - left == 64  # long side (width) fills the canvas exactly
-    assert bottom - top < 64  # short side is padded
-    assert top > 0  # padding on both sides since it's centered
+    assert right - left == 64
+    assert bottom - top < 64
+    assert top > 0
 
 
 def test_letterbox_pad_region_is_mid_gray():
-    img = Image.fromarray(uniform_image(0, size=(500, 100)))  # flat black content
+    img = Image.fromarray(uniform_image(0, size=(500, 100)))
     arr, _geom = preprocess(img, mode=MODE_LETTERBOX, size=64, do_jpeg_roundtrip=False)
-    assert arr[0, 0, 0] == pytest.approx(128.0, abs=1.0)  # top-left corner is padding
+    assert arr[0, 0, 0] == pytest.approx(128.0, abs=1.0)
 
 
 def test_unknown_mode_rejected():
@@ -112,3 +110,4 @@ def test_to_pil_accepts_all_types(tmp_path):
     buf = io.BytesIO()
     Image.fromarray(rgb).save(buf, format="PNG")
     assert to_pil(buf.getvalue()).mode == "RGB"
+

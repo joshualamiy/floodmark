@@ -1,4 +1,4 @@
-"""Optional water segmentation; independent of classifier CAM and road extent."""
+# optional water segmentation overlay, separate from the classifier
 from __future__ import annotations
 
 import io
@@ -36,7 +36,6 @@ def _rgb(image):
 
 
 def letterbox_image(image, size=320):
-    """Return RGB float32 [0,255], valid pixels, and reversible geometry."""
     original = _rgb(image)
     w, h = original.size
     if size < 1:
@@ -53,7 +52,6 @@ def letterbox_image(image, size=320):
 
 
 def restore_probability(probability, geometry):
-    """Remove padding before resizing probabilities back to the full frame."""
     probability = np.asarray(probability, np.float32)
     if probability.ndim != 2 or not np.isfinite(probability).all():
         raise ValueError("Expected a finite two-dimensional probability map")
@@ -66,7 +64,6 @@ def restore_probability(probability, geometry):
 
 
 def load_water_model(model_dir=None):
-    """Cached optional loader. Missing artifacts return None; corrupt ones raise."""
     directory = Path(model_dir or os.environ.get("FLOODML_WATER_MODEL_DIR", DEFAULT_MODEL_DIR))
     config_path, onnx_path = directory / "config.json", directory / "water.onnx"
     if not config_path.is_file() or not onnx_path.is_file():
@@ -89,7 +86,6 @@ def load_water_model(model_dir=None):
         str(onnx_path), options, providers=["CPUExecutionProvider"]
     )
     loaded = WaterModel(session, config)
-    # Remove superseded versions of this directory without caching missing files.
     for old in list(_CACHE):
         if old[0] == key[0]:
             del _CACHE[old]
@@ -104,11 +100,6 @@ def _png(image):
 
 
 def predict_water(image, model=None):
-    """Return original-size binary mask and transparent cyan overlay PNG bytes.
-
-    water_fraction is the fraction of ALL original-frame pixels predicted water.
-    A missing model raises FileNotFoundError, never a fabricated all-zero mask.
-    """
     model = model if model is not None else load_water_model()
     if model is None:
         raise FileNotFoundError("Optional water model is absent from models/water")
@@ -130,3 +121,4 @@ def predict_water(image, model=None):
         "model_version": str(model.config["model_version"]),
         "note": NOTE,
     }
+

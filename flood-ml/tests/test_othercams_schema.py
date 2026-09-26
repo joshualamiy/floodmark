@@ -5,7 +5,6 @@ from othercams.schema import FRAME_CSV_FIELDS, append_frame_rows, read_frame_row
 
 
 def test_schema_matches_ga511():
-    # brief: "writes the SAME frames.csv schema as data/ga511/frames.csv"
     assert FRAME_CSV_FIELDS == GA511_FIELDS
 
 
@@ -23,7 +22,6 @@ def test_append_and_read_round_trip(tmp_path: Path):
     assert [r["frame_id"] for r in got] == ["a_1", "a_2"]
     assert list(got[0].keys()) == FRAME_CSV_FIELDS
 
-    # a second append shouldn't repeat the header
     append_frame_rows([{"frame_id": "a_3"}], csv_path, lock_path)
     assert len(read_frame_rows(csv_path)) == 3
 
@@ -37,3 +35,4 @@ def test_append_deduplicates_existing_and_batch_ids(tmp_path):
     append_frame_rows([{"frame_id": "a"}], path, lock)
     append_frame_rows([{"frame_id": "a"}, {"frame_id": "b"}, {"frame_id": "b"}], path, lock)
     assert [r["frame_id"] for r in read_frame_rows(path)] == ["a", "b"]
+

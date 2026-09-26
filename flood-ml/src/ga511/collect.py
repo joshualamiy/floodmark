@@ -1,11 +1,4 @@
-"""Sampling collector: sweeps enabled Atlanta camera views on a rotating
-schedule, saves good frames, drops dead ones (with reason), and appends one
-row per attempted frame to data/ga511/frames.csv.
-
-Default schedule: about one frame per enabled view per 60 minutes. A full
-sweep across ~150-300 views takes a few minutes (bounded by the ~1.4 req/s
-global snapshot cap in snapshot.py), so most of each 60-minute cycle is idle.
-"""
+# sweeps camera views, saves good frames, logs dead ones
 from __future__ import annotations
 
 import argparse
@@ -55,12 +48,6 @@ FRAME_CSV_FIELDS = [
 ]
 
 DEFAULT_INTERVAL_MIN = 60.0
-# The 511GA snapshot backend can take several seconds to respond per view
-# (observed: ~1-9s, worse for offline/"no feed" cameras). The global pacing
-# in snapshot._wait_for_view_slot already caps how often we *start* a fetch
-# (~1.4 req/s); running several fetches concurrently just lets one slow
-# response not block the rest, so overall completion throughput approaches
-# that same start-rate cap instead of being latency-bound.
 DEFAULT_MAX_WORKERS = 10
 
 
@@ -87,9 +74,6 @@ def _save_prev_phashes(state: dict, path: Path = PREV_PHASH_PATH) -> None:
 
 
 def _process_view(view: dict, placeholder_hashes: list, prev_phash_hex: str | None, with_weather: bool) -> dict:
-    """Fetch + classify one view. Returns a frame.csv row plus bookkeeping
-    fields (`_dead_reason`, `_new_phash`) for the caller to aggregate.
-    """
     view_id = view["view_id"]
     result = snapshot.fetch_view(view_id)
     row = {
@@ -167,17 +151,6 @@ def sweep_once(
     stop_flag=None,
     offset: int = 0,
 ) -> dict:
-    """One pass over all enabled Atlanta views: fetch, classify, save good
-    frames, log dead ones. Views are processed concurrently (see
-    DEFAULT_MAX_WORKERS) since the snapshot backend is often slow per-request;
-    the shared global pacing in snapshot.py still caps how often we start a
-    new fetch. Returns a small summary dict.
-
-    `offset`/`max_views` slice the view list so a large initial sweep can be
-    run as a series of short, disjoint foreground chunks (e.g. offset=0,500;
-    500,500; ...) without any chunk re-hitting a view the previous chunk just
-    fetched (which would otherwise stall on the per-view 5-minute rule).
-    """
     if views is None:
         views = load_atlanta_rows(CAMERAS_ATLANTA_CSV)
     if offset:
@@ -186,11 +159,11 @@ def sweep_once(
         views = views[:max_views]
 
     placeholder_hashes = quality.load_placeholder_hashes()
-    prev_state = _load_prev_phashes()  # view_id(str) -> phash hex string
+    prev_state = _load_prev_phashes()
 
     counts = {"ok": 0, "dead": {}}
     pending_rows = []
-    flush_every = 25  # write incrementally so a long sweep doesn't lose progress if killed
+    flush_every = 25
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {}
         for view in views:
@@ -236,7 +209,6 @@ def run_forever(
     max_workers: int = DEFAULT_MAX_WORKERS,
     stop_flag=None,
 ) -> None:
-    """Repeatedly sweep every `interval_min` minutes until `stop_flag` is set."""
     import threading
 
     stop_flag = stop_flag or threading.Event()
@@ -279,3 +251,4 @@ def _main() -> None:
 
 if __name__ == "__main__":
     _main()
+

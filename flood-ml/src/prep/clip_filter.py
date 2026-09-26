@@ -1,14 +1,4 @@
-"""CLIP zero-shot road-scene filter for external (non-511GA) sources.
-
-511GA frames are already real traffic-camera images by construction, so the
-filter is only applied to external datasets, some of which (Flood Area
-Segmentation in particular) mix in aerial/oblique shots per Phase 1 notes.
-
-Scores each image against a set of positive ("this is a road/street scene")
-and negative (aerial, satellite, river, indoor, field, beach) prompts with
-open_clip, and keeps the image if the best-matching positive prompt outscores
-the best-matching negative prompt. Runs on MPS when available.
-"""
+# clip zero-shot 'is this a road' filter
 from __future__ import annotations
 
 import torch
@@ -66,9 +56,6 @@ def load_clip(model_name: str = "ViT-B-32", pretrained: str = "laion2b_s34b_b79k
 
 
 def score_batch(image_paths: list[str], bundle=None, batch_size: int = 64) -> list[tuple[bool, float, float]]:
-    """Returns, per image, (is_road_scene, best_positive_score, best_negative_score).
-    Images that fail to open are treated as NOT a road scene, score 0/0.
-    """
     if bundle is None:
         bundle = load_clip()
     model, preprocess, device, pos_feat, neg_feat = bundle
@@ -98,10 +85,11 @@ def score_batch(image_paths: list[str], bundle=None, batch_size: int = 64) -> li
             img = Image.open(path).convert("RGB")
             batch_imgs.append(preprocess(img))
             batch_idx.append(i)
-        except Exception:  # noqa: BLE001 - a bad image is just "not a road scene", never a crash
+        except Exception:  # noqa: BLE001
             results[i] = (False, 0.0, 0.0)
         if len(batch_imgs) >= batch_size:
             flush()
     flush()
 
     return results  # type: ignore
+

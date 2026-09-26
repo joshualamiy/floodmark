@@ -1,4 +1,3 @@
-"""Status/threshold logic, probability math, input types, batch consistency."""
 from __future__ import annotations
 
 import json
@@ -43,7 +42,7 @@ def _set_probs(model_dir, pa, pb):
         (TA - 0.1, 0.0, "dry"),
         (TA + 0.1, TB + 0.1, "flooded"),
         (TA + 0.1, TB - 0.1, "wet"),
-        (TA, 0.0, "wet"),  # pa == tA is NOT < tA, so it's not dry either
+        (TA, 0.0, "wet"),
     ],
 )
 def test_status_boundaries(model_dir, pa, pb, expected):
@@ -158,5 +157,6 @@ def test_to_dict_excludes_heatmap_by_default(model_dir):
     assert d["heatmap_png"] is None
     d_incl = pred.to_dict(include_heatmap=True)
     assert isinstance(d_incl["heatmap_png"], str) and len(d_incl["heatmap_png"]) > 0
-    json.dumps(d)  # both must be JSON-serializable
+    json.dumps(d)
     json.dumps(d_incl)
+

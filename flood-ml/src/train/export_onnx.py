@@ -1,27 +1,4 @@
-"""Exports a trained Stage A or Stage B Keras checkpoint to ONNX with two
-outputs: `prob` (N,1) and `cam` (N,h,w) computed in-graph from the last conv
-feature map and the Dense(1, sigmoid) head's kernel -- `ReLU(sum_k w_k *
-A_k)` -- so the shipped inference module needs only onnxruntime + numpy +
-pillow, no TensorFlow and no gradients at serve time (see `model.py` and
-`gradcam.py` for why this equals real Grad-CAM up to a positive scale).
-
-Mechanics: Keras 3 doesn't reliably hand tf2onnx a SavedModel it likes for
-a two-output functional model with a nested backbone, so we instead trace a
-plain `tf.function` with a fixed `input_signature` (NHWC, float32, batch
-None) that calls the loaded Keras model and the CAM math, and convert THAT
-with `tf2onnx.convert.from_function`. The Dense kernel must be embedded as a
-`tf.constant` created *inside* the traced function body -- a constant built
-outside and merely closed over gets traced as an extra graph input by
-tf2onnx (confirmed empirically), which would silently break any caller that
-only feeds `image`.
-
-Verification (`verify_export`): on >= 100 val images, max |prob_onnx -
-prob_keras| <= 1e-4, and Pearson r >= 0.99 between the ONNX `cam` (bilinear-
-upsampled to the image size, per-image max-normalized) and the Keras
-GradientTape Grad-CAM (same normalization). Latency (`benchmark_latency`):
-CPU, batch 1, median and p95 over 100 runs, both at 1 thread and at
-onnxruntime's default thread count.
-"""
+# keras -> onnx with prob + in-graph cam outputs
 from __future__ import annotations
 
 import json
@@ -39,17 +16,13 @@ OUTPUT_CAM = "cam"
 
 
 def build_export_fn(keras_model, img_size: int):
-    """Returns (tf.function, input_signature) ready for
-    `tf2onnx.convert.from_function`. `keras_model` must be the loaded
-    functional model with a "backbone" sub-model layer and a "prob" Dense
-    layer (i.e. exactly `model.py`'s `build_model` head shape).
-    """
     import tensorflow as tf
 
     from train.model import DENSE_LAYER_NAME, FEATURE_LAYER_NAME
 
     backbone = keras_model.get_layer(FEATURE_LAYER_NAME)
     dense = keras_model.get_layer(DENSE_LAYER_NAME)
+    # cam = relu(sum_k w_k * A_k) with the dense weights, so no gradients at serve time
     kernel, _bias = dense.get_weights()
     kernel_np = kernel[:, 0].astype("float32")
 
@@ -59,7 +32,7 @@ def build_export_fn(keras_model, img_size: int):
     def export_fn(image):
         prob = keras_model(image, training=False)
         conv = backbone(image, training=False)
-        w = tf.constant(kernel_np)  # built inside the traced function body -- see module docstring
+        w = tf.constant(kernel_np)
         cam = tf.einsum("nhwc,c->nhw", conv, w)
         cam = tf.nn.relu(cam)
         return {OUTPUT_PROB: prob, OUTPUT_CAM: cam}
@@ -83,8 +56,6 @@ def export_stage_to_onnx(
     keras_model = keras.models.load_model(ckpt_path)
     export_fn, input_signature = build_export_fn(keras_model, img_size)
 
-    # tf2onnx's transpose optimizer logs (harmless) exception tracebacks to
-    # the root logger on some graphs; keep them out of our console output.
     tf2onnx_logger = logging.getLogger("tf2onnx")
     handlers_added = []
     if convert_log:
@@ -109,8 +80,6 @@ def export_stage_to_onnx(
 
 
 def _load_val_images(rows, img_size: int, mode: str = "crop") -> np.ndarray:
-    # reuses the shipped inference-side preprocessing (PIL/numpy, no TF) so
-    # the ONNX parity check exercises exactly what inference will do.
     from inference.preprocess import preprocess as infer_preprocess
 
     imgs = np.zeros((len(rows), img_size, img_size, 3), dtype=np.float32)
@@ -233,7 +202,7 @@ if __name__ == "__main__":
     )
 
     df = load_manifest(args.manifest)
-    val_rows = select_all_rows(df, split="val")  # all val rows regardless of stage
+    val_rows = select_all_rows(df, split="val")
     verification = verify_export(
         keras_model, out_path, val_rows, img_size=args.img_size, mode=args.mode, n_images=args.n_verify,
     )
@@ -256,3 +225,4 @@ if __name__ == "__main__":
         Path(args.report_json).parent.mkdir(parents=True, exist_ok=True)
         Path(args.report_json).write_text(json.dumps(report, indent=2))
     print(json.dumps(report, indent=2))
+

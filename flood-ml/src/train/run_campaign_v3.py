@@ -1,15 +1,4 @@
-"""v3 retrain campaign: night-aug ablation screening, then full two-phase
-training for crop224 / letterbox224 / letterbox320 on the new (v3) manifest
-(iowa_rwis + eu_flood_2013 + alleyfloodnet added). Mirrors run_campaign.py's
-detached-driver pattern; kept separate so the old improve_v2 campaign stays
-reproducible byte-for-byte.
-
-Screening: crop@224, head-only, night_aug on vs off, both stages -> picks
-whichever wins by pipeline recall at precision>=0.90 (variant_selection_key).
-Full training: crop@224, letterbox@224, letterbox@320, full two-phase (head 6
-+ ft 10, ft_layers 30 -- matches the shipped recipe), using the screening's
-night_aug setting for all three.
-"""
+# v3 training campaign (detached)
 from __future__ import annotations
 
 import json
@@ -24,7 +13,7 @@ STATUS_PATH = Path("logs/jobs/campaign_v3_status.json")
 RESULTS_PATH = Path("reports/eval/campaign_v3_runs.json")
 
 HEAD_ONLY = {"epochs_head": 6, "epochs_ft": 0}
-FULL = {"epochs_head": 6, "epochs_ft": 10, "ft_layers": 30}  # matches the shipped fine-tune recipe
+FULL = {"epochs_head": 6, "epochs_ft": 10, "ft_layers": 30}
 
 
 def _status(**kw) -> None:
@@ -128,3 +117,4 @@ if __name__ == "__main__":
         logger.exception("v3 campaign failed")
         _status(phase="failed")
         raise
+

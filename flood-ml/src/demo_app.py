@@ -1,4 +1,4 @@
-"""Local upload demo."""
+# local gradio demo: upload a frame, see status + heatmap
 from __future__ import annotations
 
 import io
@@ -78,3 +78,4 @@ def build_app():
 
 if __name__ == "__main__":
     build_app().launch(server_name="127.0.0.1", server_port=7860, share=False)
+

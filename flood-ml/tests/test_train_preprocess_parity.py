@@ -1,4 +1,3 @@
-# inference letterbox/squash must match the tf training resize
 import numpy as np
 import pytest
 
@@ -22,5 +21,5 @@ def test_letterbox_matches_training():
     a = np.random.default_rng(1).integers(0, 256, (256, 455, 3)).astype(np.uint8)
     ours, _ = _letterbox_resize(Image.fromarray(a), 320)
     ref = tf.cast(tf.clip_by_value(tf_letterbox(a, 320), 0.0, 255.0), tf.uint8).numpy().astype(np.float32)
-    # float order can flip a truncation by one level
     assert np.abs(ours - ref).max() <= 1.0
+

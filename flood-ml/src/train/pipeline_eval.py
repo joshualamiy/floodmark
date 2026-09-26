@@ -1,31 +1,4 @@
-"""Pipeline-level validation: combines a trained Stage A checkpoint with a
-trained Stage B checkpoint (either variant -- "spec" wet-vs-flooded, or
-"mixed" flooded-vs-not-flooded) and scores PLAN.md section 3's status logic
-on ALL val rows (never test; see PLAN.md rule 4 / the Phase 3 brief):
-
-    dry if pA < tA; else flooded if pB >= tB; else wet
-
-This is the level the brief asks us to pick the Stage B variant at, and the
-level tB is actually tuned at (tA comes from Stage A's own ROC). Stage-level
-metrics logged per-run in `train.py` are a cheaper proxy computed during
-training and are NOT what selects the shipped variant or threshold.
-
-Threshold rule:
-    tA: Youden's J on the Stage A val ROC (balances Stage A's own errors).
-    tB: swept holding tA fixed. The lowest tB where PIPELINE precision for
-    status == "flooded" (vs. true label == "flooded") on val is >= 0.90.
-    If unreachable, maximize pipeline F0.5 instead and say so.
-
-Every number that rests on fewer than 30 val examples (the true-wet slice is
-6) is flagged in the returned report, not just quietly computed.
-
-v3: rows labeled "not_flooded" (eu_flood_2013/alleyfloodnet negatives -- dry
-OR rain-wet, unknown which) are meaningless for the dry-vs-wet question, so
-they are excluded from Stage A accuracy/AUC and from the dry/wet/flooded
-confusion table. Only "is it called flooded?" is meaningful for them, so
-their false-flood rate is reported as its own field, the same shape as the
-true-dry and true-wet false-alarm rates.
-"""
+# two-stage val eval + threshold picking
 from __future__ import annotations
 
 import json
@@ -37,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 from train.data import load_manifest, select_all_rows
-from train.train import _youden_threshold  # reuse Stage A's own threshold rule
+from train.train import _youden_threshold
 
 logger = logging.getLogger(__name__)
 
@@ -47,10 +20,6 @@ SMALL_SAMPLE_WARN_N = 30
 def predict_probs(
     model, rows: pd.DataFrame, img_size: int, batch_size: int = 64, mode: str = "crop",
 ) -> np.ndarray:
-    """Runs `model` over `rows["path"]` in order (no shuffling), returning a
-    1-D float32 array of probabilities aligned to `rows`'s row order. `mode`
-    must match whatever geometry `model` was trained with (improve_v2).
-    """
     from train.data import make_dataset
 
     fake = rows.copy()
@@ -130,9 +99,6 @@ def sweep_tb_for_precision(
         beta2 = 0.25
         denom = beta2 * precision + recall
         f05 = (1 + beta2) * precision * recall / denom if denom > 0 else 0.0
-        # require at least one predicted positive: otherwise precision is
-        # vacuously 1.0 (0/0) and would let a threshold that flags nothing
-        # "reach" the target, which is meaningless (recall 0).
         if (tp + fp) > 0 and precision >= target_precision and best_reaching is None:
             best_reaching = float(tb)
         if f05 > best_f05[0]:
@@ -146,12 +112,6 @@ def evaluate_pipeline(
     val_rows: pd.DataFrame, pA: np.ndarray, pB: np.ndarray, target_precision: float = 0.90,
     tA: float | None = None, tB: float | None = None,
 ) -> PipelineReport:
-    """`tA`/`tB`: pass a FIXED threshold (e.g. the shipped config.json's
-    operating point) to score against it instead of retuning on this val --
-    used for the "shipped, as-is" baseline row (v3), which must be compared
-    at its real deployed operating point, not a hypothetical retuned one.
-    Leave both None (the default) to tune fresh, as every other candidate does.
-    """
     from sklearn.metrics import average_precision_score, roc_auc_score
 
     true_label = val_rows["label"].to_numpy()
@@ -159,7 +119,6 @@ def evaluate_pipeline(
     is_wet_true = true_label == "wet"
     is_flooded_true = true_label == "flooded"
     is_not_flooded_true = true_label == "not_flooded"
-    # not_flooded's dry/wet state is unknown -- never trains or evals Stage A.
     stage_a_mask = ~is_not_flooded_true
 
     stage_a_true_full = (~is_dry_true).astype(int)
@@ -171,29 +130,22 @@ def evaluate_pipeline(
     stage_a_auc_pr = float(average_precision_score(stage_a_true, pA_stage_a))
     stage_a_pred = (pA_stage_a >= tA).astype(int)
     stage_a_accuracy = float(np.mean(stage_a_pred == stage_a_true))
-    # wet recall: of true "wet" rows, how many Stage A calls not-dry (pA>=tA).
-    # Phase 4 found this was 0/10 on the shipped model -- now measurable with
-    # real n (Iowa RWIS + NYSDOT val wet rows) instead of n=6.
     wet_recall_rate, wet_recall_num, wet_recall_den = _rate(pA >= tA, is_wet_true)
 
     if tB is None:
         tB, tB_note = sweep_tb_for_precision(true_label, pA, pB, tA, target_precision=target_precision)
     else:
         tB_note = "fixed threshold, not tuned on this val"
-    status = status_from_probs(pA, pB, tA, tB)  # over ALL rows, including not_flooded
+    status = status_from_probs(pA, pB, tA, tB)
     pred_flooded = status == "flooded"
 
     precision_rate, precision_num, precision_den = _rate(is_flooded_true, pred_flooded)
-    # recall: of true flooded, how many were caught (denominator = true flooded)
     recall_rate, recall_num, recall_den = _rate(pred_flooded, is_flooded_true)
 
     far_dry_rate, far_dry_num, far_dry_den = _rate(pred_flooded, is_dry_true)
     far_wet_rate, far_wet_num, far_wet_den = _rate(pred_flooded, is_wet_true)
     far_nf_rate, far_nf_num, far_nf_den = _rate(pred_flooded, is_not_flooded_true)
 
-    # not_flooded is excluded here: its dry/wet split is unknown, so it has
-    # no place in a dry/wet/flooded confusion table -- only its false-flood
-    # rate above is meaningful.
     confusion: dict[str, dict[str, int]] = {}
     for true_l in ("dry", "wet", "flooded"):
         row_mask = true_label == true_l
@@ -232,12 +184,6 @@ def evaluate_pipeline(
 def per_source_breakdown(
     val_rows: pd.DataFrame, pA: np.ndarray, pB: np.ndarray, tA: float, tB: float,
 ) -> dict[str, dict]:
-    """v3: per-source slice of the pipeline report the brief asks for
-    ("overall AND per source"), using an ALREADY-tuned (tA, tB) -- these are
-    tuned once on the whole val set, not re-tuned per source (too few rows
-    per source to tune on). Returns {source: {...}}; every rate carries its
-    own num/den so a small-n source is easy to flag (den < 30) downstream.
-    """
     true_label = val_rows["label"].to_numpy()
     source = val_rows["source"].to_numpy()
     status = status_from_probs(pA, pB, tA, tB)
@@ -279,21 +225,6 @@ def load_checkpoint(run_id: str, models_root: str = "models"):
 
 
 def variant_selection_key(precision: float, recall: float, target_precision: float = 0.90) -> tuple:
-    """Ranking key for choosing between Stage B variants from their
-    PIPELINE-level precision/recall on "flooded" (higher sorts better).
-
-    Among variants that clear `target_precision`, rank by F1 -- NOT by
-    precision alone, which would let a variant win by posting a slightly
-    higher precision while its recall collapses. That is exactly what
-    B-spec does: trained only on wet+flooded, it has no calibration for the
-    dry images Stage A inevitably lets through as false "wet surface" calls,
-    and most real floods end up predicted "wet" instead of "flooded" (see
-    docs/phase_reports/phase3_modeling.md for the actual numbers -- B-spec's
-    stage-level val AUC is a perfect-looking 1.0 while its pipeline recall
-    for "flooded" is 0.125). Below the precision target, precision alone
-    takes priority, since avoiding false flood alarms is this project's
-    stated priority.
-    """
     f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
     meets_target = precision >= target_precision
     return (meets_target, f1 if meets_target else precision)
@@ -309,14 +240,8 @@ def run_pipeline_selection(
     models_root: str = "models",
     target_precision: float = 0.90,
 ) -> dict:
-    """`stage_b_runs`: e.g. {"spec": "<run_id>", "mixed": "<run_id>"}.
-    Evaluates the pipeline for each Stage B variant against the same Stage A
-    model, on ALL val rows, and returns a dict with both variants' reports
-    plus the recommended variant (see `variant_selection_key`). `mode`/
-    `img_size` must match the geometry both checkpoints were trained with.
-    """
     df = load_manifest(manifest)
-    val_rows = select_all_rows(df, split="val")  # all val rows, any label (including not_flooded)
+    val_rows = select_all_rows(df, split="val")
 
     stage_a_model = load_checkpoint(stage_a_run, models_root)
     pA = predict_probs(stage_a_model, val_rows, img_size, mode=mode)
@@ -375,3 +300,4 @@ if __name__ == "__main__":
     Path(args.out_json).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out_json).write_text(json.dumps(result, indent=2))
     print(json.dumps(result, indent=2))
+

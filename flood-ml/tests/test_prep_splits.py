@@ -1,7 +1,3 @@
-"""Unit tests for prep.splits: group-aware split assignment, stability across
-reruns, and the disjointness assertion. No network, data, or models -- all
-synthetic camera_ids / group labels.
-"""
 from collections import Counter
 
 from prep.splits import (
@@ -23,14 +19,12 @@ def test_ga511_camera_splits_roughly_20_percent_test():
     splits = ga511_camera_splits(cams)
     counts = Counter(splits.values())
     frac_test = counts["test"] / len(cams)
-    # hash-based, so not exact, but should be in a sane band around 20%
     assert 0.10 < frac_test < 0.30
 
 
 def test_ga511_camera_splits_is_stable_across_reruns():
     cams = [f"cam{i}" for i in range(150)]
     first = ga511_camera_splits(cams)
-    # Re-run with the same input: must be identical (deterministic hash).
     second = ga511_camera_splits(cams)
     assert first == second
 
@@ -38,7 +32,6 @@ def test_ga511_camera_splits_is_stable_across_reruns():
 def test_ga511_camera_splits_never_moves_an_existing_camera():
     cams = [f"cam{i}" for i in range(100)]
     first = ga511_camera_splits(cams)
-    # Simulate a rerun after new cameras arrive: existing ones must not move.
     more_cams = cams + [f"cam{i}" for i in range(100, 130)]
     second = ga511_camera_splits(more_cams, existing=first)
     for cam, split in first.items():
@@ -46,15 +39,13 @@ def test_ga511_camera_splits_never_moves_an_existing_camera():
 
 
 def test_ga511_camera_splits_pulls_reviewed_positive_new_cameras_toward_test():
-    # A brand-new camera with a confirmed wet/flooded review should land in
-    # test more often than the baseline ~20% hash draw, up to the cap.
     existing = {f"old{i}": "train" for i in range(50)}
     new_cams = [f"newcam{i}" for i in range(20)]
     splits = ga511_camera_splits(
         new_cams, existing=existing, reviewed_positive_cameras=set(new_cams)
     )
     n_test = sum(1 for c in new_cams if splits[c] == "test")
-    assert n_test > 0  # at least some should be pulled into test
+    assert n_test > 0
 
 
 def test_greedy_group_stratified_split_respects_forced_assignments():
@@ -110,3 +101,4 @@ def test_assert_disjoint_flags_a_dup_cluster_split_across_splits():
     ]
     violations = assert_disjoint(rows)
     assert any("shared" in v for v in violations)
+

@@ -1,6 +1,4 @@
-"""Poll 511GA events, flag ones that mention flooding/water, and capture
-frames from nearby enabled cameras the moment a new flagged event appears.
-"""
+# poll 511ga events, grab nearby cams on flood reports
 from __future__ import annotations
 
 import argparse
@@ -34,9 +32,6 @@ DEFAULT_POLL_INTERVAL_S = 300.0
 
 
 def match_flood_keyword(text: str | None) -> str | None:
-    """Return the first matching flood-ish keyword (word-boundary,
-    case-insensitive), checking longer/more-specific phrases first, or None.
-    """
     if not text:
         return None
     for kw, pattern in _KEYWORD_PATTERNS:
@@ -52,7 +47,6 @@ def is_likely_false_positive(text: str | None) -> bool:
 
 
 def flag_event(event: dict) -> dict | None:
-    """Check one raw event dict; return a flag record or None."""
     text = " ".join(
         str(event.get(f) or "") for f in ("Description", "EventType", "Subtype")
     ).strip()
@@ -206,3 +200,4 @@ def _main() -> None:
 
 if __name__ == "__main__":
     _main()
+

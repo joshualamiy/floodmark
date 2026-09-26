@@ -1,7 +1,3 @@
-"""CameraMoveDetector: structure-only, brightness/gamma-invariant, catches
-real re-aims (heavy crop/zoom or a different scene). Threshold 0.35 is
-calibrated on real 511GA frame pairs -- see docs/INFERENCE_API.md.
-"""
 from __future__ import annotations
 
 import numpy as np
@@ -83,7 +79,7 @@ def test_cameras_are_independent():
     det = CameraMoveDetector(k_ref=1)
     _build_ref(det, "cam1", _textured_scene(seed=1))
     moved, _ = det.update("cam2", Image.fromarray(_textured_scene(seed=1)))
-    assert moved is False  # cam2 still building its own reference
+    assert moved is False
 
 
 def test_set_reference_explicitly():
@@ -104,3 +100,4 @@ def test_serialization_round_trip():
     assert det2.threshold == 0.4
     moved, _score = det2.update("cam1", Image.fromarray(scene))
     assert moved is False
+

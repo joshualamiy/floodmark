@@ -1,15 +1,4 @@
-"""Dead-frame detection: HTTP/decoding failures are handled upstream in
-snapshot.py; this module classifies frames that decoded fine but are still
-not usable:
-
-- tiny_file: suspiciously small response body
-- low_variance: near-uniform image (blank/gray/black frame)
-- placeholder: matches a known "camera offline" placeholder image (pHash)
-- frozen_repeat: near-identical to the same view's previous frame
-
-Dead frames are never written to frames/; a small sample of each observed
-reason is kept under data/ga511/dead_samples/<reason>/ for inspection.
-"""
+# dead frame checks: placeholders, frozen feeds, blank frames
 from __future__ import annotations
 
 import io
@@ -108,12 +97,6 @@ def classify(
     prev_img: Image.Image | None = None,
     placeholder_hashes: list | None = None,
 ) -> tuple[str | None, imagehash.ImageHash | None]:
-    """Classify a decoded frame. Returns (dead_reason or None, phash or None).
-
-    `phash` is None only when the frame was rejected before hashing made
-    sense (tiny_file), so callers should not update frozen-repeat state on
-    that reason.
-    """
     if is_tiny(nbytes):
         return "tiny_file", None
     phash = compute_phash(img)
@@ -129,7 +112,6 @@ def classify(
 def save_dead_sample(
     reason: str, view_id, ts: int, img: Image.Image, cap: int = DEAD_SAMPLE_CAP_PER_REASON
 ) -> Path | None:
-    """Keep at most `cap` sample frames per dead reason for inspection."""
     ensure_dirs()
     out_dir = DEAD_SAMPLES_DIR / reason
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -146,9 +128,6 @@ def save_dead_sample(
 
 
 def save_placeholder_candidate(img: Image.Image, name: str, dirpath=PLACEHOLDER_DIR) -> Path:
-    """Manually invoked helper: save an observed offline/placeholder image
-    into the pHash catalog directory.
-    """
     ensure_dirs()
     d = Path(dirpath)
     d.mkdir(parents=True, exist_ok=True)
@@ -161,3 +140,4 @@ def bytes_to_image(data: bytes) -> Image.Image:
     img = Image.open(io.BytesIO(data))
     img.load()
     return img
+

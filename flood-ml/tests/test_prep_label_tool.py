@@ -1,8 +1,3 @@
-"""Unit tests for prep.label_tool: the server starts, serves the page and
-the frames API, and a POST to /api/label appends a row to labels.csv with
-last-write-wins semantics. Uses a temp dir standing in for data/ga511/, and
-a real (but ephemeral, 127.0.0.1:0) HTTP server -- no external network.
-"""
 import csv
 import json
 import threading
@@ -37,7 +32,6 @@ def ga511_root(tmp_path):
             "DeKalb", "2026-01-01T00:00:00Z", "200", "1000", "640", "480",
             "def", "", "likely_wet", "1.0", "2.0", "test",
         ])
-    # one real (tiny) jpeg-ish file per frame so list_frames() finds them
     for sub, name in (("v1", "1.jpg"), ("v2", "2.jpg")):
         d = root / "frames" / sub
         d.mkdir(parents=True)
@@ -111,11 +105,11 @@ def test_post_label_last_write_wins(server, ga511_root):
     labels_csv = ga511_root / "labels.csv"
     with open(labels_csv, newline="") as f:
         rows = list(csv.DictReader(f))
-    assert len(rows) == 3  # append-only on disk
+    assert len(rows) == 3
 
     from prep.sources import load_labels_csv
     reduced = load_labels_csv(labels_csv)
-    assert reduced["f1"]["label"] == "flooded"  # last write wins
+    assert reduced["f1"]["label"] == "flooded"
 
 
 def test_post_label_rejects_invalid_label(server):
@@ -133,8 +127,6 @@ def test_post_label_rejects_invalid_label(server):
 
 
 def test_frames_api_disputed_filter(server, ga511_root):
-    # f1 is likely_dry by weather but ai_review called it wet -> disputed.
-    # f2 is likely_wet, so an ai wet on it is not a dispute.
     with open(ga511_root / "ai_review_labels.csv", "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["frame_id", "label", "note"])
@@ -143,3 +135,4 @@ def test_frames_api_disputed_filter(server, ga511_root):
     with urllib.request.urlopen(_url(server, "/api/frames?filter=disputed")) as resp:
         frames = json.loads(resp.read())
     assert [f["frame_id"] for f in frames] == ["f1"]
+

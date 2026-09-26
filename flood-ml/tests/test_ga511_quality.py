@@ -54,7 +54,6 @@ def test_classify_frozen_repeat_same_image_as_previous():
 def test_classify_ok_when_different_from_previous():
     img_a = _noisy_image()
     img_b = _noisy_image()
-    # perturb img_b so its hash differs meaningfully from img_a
     px = img_b.load()
     for x in range(0, 64, 2):
         for y in range(0, 64, 2):
@@ -63,3 +62,4 @@ def test_classify_ok_when_different_from_previous():
     reason, phash = classify(img_b, nbytes=50_000, prev_phash=prev_phash)
     assert reason is None
     assert phash is not None
+

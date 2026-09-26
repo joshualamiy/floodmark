@@ -1,7 +1,3 @@
-"""Unit tests for acquire.flood_master's pure logic: no network, data, or
-models. Path-resolution tests use synthetic rows/dirs under tmp_path instead
-of the real (restricted) dataset.
-"""
 from __future__ import annotations
 
 import numpy as np
@@ -19,14 +15,13 @@ def test_band_keys_length_and_values():
     value = 0x0102030405060708
     bands = fm._band_keys(value, n_bands=8, band_bits=8)
     assert len(bands) == 8
-    # band 0 is the low byte, so it should be 0x08
     assert bands[0] == (0, 0x08)
 
 
 def test_bucketed_overlap_search_finds_near_duplicate():
     base = 0x0F0F0F0F0F0F0F0F
-    near = base ^ 0b111  # Hamming distance 3 from base
-    far = base ^ 0xFFFFFFFF  # Hamming distance 32 from base
+    near = base ^ 0b111
+    far = base ^ 0xFFFFFFFF
 
     corpus = {"near.jpg": near, "far.jpg": far}
     query = {"query.jpg": base}
@@ -87,3 +82,4 @@ def test_resolve_test_rgb_picks_subfolder_by_source():
 def test_test_group_id_one_group_per_video():
     assert fm.test_group_id({"Source": "greek video"}) == "fmd_greek_video"
     assert fm.test_group_id({"Source": "italian video"}) == "fmd_italian_video"
+

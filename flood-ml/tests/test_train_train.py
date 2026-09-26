@@ -1,7 +1,3 @@
-"""Unit tests for train.train: threshold selection helpers, run-id naming,
-runs.csv writing, and a tiny end-to-end training run (weights=None,
-synthetic data) that exercises the full CLI path used for real runs.
-"""
 from datetime import datetime, timezone
 
 import numpy as np
@@ -58,11 +54,6 @@ def test_precision_target_threshold_reaches_target_when_possible():
 
 
 def test_precision_target_threshold_falls_back_to_f05_when_unreachable():
-    # The top score value is tied across both classes, so no threshold (a
-    # scalar cutoff) can ever isolate a pure-positive subset -- unlike an
-    # i.i.d.-noise draw, where the single highest-scoring point can
-    # spuriously be a true positive and hit precision 1.0 on a denominator
-    # of 1 (the same small-sample trap flagged elsewhere in this brief).
     y = np.array([0] * 5 + [1] * 5 + [0] * 90)
     scores = np.concatenate([np.full(10, 0.99), np.full(90, 0.1)])
     _thr, note = _precision_target_threshold(y, scores, target_precision=0.90)
@@ -121,8 +112,6 @@ def _write_tiny_manifest(tmp_path):
             })
     manifest_path = tmp_path / "manifest.csv"
     pd.DataFrame(rows).to_csv(manifest_path, index=False)
-    # written at the conventional relative location so the default
-    # DATA_VERSION_PATH (resolved against cwd) finds it after chdir below.
     version_path = tmp_path / "data" / "processed" / "VERSION"
     version_path.parent.mkdir(parents=True, exist_ok=True)
     version_path.write_text("data_version = vtest-00000000\n")
@@ -147,3 +136,4 @@ def test_run_training_end_to_end_tiny(tmp_path, monkeypatch):
     runs_csv = pd.read_csv(tmp_path / "reports" / "runs.csv")
     assert len(runs_csv) == 1
     assert runs_csv.iloc[0]["stage"] == "a"
+

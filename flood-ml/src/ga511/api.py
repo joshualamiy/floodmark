@@ -1,8 +1,4 @@
-"""Thin client for the 511GA v2 API: cameras (cached) and events (live).
-
-Never logs or raises with a raw URL or key: every log line and exception
-message goes through `redact()` first.
-"""
+# 511ga api client: cameras (cached daily) + events
 from __future__ import annotations
 
 import argparse
@@ -20,7 +16,7 @@ CAMERAS_URL = "https://511ga.org/api/v2/get/cameras"
 EVENTS_URL = "https://511ga.org/api/v2/get/event"
 USER_AGENT = "floodmark-research/0.1 (+https://github.com/joshualamiy/floodmark)"
 
-CAMERAS_MAX_AGE_S = 86400  # refresh cameras.json at most once per day
+CAMERAS_MAX_AGE_S = 86400
 
 log = setup_logging("ga511_api")
 
@@ -88,9 +84,6 @@ def get_cameras(
     max_age_s: int = CAMERAS_MAX_AGE_S,
     cache_path: Path = CAMERAS_CACHE_PATH,
 ):
-    """Return the list of camera dicts from the 511GA API, cached to disk and
-    refreshed at most once per `max_age_s` seconds (default 1 day).
-    """
     ensure_dirs()
     if not force_refresh and cache_path.exists():
         age = time.time() - cache_path.stat().st_mtime
@@ -110,7 +103,6 @@ def get_cameras(
 
 
 def get_events(limiter: RateLimiter | None = None):
-    """Return the list of event dicts from the 511GA API (never cached)."""
     limiter = limiter or get_default_limiter()
     data = _call_api(EVENTS_URL, limiter)
     log.info("get_events: fetched %d events", len(data))
@@ -135,3 +127,4 @@ def _main() -> None:
 
 if __name__ == "__main__":
     _main()
+

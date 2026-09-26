@@ -1,19 +1,4 @@
-"""Weak precipitation labels for 511GA frames.
-
-For each (lat, lon, timestamp_utc) we try to get recent precipitation
-totals, preferring a measured observation from the nearest NWS station
-(api.weather.gov), falling back to Open-Meteo (archive API for older
-timestamps, forecast API with past_days for recent ones).
-
-Rule (documented per PLAN.md / brief):
-  - likely_wet  if precip in the last 1h >= 0.2 mm, or last 3h >= 1.0 mm
-  - likely_dry  if precip in the last 6h == 0 mm
-  - uncertain   otherwise (including whenever we can't get a number)
-
-These are weak labels: candidates for manual review, never ground truth.
-Results are cached per-station-per-hour (NWS) or per grid-cell-per-hour
-(Open-Meteo) under data/ga511/weather_cache/ to avoid hammering either API.
-"""
+# weak rain labels from nws / open-meteo
 from __future__ import annotations
 
 import argparse
@@ -43,9 +28,6 @@ def classify_weak_label(
     precip_3h_mm: float | None,
     precip_6h_mm: float | None,
 ) -> str:
-    """Pure decision rule, documented above. Any missing input is simply
-    skipped (treated as not meeting that particular condition).
-    """
     if precip_1h_mm is not None and precip_1h_mm >= WET_1H_MM:
         return "likely_wet"
     if precip_3h_mm is not None and precip_3h_mm >= WET_3H_MM:
@@ -95,12 +77,11 @@ def _to_mm(value, unit_code: str | None) -> float | None:
         return float(value) * 1000.0
     if "in" in unit:
         return float(value) * 25.4
-    # Unknown unit: NWS's usual unitCode for these fields is meters.
     return float(value) * 1000.0
 
 
 def _nearest_station(lat: float, lon: float) -> str | None:
-    hour_key = "static"  # station lookups don't change hour to hour
+    hour_key = "static"
     key = _round_grid(lat, lon, step=0.05)
     cache_path = _cache_path("nws_station", key, hour_key)
     cached = _read_cache(cache_path)
@@ -130,9 +111,6 @@ def _nearest_station(lat: float, lon: float) -> str | None:
 
 
 def _nws_precip(lat: float, lon: float, ts_utc: int) -> dict | None:
-    """Only usable for recent timestamps: NWS's observation endpoint only
-    keeps a rolling window (roughly the last week) of recent obs.
-    """
     station_id = _nearest_station(lat, lon)
     if not station_id:
         return None
@@ -168,7 +146,7 @@ def _nws_precip(lat: float, lon: float, ts_utc: int) -> dict | None:
         except ValueError:
             continue
         diff = abs((obs_dt - dt).total_seconds())
-        if diff > 3 * 3600:  # only accept an observation within 3h of the frame
+        if diff > 3 * 3600:
             continue
         if best_dt_diff is None or diff < best_dt_diff:
             best, best_dt_diff = props, diff
@@ -230,7 +208,6 @@ def _open_meteo_precip(lat: float, lon: float, ts_utc: int) -> dict | None:
     precip = hourly.get("precipitation") or []
     if not times or not precip:
         return None
-    # index of the hour <= ts_utc, closest match
     target = dt.replace(minute=0, second=0, microsecond=0)
     idx_by_time = {t: i for i, t in enumerate(times)}
     target_str = target.strftime("%Y-%m-%dT%H:00")
@@ -252,10 +229,6 @@ def _open_meteo_precip(lat: float, lon: float, ts_utc: int) -> dict | None:
 
 
 def get_precip_and_label(lat: float, lon: float, ts_utc: int) -> dict:
-    """Best-effort precipitation lookup + weak label for one frame.
-    Always returns a dict with precip_1h_mm, precip_3h_mm, precip_source,
-    weak_label (fields may be None if no source had data).
-    """
     lat, lon, ts_utc = float(lat), float(lon), int(ts_utc)
     result = None
     try:
@@ -286,14 +259,8 @@ def get_precip_and_label(lat: float, lon: float, ts_utc: int) -> dict:
 
 
 def fill_weak_labels(csv_path: Path = FRAMES_CSV, limit: int | None = None) -> int:
-    """Fill weak_label/precip_* columns for frames.csv rows that don't have
-    them yet (and aren't dead frames). Rewrites the CSV **atomically**
-    (temp file + os.replace) so a concurrent reader (the Phase 2 data-prep
-    worker) never observes a partially-written file, even without taking our
-    lock itself. Returns the number of rows updated.
-    """
     from ga511.paths import FRAMES_CSV_LOCK
-    from ga511.ratelimit import locked_file, read_json_fd  # noqa: F401 (kept import-parallel)
+    from ga511.ratelimit import locked_file, read_json_fd  # noqa: F401
 
     csv_path = Path(csv_path)
     with locked_file(FRAMES_CSV_LOCK):
@@ -349,3 +316,4 @@ def _main() -> None:
 
 if __name__ == "__main__":
     _main()
+

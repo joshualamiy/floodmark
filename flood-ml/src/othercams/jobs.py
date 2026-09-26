@@ -1,4 +1,4 @@
-"""Generic detached-job PID helpers, same pattern as ga511/daemon.py."""
+# detached job pid helpers
 from __future__ import annotations
 
 import fcntl
@@ -39,7 +39,6 @@ def pid_alive(pid: int) -> bool:
 
 @contextmanager
 def collection_lock(pid_path: Path):
-    """Reject overlapping runs, including the older PID-only collector."""
     pid_path.parent.mkdir(parents=True, exist_ok=True)
     with pid_path.with_suffix(".run.lock").open("a") as lock:
         try:
@@ -59,7 +58,6 @@ def collection_lock(pid_path: Path):
 
 
 def start_detached(module: str, args: list[str], log_path: Path, cwd: Path) -> int:
-    """Launch `-m module args` fully detached, own session, log to log_path."""
     log_path.parent.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
     env["PYTHONPATH"] = str(cwd / "src")
@@ -88,3 +86,4 @@ def stop(pid_path: Path, timeout_s: float = 15.0) -> bool:
             return True
         time.sleep(0.5)
     return False
+

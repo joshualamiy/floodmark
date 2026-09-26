@@ -1,3 +1,4 @@
+# failure slices: night, blur, glare, moved cameras
 from __future__ import annotations
 
 import argparse
@@ -45,11 +46,9 @@ def clip_odd(paths=None, emb: np.ndarray | None = None) -> np.ndarray:
 def tag_frame(df: pd.DataFrame, cues: pd.DataFrame, p_road: np.ndarray) -> pd.DataFrame:
     t = pd.DataFrame([tag_slices(r) for r in cues.to_dict("records")], index=df.index)
     t["odd_view"] = p_road < 0.5
-    # every 511 frame was captured 21:01-23:36 EDT (after sunset), so night is known
     ga = (df["source"] == "ga511") if "source" in df else pd.Series(True, index=df.index)
     t.loc[ga, "night"] = True
     t["glare"] = (cues["clip_frac"] > 0.005) & t["night"]
-    # overlay heuristic only trusted within 511 (other sources: all or nothing by source)
     t.loc[~ga, "overlay_text"] = False
     return t
 
@@ -78,7 +77,6 @@ def slice_table(d: pd.DataFrame, tags: pd.DataFrame, group_col: str, true_col: s
 
 
 def view_changed(f: pd.DataFrame, thr: int = 22) -> pd.Series:
-    # frames whose phash is far from the camera's first good frame
     first = f.sort_values("timestamp_utc").groupby("camera_id")["phash"].first()
     ref = f["camera_id"].map(first)
     ham = [(int(a, 16) ^ int(b, 16)).bit_count() for a, b in zip(f["phash"], ref)]
@@ -87,7 +85,6 @@ def view_changed(f: pd.DataFrame, thr: int = 22) -> pd.Series:
 
 def main() -> dict:
     res: dict = {}
-    # test split
     man = pd.read_csv(MANIFEST, dtype={"camera_id": str})
     test_idx = man.index[man["split"] == "test"]
     cues = pd.read_csv(LOCAL / "cues_manifest.csv", index_col=0).loc[test_idx].reset_index(drop=True)
@@ -100,7 +97,6 @@ def main() -> dict:
     res["test_prevalence"] = {t: {k: int(v) for k, v in tags.groupby(d["source"])[t].sum().items()}
                               for t in TAGS if t in tags}
     res["test"] = slice_table(d, tags, "boot_group", "label")
-    # live frames
     f = pd.read_csv(LOCAL / "live_preds.csv")
     lc = LOCAL / "cues_live.csv"
     fc = pd.read_csv(lc, index_col=0) if lc.exists() else None
@@ -124,7 +120,6 @@ def main() -> dict:
 
 
 def eye_check(n: int = 8, seed: int = 0) -> None:
-    # sheets of tagged frames to confirm tags by eye
     for name, csv, pcol in (("test", "test_slices.csv", "path"), ("live", "live_slices.csv", "abs_path")):
         t = pd.read_csv(LOCAL / csv, index_col=0)
         for tag in TAGS:
@@ -147,3 +142,4 @@ if __name__ == "__main__":
     main()
     if a.eye:
         eye_check()
+

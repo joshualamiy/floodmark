@@ -1,3 +1,4 @@
+# cross-split leakage checks (phash, groups, cameras, paths)
 from __future__ import annotations
 
 import json
@@ -26,7 +27,6 @@ def ph_int(h) -> np.ndarray:
 
 
 def hamming_pairs(a: np.ndarray, b: np.ndarray, thr: int = HAM, chunk: int = 512):
-    # all (i, j, dist) with hamming(a[i], b[j]) <= thr
     out = []
     for s in range(0, len(a), chunk):
         x = a[s:s + chunk, None] ^ b[None, :]
@@ -94,7 +94,6 @@ def fmd_vs_public(cur: pd.DataFrame) -> dict:
 
 
 def live_cross_split() -> dict:
-    # different camera ids that look at the same scene across splits
     f = pd.read_csv(FRAMES_CSV)
     f = f[f["dead_reason"].isna() & f["phash"].notna()].copy()
     sp = json.loads(CAM_SPLITS.read_text())
@@ -118,7 +117,6 @@ def live_cross_split() -> dict:
 
 
 def test_vs_seen(t: pd.DataFrame, seen: pd.DataFrame) -> dict:
-    # shared ids + phash pairs, broken down by test source
     r = {c: shared(c, t, seen) for c in ("group_id", "camera_id", "orig_path", "dup_cluster")}
     pairs = hamming_pairs(ph_int(t["phash"]), ph_int(seen["phash"]))
     ex = [{"test": t.iloc[p]["orig_path"], "seen": seen.iloc[q]["orig_path"], "seen_split": seen.iloc[q]["split"],
@@ -152,7 +150,6 @@ def clip_embed(df: pd.DataFrame, out) -> np.ndarray:
 
 
 def clip_near_dups(cur: pd.DataFrame, thr: float = 0.95) -> dict:
-    # catches crops / rescales / borders that phash misses
     e = clip_embed(cur, local("v3") / "emb_clip_manifest_v3.npy")
     ti = np.flatnonzero((cur["split"] == "test").to_numpy())
     si = np.flatnonzero(cur["split"].isin(["train", "val"]).to_numpy())
@@ -174,7 +171,6 @@ def clip_near_dups(cur: pd.DataFrame, thr: float = 0.95) -> dict:
 
 
 def rerun(clip: bool = True) -> dict:
-    # v3 rerun: current manifest == v3's training manifest (v1-7251bbd2)
     cur = pd.read_csv(MANIFEST, dtype={"camera_id": str, "group_id": str})
     t, seen = cur[cur["split"] == "test"], cur[cur["split"].isin(["train", "val"])]
     res = {"manifest": str(MANIFEST.name), "data_version": (ROOT / "data/processed/VERSION").read_text().strip()}
@@ -221,3 +217,4 @@ if __name__ == "__main__":
     ap.add_argument("--no-clip", action="store_true")
     a = ap.parse_args()
     rerun(not a.no_clip) if a.rerun else main()
+

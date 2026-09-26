@@ -1,11 +1,4 @@
-"""Builds tiny ONNX stage models for tests: same I/O names/shapes as the real
-ones (input "image" [N,224,224,3]; outputs cam [N,7,7], prob [N,1], declared
-in that order). prob = sigmoid(prob_slope * mean(image)/255 + prob_bias), so
-with prob_slope=0 (the default) prob is an input-independent constant --
-lets tests hit exact threshold boundaries. cam is either a constant (broadcast
-to the batch) or ReLU(cam_scale * pooled_grayscale + cam_bias), a real
-function of the image content, for heatmap tests.
-"""
+# tiny fake onnx models with the real i/o names, for tests
 from __future__ import annotations
 
 import math
@@ -16,7 +9,7 @@ from onnx import TensorProto, helper
 
 SIZE = 224
 GRID = 7
-POOL = SIZE // GRID  # 32
+POOL = SIZE // GRID
 
 
 def logit(p: float) -> float:
@@ -41,7 +34,6 @@ def build_stage_onnx(
     nodes = []
     inits = []
 
-    # --- prob branch: sigmoid(prob_slope * mean(image)/255 + prob_bias) ---
     nodes.append(helper.make_node("ReduceMean", ["image"], ["mean_all"], axes=[1, 2, 3], keepdims=0))
     inits.append(helper.make_tensor("c255", TensorProto.FLOAT, [], [255.0]))
     nodes.append(helper.make_node("Div", ["mean_all", "c255"], ["mean_norm"]))
@@ -53,9 +45,8 @@ def build_stage_onnx(
     inits.append(helper.make_tensor("prob_shape", TensorProto.INT64, [2], [-1, 1]))
     nodes.append(helper.make_node("Reshape", ["prob_flat", "prob_shape"], ["prob"]))
 
-    # --- cam branch ---
     if cam_mode == "constant":
-        nodes.append(helper.make_node("Shape", ["mean_all"], ["n_dim"]))  # [N] as a 1-elem tensor
+        nodes.append(helper.make_node("Shape", ["mean_all"], ["n_dim"]))
         inits.append(helper.make_tensor("grid_shape", TensorProto.INT64, [2], [GRID, GRID]))
         nodes.append(helper.make_node("Concat", ["n_dim", "grid_shape"], ["cam_target_shape"], axis=0))
         inits.append(helper.make_tensor(
@@ -86,15 +77,14 @@ def build_stage_onnx(
 
 
 def uniform_image(value: int, size=(SIZE + 32, SIZE + 32)) -> np.ndarray:
-    """A flat-color RGB uint8 image (bigger than the crop so preprocessing is exercised)."""
     arr = np.full((size[1], size[0], 3), value, dtype=np.uint8)
     return arr
 
 
 def gradient_image(size=(SIZE + 32, SIZE + 32)) -> np.ndarray:
-    """A spatially-varying RGB uint8 image, for non-blank cam tests."""
     w, h = size
     xs = np.linspace(0, 255, w, dtype=np.float32)
     grid = np.tile(xs, (h, 1))
     arr = np.stack([grid, grid, grid], axis=-1).astype(np.uint8)
     return arr
+

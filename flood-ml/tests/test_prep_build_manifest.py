@@ -1,7 +1,3 @@
-"""Unit tests for prep.build_manifest's v3 additions: the old-test-rows-
-unchanged guard, the manifest backup, and iowa_rwis's forced mixed-camera
-splits. No network, data, or models -- synthetic rows/CSVs only.
-"""
 import csv
 
 import pytest
@@ -70,7 +66,6 @@ def test_assert_legacy_test_rows_unchanged_raises_on_label_change(tmp_path):
 
 
 def test_assert_legacy_test_rows_unchanged_also_catches_train_row_changes(tmp_path):
-    # the brief requires EVERY legacy row to keep its split, not just test.
     old = tmp_path / "manifest.csv"
     _write_old_manifest(old, [
         {"path": "p.jpg", "label": "flooded", "source": "roadway_flooding",
@@ -109,7 +104,6 @@ def test_backup_old_manifest_copies_once(tmp_path):
     assert backup.read_text() == old.read_text()
     assert "copied" in note
 
-    # a second call must not clobber the backup even if the source changed
     old.write_text("a,b\n999,999\n")
     note2 = backup_old_manifest(old, backup)
     assert "already exists" in note2
@@ -124,9 +118,6 @@ def test_legacy_forced_splits_pins_old_groups_by_orig_path(tmp_path):
         {"path": "old2.jpg", "label": "flooded", "source": "roadway_flooding",
          "split": "train", "orig_path": "data/raw/roadway_flooding/b.jpg"},
     ])
-    # simulate a rebuild where roadway_flooding's dup_cluster ids got
-    # renumbered (a new source was inserted earlier in processing order):
-    # same orig_path, different (new) group_id.
     ext_rows = [
         {"source": "roadway_flooding", "orig_path": "data/raw/roadway_flooding/a.jpg", "group_id": "dc0009999"},
         {"source": "roadway_flooding", "orig_path": "data/raw/roadway_flooding/b.jpg", "group_id": "dc0009998"},
@@ -144,8 +135,6 @@ def test_legacy_forced_splits_resolves_merged_cluster_test_over_train(tmp_path):
         {"path": "old2.jpg", "label": "flooded", "source": "roadway_flooding",
          "split": "train", "orig_path": "data/raw/roadway_flooding/b.jpg"},
     ])
-    # a and b now land in the SAME new cluster (bridged by a new image) --
-    # test must win over train.
     ext_rows = [
         {"source": "roadway_flooding", "orig_path": "data/raw/roadway_flooding/a.jpg", "group_id": "dc0000001"},
         {"source": "roadway_flooding", "orig_path": "data/raw/roadway_flooding/b.jpg", "group_id": "dc0000001"},
@@ -160,7 +149,6 @@ def test_iowa_rwis_forced_splits_pins_mixed_cameras_to_test_and_val():
     for cam in mixed_cams:
         ext_rows.append({"source": "iowa_rwis", "camera_id": cam, "label": "wet"})
         ext_rows.append({"source": "iowa_rwis", "camera_id": cam, "label": "dry"})
-    # a wet-only camera must never be "forced" (it isn't mixed)
     ext_rows.append({"source": "iowa_rwis", "camera_id": "IDOT-999", "label": "wet"})
 
     forced = iowa_rwis_forced_splits(ext_rows, n_test=6, n_val=6)
@@ -179,3 +167,4 @@ def test_iowa_rwis_forced_splits_is_deterministic():
     first = iowa_rwis_forced_splits(ext_rows, n_test=2, n_val=2)
     second = iowa_rwis_forced_splits(ext_rows, n_test=2, n_val=2)
     assert first == second
+

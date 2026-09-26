@@ -1,9 +1,4 @@
-"""predict()/predict_batch(): the ML -> backend contract. See docs/INFERENCE_API.md.
-
-"wet" means water detected but below the flood alert threshold (possible
-flooding), not "wet pavement" -- Stage A never learned to detect that
-(reports/EVALUATION.md). Hence the `note` field on wet predictions.
-"""
+# predict() / predict_batch(): the backend contract, see docs/INFERENCE_API.md
 from __future__ import annotations
 
 import base64
@@ -20,7 +15,7 @@ WET_NOTE = "water detected below flood alert threshold"
 
 @dataclass
 class Prediction:
-    status: str  # "dry" | "wet" | "flooded"
+    status: str
     confidence: float
     stage_a_probs: dict
     stage_b_probs: dict
@@ -57,6 +52,7 @@ class Prediction:
         return d
 
 
+# dry if pA < tA, flooded if pB >= tB, else wet (= possible flooding)
 def _status_and_probs(pa: float, pb: float, ta: float, tb: float):
     if pa < ta:
         status = "dry"
@@ -69,7 +65,6 @@ def _status_and_probs(pa: float, pb: float, ta: float, tb: float):
 
 
 def _run_stage(sess, x: np.ndarray):
-    # onnx returns (cam, prob) in that order -- always fetch by name
     cam, prob = sess.run(["cam", "prob"], {"image": x})
     return prob[:, 0], cam
 
@@ -84,9 +79,6 @@ def predict_batch(
     images, models=None, heatmap: bool = True, camera_id: str | None = None,
     *, raw_heatmap: bool = False,
 ) -> list[Prediction]:
-    """camera_id is accepted for forward compatibility / logging; per-camera
-    smoothing and blocklisting live in TemporalSmoother, not here.
-    """
     del camera_id
     if len(images) == 0:
         return []
@@ -96,7 +88,7 @@ def predict_batch(
     tb = float(cfg["stage_b"]["threshold_tB"])
     preproc_cfg = cfg.get("preprocess", {})
     do_jpeg = preproc_cfg.get("jpeg_roundtrip", True)
-    mode = preproc_cfg.get("mode", "crop")  # old configs without "mode" keep working as crop
+    mode = preproc_cfg.get("mode", "crop")
     size = int(preproc_cfg.get("size", cfg.get("input", {}).get("size", 224)))
 
     frames = [to_pil(img) for img in images]
@@ -141,3 +133,4 @@ def predict_batch(
             raw_heatmap_png=raw,
         ))
     return out
+

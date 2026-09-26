@@ -1,8 +1,4 @@
-"""Flags re-aimed cameras so the frame gets skipped, not misclassified.
-Structure only (Sobel edges), never color/brightness -- day/night, rain and
-headlights must not trigger it. Threshold calibrated on real 511GA frames,
-see docs/INFERENCE_API.md.
-"""
+# flags re-aimed cameras using edges only, not color
 from __future__ import annotations
 
 import numpy as np
@@ -30,7 +26,7 @@ def _sobel(gray: np.ndarray) -> np.ndarray:
         for j in range(3):
             window = padded[i:i + gray.shape[0], j:j + gray.shape[1]]
             gx += kx[i, j] * window
-            gy += kx[j, i] * window  # ky = kx.T
+            gy += kx[j, i] * window
     return np.hypot(gx, gy)
 
 
@@ -72,7 +68,7 @@ class CameraMoveDetector:
             if len(bucket) >= self.k_ref:
                 self._refs[camera_id] = np.median(np.stack(bucket), axis=0)
                 del self._building[camera_id]
-            return False, 1.0  # still building the reference: assume not moved
+            return False, 1.0
         score = _best_shift_ncc(self._refs[camera_id], edges)
         return score < self.threshold, score
 
@@ -88,3 +84,4 @@ class CameraMoveDetector:
         obj = cls(k_ref=d.get("k_ref", DEFAULT_K_REF), threshold=d.get("threshold", DEFAULT_THRESHOLD))
         obj._refs = {k: np.asarray(v, dtype=np.float32) for k, v in d.get("refs", {}).items()}
         return obj
+

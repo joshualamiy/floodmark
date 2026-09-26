@@ -1,50 +1,4 @@
-"""Street/elevated-view flood photo acquisition (Phase 1 gap-fill).
-
-Owns data/raw/eu_flood_2013/, data/raw/floodimg/ and data/raw/alleyfloodnet/
-(new folders only), docs/phase_reports/flood_photos.md, and appended rows in
-data/raw/SOURCES.md and docs/DATASETS.md. Never touches another worker's files.
-
-Three verified, ungated datasets:
-
-- eu_flood_2013: European Flood 2013 Dataset (cvjena/eu-flood-dataset,
-  Univ. Jena). 3,435 Wikimedia Commons photos of the May/June 2013 central
-  European floods + 275 manually-collected oil-spill "pollution" photos.
-  Per-image Wikimedia license in metadata.json (mostly CC BY-SA / CC BY /
-  CC0). Ground and elevated (bridge/embankment) street photography.
-  Includes a real "not flood-relevant" pool (relevance/irrelevant.txt).
-  Images: https://archive.org/download/european-flood-2013/ (no login).
-- floodimg: Kaggle `hhrclemson/flooding-image-dataset` (Clemson Univ.,
-  CC0-1.0, confirmed via `kaggle datasets download`). 9,296 real-world flood
-  photos incl. DOT roadside/traffic camera captures (elevated, fixed-camera
-  -- the exact view type the model misses), Twitter, Google Images and a
-  copy of eu-flood-dataset. No non-flooded images (every image is
-  "flooded" by the dataset's own scope) and no per-image source tag, so we
-  sample a deterministic subset instead of the whole ~12 GB.
-- alleyfloodnet: Kaggle `seonyseony/alleyfloodnet` (Lee & Joo 2025,
-  *Electronics* 14(10):2082, CC BY 4.0, confirmed via
-  `kaggle datasets metadata`). 1,110 ground-level photos of alleys/lowlands/
-  semi-basement entries, natively split flooded (601) vs. non_flooded (509)
-  -- the best-balanced source found. Filenames (gettyimages-*, hq720.jpg,
-  "images (N).jpg") show it was compiled from stock-photo/news/YouTube/Google
-  search results, so the CC BY 4.0 grant is the authors' license over their
-  compiled dataset and labels, not a confirmed per-photo redistribution
-  right for every underlying image -- flagged in the report, same caveat as
-  floodimg's Twitter/Google-sourced images.
-
-Module-level imports stay stdlib-only (+ PIL, imported lazily where used) so
-tests/test_acquire_flood_photos.py can import this file with no training
-deps installed, per tests/conftest.py's NEEDS pattern (CI only has
-requirements.txt).
-
-Usage (from flood-ml/, with src/ on PYTHONPATH):
-
-    PYTHONPATH=src ../my_env/bin/python -m acquire.flood_photos download --dataset all
-    PYTHONPATH=src ../my_env/bin/python -m acquire.flood_photos download --dataset floodimg --sample-size 2000
-    PYTHONPATH=src ../my_env/bin/python -m acquire.flood_photos verify --dataset all
-    PYTHONPATH=src ../my_env/bin/python -m acquire.flood_photos characterize --dataset all
-    PYTHONPATH=src ../my_env/bin/python -m acquire.flood_photos contact-sheet --dataset eu_flood_2013 --n 48
-"""
-
+# download + characterize street/elevated flood photo datasets
 from __future__ import annotations
 
 import argparse
@@ -65,7 +19,6 @@ REPORTS_DIR = FLOOD_ML_ROOT / "reports"
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png"}
 
-# --- eu_flood_2013 ---------------------------------------------------------
 
 EU_FLOOD_DEST = DATA_RAW / "eu_flood_2013"
 EU_FLOOD_GITHUB_RAW = "https://raw.githubusercontent.com/cvjena/eu-flood-dataset/master"
@@ -82,17 +35,14 @@ EU_FLOOD_ANNOTATION_FILES = [
     "important_regions/depth.json",
     "important_regions/pollution.json",
 ]
-# 512px variant: smaller side <=512px, 1.1 GB. Plenty for a 224px pipeline.
 EU_FLOOD_IMAGES_ZIP_URL = "https://archive.org/download/european-flood-2013/european-flood-2013_imgs_small.zip"
 
-# --- floodimg ----------------------------------------------------------------
 
 FLOODIMG_DEST = DATA_RAW / "floodimg"
 FLOODIMG_KAGGLE_REF = "hhrclemson/flooding-image-dataset"
-FLOODIMG_SAMPLE_DEFAULT = 2000  # ~2.5 GB of the 9,296 images (~12 GB total)
+FLOODIMG_SAMPLE_DEFAULT = 2000
 FLOODIMG_SEED = 42
 
-# --- alleyfloodnet -----------------------------------------------------------
 
 ALLEYFN_DEST = DATA_RAW / "alleyfloodnet"
 ALLEYFN_KAGGLE_REF = "seonyseony/alleyfloodnet"
@@ -108,20 +58,14 @@ def _nonempty_dir(path: Path) -> bool:
 
 
 def _retry(fn, *args, retries: int = 5, backoff: float = 3.0, **kwargs):
-    """Small retry wrapper for flaky network calls (429s etc)."""
     last_exc: Exception | None = None
     for attempt in range(retries):
         try:
             return fn(*args, **kwargs)
-        except Exception as exc:  # noqa: BLE001 - want to retry any transient error
+        except Exception as exc:  # noqa: BLE001
             last_exc = exc
             time.sleep(backoff * (attempt + 1))
     raise last_exc  # type: ignore[misc]
-
-
-# --------------------------------------------------------------------------
-# eu_flood_2013 download
-# --------------------------------------------------------------------------
 
 
 def download_eu_flood_2013() -> None:
@@ -158,10 +102,6 @@ def download_eu_flood_2013() -> None:
 def parse_eu_flood_labels(
     all_ids: list[str], flooding_ids: set[str], irrelevant_ids: set[str]
 ) -> dict[str, str]:
-    """flooding.txt = relevant to "is this area flooded" -> flooded.
-    irrelevant.txt = not relevant to any of the 3 objectives -> not_flooded.
-    Everything else (depth/pollution-only relevant) is ambiguous -> unknown.
-    """
     labels: dict[str, str] = {}
     for image_id in all_ids:
         if image_id in irrelevant_ids:
@@ -179,11 +119,6 @@ def _read_id_list(path: Path) -> set[str]:
     return {line.strip() for line in path.read_text().splitlines() if line.strip()}
 
 
-# --------------------------------------------------------------------------
-# floodimg download
-# --------------------------------------------------------------------------
-
-
 def _kaggle_api():
     import kaggle
 
@@ -192,7 +127,6 @@ def _kaggle_api():
 
 
 def _list_floodimg_files() -> list[dict[str, Any]]:
-    """Cache the Kaggle file listing (9,321 entries) so re-runs don't re-page."""
     cache = FLOODIMG_DEST / "file_list.json"
     if cache.exists():
         return json.loads(cache.read_text())
@@ -213,7 +147,6 @@ def _list_floodimg_files() -> list[dict[str, Any]]:
 
 
 def deterministic_sample(names: list[str], n: int, seed: int) -> list[str]:
-    """Same (name, n, seed) always yields the same subset -- idempotent re-runs."""
     ordered = sorted(names)
     rng = random.Random(seed)
     rng.shuffle(ordered)
@@ -225,10 +158,6 @@ def floodimg_local_name(kaggle_path: str) -> str:
 
 
 def _kaggle_download_one(api, dest_dir: Path, kaggle_name: str) -> None:
-    """Kaggle's single-file download sometimes wraps the file in a zip
-    (server-side, size-dependent) instead of returning it raw -- unwrap it
-    so the final file always lands at dest_dir/<basename>, never *.zip.
-    """
     target = dest_dir / Path(kaggle_name).name
     _retry(api.dataset_download_file, FLOODIMG_KAGGLE_REF, kaggle_name, path=str(dest_dir), force=True)
     zip_path = dest_dir / (target.name + ".zip")
@@ -244,7 +173,6 @@ def download_floodimg(sample_size: int = FLOODIMG_SAMPLE_DEFAULT, seed: int = FL
     api = _kaggle_api()
     files = _list_floodimg_files()
 
-    # small official annotated subset (25 labelme jsons, each embeds its own image)
     ann_dest = dest / "annotation_sample"
     ann_dest.mkdir(exist_ok=True)
     ann_names = [f["name"] for f in files if f["name"].startswith("Annotation/")]
@@ -254,7 +182,6 @@ def download_floodimg(sample_size: int = FLOODIMG_SAMPLE_DEFAULT, seed: int = FL
         _kaggle_download_one(api, ann_dest, name)
         time.sleep(0.4)
 
-    # main sample: every image here is "flooded" by the dataset's own scope
     img_names = [f["name"] for f in files if f["name"].startswith("Flood Images/")]
     selected = deterministic_sample(img_names, sample_size, seed)
     img_dest = dest / "images"
@@ -274,7 +201,6 @@ def download_floodimg(sample_size: int = FLOODIMG_SAMPLE_DEFAULT, seed: int = FL
 
 
 def download_alleyfloodnet() -> None:
-    """Whole dataset is 64 MB -- no sampling needed, plain kaggle CLI download."""
     import subprocess
 
     dest = ALLEYFN_DEST
@@ -305,11 +231,6 @@ def download(dataset: str, sample_size: int, seed: int) -> None:
     names = list(DOWNLOADERS) if dataset == "all" else [dataset]
     for name in names:
         DOWNLOADERS[name](sample_size=sample_size, seed=seed)
-
-
-# --------------------------------------------------------------------------
-# verify
-# --------------------------------------------------------------------------
 
 
 def _check_images(paths: list[Path]) -> dict[str, Any]:
@@ -431,12 +352,6 @@ def verify(dataset: str) -> dict[str, Any]:
     return report
 
 
-# --------------------------------------------------------------------------
-# characterize: candidates.csv (path, label, label_source, road_score,
-# view_guess, group_id, license, phash)
-# --------------------------------------------------------------------------
-
-
 def _eu_flood_rows() -> list[dict[str, Any]]:
     dest = EU_FLOOD_DEST
     meta = json.loads((dest / "metadata.json").read_text())
@@ -457,7 +372,6 @@ def _eu_flood_rows() -> list[dict[str, Any]]:
             license_str = m.get("license", "unverified")
             group_id = f"euflood_user_{m.get('user', 'unknown')}"
         elif image_id in pollution_ids or image_id.startswith("pollution_"):
-            # manually harvested oil-spill photos, no per-image Wikimedia license
             label = "unknown"
             license_str = "unverified (manually harvested search-engine image, not Wikimedia)"
             group_id = "euflood_pollution_batch"
@@ -490,10 +404,10 @@ def _floodimg_rows() -> list[dict[str, Any]]:
             {
                 "path": str(p.relative_to(FLOOD_ML_ROOT)),
                 "label": "flooded",
-                "label_source": "dataset_label",  # whole dataset is scoped to flood images, not per-image
+                "label_source": "dataset_label",
                 "road_score": "",
                 "view_guess": "unknown",
-                "group_id": "floodimg_unknown",  # no per-image source/photographer metadata upstream
+                "group_id": "floodimg_unknown",
                 "license": "CC0-1.0",
                 "phash": "",
             }
@@ -519,7 +433,6 @@ def _alleyfloodnet_rows() -> list[dict[str, Any]]:
                         "label_source": "dataset_label",
                         "road_score": "",
                         "view_guess": "unknown",
-                        # stock/news/social filenames -> no real photographer/event key upstream
                         "group_id": "alleyfloodnet_unknown",
                         "license": "CC BY 4.0 (dataset-level grant; per-photo origin unverified -- see report)",
                         "phash": "",
@@ -549,7 +462,6 @@ def _add_phash(rows: list[dict[str, Any]]) -> None:
 
 
 def _add_road_scores(rows: list[dict[str, Any]]) -> None:
-    """Reuses prep.clip_filter (read-only import) for a zero-shot road-scene score."""
     sys.path.insert(0, str(FLOOD_ML_ROOT / "src"))
     from prep.clip_filter import load_clip, score_batch
 
@@ -580,11 +492,6 @@ def characterize(dataset: str, skip_clip: bool = False) -> None:
         print(f"wrote {out_path} ({len(rows)} rows)")
 
 
-# --------------------------------------------------------------------------
-# contact sheets (local-only, reports/ is gitignored except .md/.csv)
-# --------------------------------------------------------------------------
-
-
 def contact_sheet(dataset: str, n: int, seed: int, out: Path | None = None, cols: int = 8) -> Path:
     from PIL import Image
 
@@ -606,21 +513,15 @@ def contact_sheet(dataset: str, n: int, seed: int, out: Path | None = None, cols
                 im.thumbnail((thumb, thumb))
                 x, y = (i % cols) * thumb, (i // cols) * thumb
                 sheet.paste(im, (x, y))
-        except Exception:  # noqa: BLE001, S112 - a bad thumbnail is just skipped
+        except Exception:  # noqa: BLE001, S112
             continue
 
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     out_path = out or REPORTS_DIR / f"flood_photos_{dataset}_contact_sheet.png"
     sheet.save(out_path)
-    # so a human (or a later Read of this PNG) can map grid position -> path
     (out_path.with_suffix(".json")).write_text(json.dumps(sample, indent=2))
     print(f"wrote {out_path} ({len(sample)} images, {cols} cols)")
     return out_path
-
-
-# --------------------------------------------------------------------------
-# CLI
-# --------------------------------------------------------------------------
 
 
 def main() -> None:
@@ -658,3 +559,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

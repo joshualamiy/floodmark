@@ -1,3 +1,4 @@
+# run the onnx models over test rows and live frames
 from __future__ import annotations
 
 import argparse
@@ -25,7 +26,6 @@ from eval.common import (
 
 
 def input_paths(df: pd.DataFrame, raw: bool) -> pd.Series:
-    # raw = the original file; nysdot raw has a label-leaking header, so keep its crop
     if not raw:
         return df["path"]
     return df["orig_path"].where(df["source"] != "nysdot_road_surface", df["path"])
@@ -63,7 +63,7 @@ def live_frames(snapshot_ts: int | None = None) -> pd.DataFrame:
     ts = pd.to_datetime(f["timestamp_utc"], unit="s", utc=True).dt.tz_convert("America/New_York")
     f["local_time"] = ts.astype(str)
     mins = ts.dt.hour * 60 + ts.dt.minute
-    f["day"] = ((mins >= 450) & (mins < 1170)).to_numpy()  # 07:30-19:30 EDT
+    f["day"] = ((mins >= 450) & (mins < 1170)).to_numpy()
     return f.reset_index(drop=True)
 
 
@@ -82,7 +82,6 @@ def run_live(tag: str, snapshot_ts: int | None = None) -> pd.DataFrame:
 
 
 def tf_input(path: str, spec: dict) -> np.ndarray:
-    # training-time val pipeline (train.data), run on the processed copy
     import tensorflow as tf
 
     from train.data import _letterbox_resize, _resize_short_side, _squash_resize
@@ -99,7 +98,6 @@ def tf_input(path: str, spec: dict) -> np.ndarray:
 
 
 def run_tf(tag: str) -> pd.DataFrame:
-    # sensitivity: same rows through the training-time tf path
     out = local(tag)
     f = pd.read_csv(out / "test_preds.csv", dtype={"camera_id": str, "group_id": str})
     pipe = Pipeline(model_dir(tag))
@@ -112,7 +110,6 @@ def run_tf(tag: str) -> pd.DataFrame:
 
 
 def run_parity(tag: str, n: int = 56, seed: int = 0) -> dict:
-    # eval loader vs the deployed predict_batch; onnx vs keras
     from inference import load_models, predict_batch
 
     out = local(tag)
@@ -145,7 +142,6 @@ def run_parity(tag: str, n: int = 56, seed: int = 0) -> dict:
 
 
 def v1_reproduce() -> dict:
-    # does models/v1 + new loader reproduce the first phase 4 run?
     old = pd.read_csv(LOCAL / "test_preds.csv")
     new = pd.read_csv(local("v1") / "test_preds.csv")
     m = old.merge(new, on="orig_path", suffixes=("_old", "_new"))
@@ -207,3 +203,4 @@ if __name__ == "__main__":
         run_tf(a.tag)
     else:
         parity_all()
+

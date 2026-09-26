@@ -1,3 +1,4 @@
+# builds reports/errors.html (every test mistake + heatmap)
 from __future__ import annotations
 
 import argparse
@@ -58,7 +59,6 @@ td{padding:1px 6px 1px 0}h2{margin-top:28px}.note{color:#52514e;font-size:13px}"
 
 def build(out=REPORTS / "errors.html", live_wet: bool = True, tag: str | None = None,
           live_splits=("test",)) -> dict:
-    # tag None = first run (v1); else reports/eval/<tag>/
     base = local(tag) if tag else LOCAL
     spec = preproc_spec(load_config(model_dir(tag))) if tag else None
     d = pd.read_csv(base / "test_preds.csv")
@@ -109,3 +109,4 @@ if __name__ == "__main__":
     ap.add_argument("--tag", default=None, choices=["v1", "v3"])
     a = ap.parse_args()
     build(live_wet=not a.no_live_wet, tag=a.tag)
+

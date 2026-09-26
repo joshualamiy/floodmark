@@ -1,9 +1,4 @@
-"""Multi-crop test-time augmentation on the CURRENT (crop-224) shipped ONNX
-models -- no retraining. Takes left/center/right 224 crops of the 256-short-
-side frame and reports max pA, max pB across the three, so an off-center
-flood (improve_v2 problem 1) has a better chance of landing inside a crop.
-Cheap fallback: same models, ~3x inference cost, no new training run.
-"""
+# multi-crop test-time aug experiment
 from __future__ import annotations
 
 import numpy as np
@@ -14,10 +9,6 @@ CROP_SIZE = 224
 
 
 def three_crop_boxes(w: int, h: int, size: int = CROP_SIZE) -> list[tuple[int, int, int, int]]:
-    """Left/center/right (or top/center/bottom) boxes along the longer axis of
-    a size-or-bigger frame. Collapses to one box if the frame is <= size on
-    that axis (dedup keeps them in left-to-right / top-to-bottom order).
-    """
     boxes = []
     if w >= h:
         offsets = sorted({0, max(0, (w - size) // 2), max(0, w - size)})
@@ -45,10 +36,6 @@ def three_crops(img: Image.Image, short_side: int = SHORT_SIDE, size: int = CROP
 
 
 def perturb_tta_flip_rate(sess_a, sess_b, paths, ta: float, tb: float, size: int = CROP_SIZE) -> dict:
-    """Perturbation robustness for the multi-crop TTA candidate: applies
-    eval.shortcut._perturb (imported, not edited) to EACH of the 3 crops,
-    then takes the max pA/pB across crops, same as the unperturbed case.
-    """
     from eval.shortcut import _perturb
     from train.pipeline_eval import status_from_probs
 
@@ -70,10 +57,6 @@ def perturb_tta_flip_rate(sess_a, sess_b, paths, ta: float, tb: float, size: int
 
 
 def predict_tta_max(sess_a, sess_b, paths, size: int = CROP_SIZE, batch: int = 32) -> dict[str, np.ndarray]:
-    """Runs both stages over every crop of every path and returns per-image
-    max pA / max pB (the max, not the mean, since we want ANY crop that sees
-    the flood to be able to trigger it).
-    """
     pa_out, pb_out = [], []
     for p in paths:
         img = Image.open(p).convert("RGB")
@@ -112,3 +95,4 @@ if __name__ == "__main__":
     Path(args.out_csv).parent.mkdir(parents=True, exist_ok=True)
     rows.to_csv(args.out_csv, index=False)
     print(json.dumps({"n": len(rows), "out_csv": args.out_csv}, indent=2))
+

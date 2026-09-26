@@ -1,16 +1,4 @@
-"""Perceptual-hash dedup across all sources, and temporal thinning of long
-video-like runs (FRED sequences, Flood Master test videos).
-
-Uses `imagehash.phash` (via a precomputed hex string per row) and a simple
-LSH-style bucketed search: the 64-bit hash is split into 4x16-bit bands, and
-only rows sharing at least one band are compared exactly (Hamming <= 6),
-which is much cheaper than all-pairs for thousands of images while still
-finding every true near-duplicate pair (any two hashes within Hamming
-distance 6 of a 64-bit hash must match exactly on at least one 16-bit band,
-by pigeonhole: 4 bands * 6 max differing bits could in principle all land in
-different bands only if bits are adversarially spread, so this is a
-heuristic search, not an exact guarantee -- documented in the phase report).
-"""
+# phash dedup + thinning long video runs
 from __future__ import annotations
 
 from collections import defaultdict
@@ -43,10 +31,6 @@ def _bands(value: int) -> list[int]:
 
 
 def cluster_phashes(phashes: list[str | None], threshold: int = HAMMING_THRESHOLD) -> list[int]:
-    """Returns a cluster id (int, 0-based, stable given input order) for
-    every row. Rows with no phash (None) each get their own singleton
-    cluster. Uses bucketed union-find so it scales to thousands of rows.
-    """
     n = len(phashes)
     uf = UnionFind(n)
     buckets: dict[tuple[int, int], list[int]] = defaultdict(list)
@@ -68,7 +52,6 @@ def cluster_phashes(phashes: list[str | None], threshold: int = HAMMING_THRESHOL
                 if hamming(ints[ia], ints[ib]) <= threshold:
                     uf.union(ia, ib)
 
-    # Renumber roots to small dense ids in a stable order.
     root_to_id: dict[int, int] = {}
     ids: list[int] = []
     next_id = 0
@@ -87,13 +70,6 @@ def cluster_phashes(phashes: list[str | None], threshold: int = HAMMING_THRESHOL
 
 def thin_sequence(items: list[tuple[int, str | None]], min_distance: int = 6,
                    max_gap: int = 15) -> list[int]:
-    """Thin a single ordered video-like sequence of (row_index, phash_hex).
-    Keeps a frame if it differs from the last *kept* frame by more than
-    `min_distance`, OR if `max_gap` frames have been dropped in a row (so a
-    long static stretch is still sampled every `max_gap` frames instead of
-    collapsing to a single frame). Always keeps the first frame. Returns the
-    list of kept row indices, in the given order.
-    """
     kept: list[int] = []
     last_kept_hash: int | None = None
     dropped_since_last = 0
@@ -111,3 +87,4 @@ def thin_sequence(items: list[tuple[int, str | None]], min_distance: int = 6,
         else:
             dropped_since_last += 1
     return kept
+

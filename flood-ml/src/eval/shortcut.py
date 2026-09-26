@@ -1,3 +1,4 @@
+# source-predictability and perturbation shortcut tests
 from __future__ import annotations
 
 import argparse
@@ -45,7 +46,6 @@ def compute_cues(df: pd.DataFrame) -> pd.DataFrame:
 def embed_stage_a(paths, batch: int = 64) -> np.ndarray:
     import keras
 
-    # first-run features: v1 model, crop224 input
     m = keras.models.load_model(MODELS / load_config(model_dir("v1"))["stage_a"]["run_id"] / "model.keras")
     bb = m.get_layer("backbone")
     out = []
@@ -185,8 +185,6 @@ def main(skip_embed: bool = False) -> dict:
     return res
 
 
-
-
 def _perturb(x: np.ndarray, kind: str) -> np.ndarray:
     import io
 
@@ -211,7 +209,6 @@ def _perturb(x: np.ndarray, kind: str) -> np.ndarray:
 
 
 def perturb(kinds=("dark", "gray", "label_box", "ga511_jpeg")) -> dict:
-    # first-run stress test (v1, edits on the 224 crop); v3 rerun: eval.stress
     from eval.common import Pipeline
 
     d = pd.read_csv(LOCAL / "test_preds.csv")
@@ -241,3 +238,4 @@ if __name__ == "__main__":
     ap.add_argument("--perturb", action="store_true")
     a = ap.parse_args()
     perturb() if a.perturb else main(a.skip_embed)
+

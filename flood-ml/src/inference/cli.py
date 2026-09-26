@@ -1,8 +1,4 @@
-"""Run the pipeline over a folder of frames.
-
-Usage: PYTHONPATH=src ../my_env/bin/python -m inference.cli <folder> [--camera-id ID]
-       [--smooth-n 3] [--json] [--save-heatmaps DIR] [--blocklist 11372,...]
-"""
+# run the pipeline over a folder of frames
 from __future__ import annotations
 
 import argparse
@@ -80,3 +76,4 @@ def run(argv=None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(run())
+

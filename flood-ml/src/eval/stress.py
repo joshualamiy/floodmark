@@ -1,8 +1,4 @@
-"""Image-space stress tests for both models (v3 rerun).
-
-Edits go on the full frame before each model's own deployed preprocess, so a
-511GA-style overlay lands on image content, not on letterbox padding.
-"""
+# image stress tests for v1 vs v3
 from __future__ import annotations
 
 import argparse
@@ -23,7 +19,6 @@ def darken(im: Image.Image) -> Image.Image:
 
 
 def ga511_overlay(im: Image.Image) -> Image.Image:
-    # black title band top-left + white logo box top-right, sized like real 511GA frames
     im = im.copy()
     w, h = im.size
     bh = max(10, round(0.07 * h))
@@ -37,7 +32,6 @@ def ga511_overlay(im: Image.Image) -> Image.Image:
 
 
 def overlay_part(im: Image.Image, part: str) -> Image.Image:
-    # decompose the overlay; "band_bottom" = same band moved to the bottom (occlusion control)
     im = im.copy()
     w, h = im.size
     bh = max(10, round(0.07 * h))
@@ -54,7 +48,6 @@ def overlay_part(im: Image.Image, part: str) -> Image.Image:
 
 
 def crop_aspect(im: Image.Image, aspect: float) -> Image.Image:
-    # largest centered crop with w/h == aspect
     w, h = im.size
     if w / h > aspect:
         nw = round(h * aspect)
@@ -64,7 +57,6 @@ def crop_aspect(im: Image.Image, aspect: float) -> Image.Image:
 
 
 def crop_area(im: Image.Image, frac: float) -> Image.Image:
-    # control: same area removed, aspect kept
     w, h = im.size
     s = np.sqrt(frac)
     nw, nh = max(1, round(w * s)), max(1, round(h * s))
@@ -122,7 +114,6 @@ def main() -> dict:
             "dark", "ga511_overlay", "dark+overlay", "band_top", "band_bottom", "gray_band_top", "logo")))
         dry = d[(d["label"] == "dry") & (d["source"] != "ga511")]
         r["dry_non_ga511"] = summarize(dry, run_set(pipe, dry["path"], ("dark", "ga511_overlay")))
-        # aspect: letterbox bars encode source aspect ratio
         asp = d["width"] / d["height"]
         f43 = fl[(asp[fl.index] < 1.5).to_numpy()]
         r["flooded_non16x9"] = summarize(f43, run_set(pipe, f43["path"], ("to_16x9", "to_16x9_ctrl")))
@@ -139,3 +130,4 @@ def main() -> dict:
 if __name__ == "__main__":
     argparse.ArgumentParser().parse_args()
     main()
+

@@ -70,3 +70,4 @@ def test_boot_groups_fred_uses_sequence():
                                      "data/ga511/frames/1/2.jpg"],
                        "group_id": ["loc", "loc", "123"]})
     assert boot_groups(df).tolist() == ["fred:SeqA", "fred:SeqB", "ga511:123"]
+

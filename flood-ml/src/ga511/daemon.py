@@ -1,19 +1,4 @@
-"""Long-lived process: runs the frame collector and the event poller together,
-with graceful SIGTERM handling. Meant to be started detached (nohup ... &
-disown) so it keeps sampling across times of day.
-
-Start:
-    cd flood-ml && PYTHONPATH=src nohup ../my_env/bin/python -m ga511.daemon run \\
-        --interval-min 60 --event-poll-min 5 \\
-        > logs/jobs/ga511_collector.log 2>&1 &
-    disown
-
-Stop:
-    cd flood-ml && PYTHONPATH=src ../my_env/bin/python -m ga511.daemon stop
-
-Status:
-    cd flood-ml && PYTHONPATH=src ../my_env/bin/python -m ga511.daemon status
-"""
+# long-running collector + flood event poller
 from __future__ import annotations
 
 import argparse
@@ -217,3 +202,4 @@ def _main() -> None:
 
 if __name__ == "__main__":
     _main()
+

@@ -1,4 +1,3 @@
-"""Heatmap PNG: decodes, right size, aspect preserved, blank-safe."""
 from __future__ import annotations
 
 import io
@@ -47,7 +46,6 @@ def test_heatmap_caps_long_side_at_640_and_keeps_aspect(models):
 
 
 def test_blank_cam_returns_valid_png_with_no_error(tmp_path):
-    # cam_mode="constant" with bias 0 -> ReLU(0) everywhere -> "blank heat" branch
     build_stage_onnx(tmp_path / "stage_a.onnx", prob_bias=logit(0.9), cam_mode="constant", cam_bias=0.0)
     build_stage_onnx(tmp_path / "stage_b.onnx", prob_bias=logit(0.9), cam_mode="constant", cam_bias=0.0)
     cfg = {
@@ -83,7 +81,7 @@ def test_heatmap_squash_covers_the_whole_frame():
 def test_heatmap_letterbox_maps_content_box_back():
     from inference.heatmap import make_heatmap_png
 
-    frame = Image.fromarray(gradient_image((500, 200)))  # wide -> padded top/bottom
+    frame = Image.fromarray(gradient_image((500, 200)))
     cam = np.ones((7, 7), dtype=np.float32)
     _arr, geom = preprocess(frame, mode="letterbox", size=64, do_jpeg_roundtrip=False)
     png = make_heatmap_png(frame, cam, geom)
@@ -152,3 +150,4 @@ def test_letterbox_discards_attribution_in_padding():
     cam[:8] = 1.0
     out = np.asarray(Image.open(io.BytesIO(make_heatmap_png(frame, cam, geom))))
     assert np.all(out == 80)
+

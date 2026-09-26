@@ -1,4 +1,4 @@
-"""Render relative flood attribution; colors are not water probabilities."""
+# flood heatmap overlay (relative evidence, not water probability)
 from __future__ import annotations
 
 import io
@@ -23,7 +23,7 @@ def _normalize(cam: np.ndarray) -> np.ndarray:
     cam = np.maximum(np.nan_to_num(cam, nan=0.0, posinf=0.0, neginf=0.0), 0.0)
     lo, hi = float(cam.min()), float(cam.max())
     if hi < BLANK_EPS or (hi - lo) < BLANK_EPS:
-        return np.zeros_like(cam)  # ~all-zero CAM -> blank heat
+        return np.zeros_like(cam)
     return (cam - lo) / (hi - lo)
 
 
@@ -63,8 +63,6 @@ def _heat_full_crop(norm: np.ndarray, geom: dict, w0: int, h0: int) -> np.ndarra
 
 
 def _heat_full_letterbox(norm: np.ndarray, geom: dict, w0: int, h0: int) -> np.ndarray:
-    # invert the pad: crop out the real-content sub-box, then resize that
-    # 1:1 back onto the whole original frame (padding never gets any heat).
     left, top, right, bottom = geom["content_box_canvas"]
     cw, ch = max(1, right - left), max(1, bottom - top)
     content = norm[top:top + ch, left:left + cw]
@@ -85,9 +83,8 @@ def make_heatmap_png(
     if mode == "crop":
         heat_full = _heat_full_crop(norm, geom, w0, h0)
     elif mode == "squash":
-        # the CAM covers the whole (aspect-ignored) frame directly.
         heat_full = _resize_float(norm, (w0, h0))
-    else:  # letterbox
+    else:
         heat_full = _heat_full_letterbox(norm, geom, w0, h0)
 
     base = np.asarray(frame.convert("RGB"), dtype=np.float32)
@@ -105,3 +102,4 @@ def make_heatmap_png(
     buf = io.BytesIO()
     out.save(buf, format="PNG")
     return buf.getvalue()
+

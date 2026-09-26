@@ -8,10 +8,6 @@ def test_match_flood_keyword_basic():
 
 
 def test_match_flood_keyword_word_boundary_no_false_substring_match():
-    # "waterway" should not match "water" as a substring without a boundary... but
-    # word-boundary regex on "water" *will* match inside "waterway" since \b sits
-    # between non-word/word transitions at the start; the point of this test is
-    # that unrelated words with no keyword substring at all don't match.
     assert match_flood_keyword("Debris in the roadway") is None
     assert match_flood_keyword("Bridgework ongoing") is None
     assert match_flood_keyword(None) is None
@@ -49,3 +45,4 @@ def test_flag_event_real_flood_is_not_false_positive():
 def test_flag_event_returns_none_when_no_keyword():
     event = {"Description": "Lane closure for paving", "EventType": "Construction", "Subtype": None}
     assert flag_event(event) is None
+

@@ -1,12 +1,4 @@
-"""Matches the training-time path. Three `mode`s (improve_v2 problem 1: a
-224 center crop only sees the middle ~49% of a wide 511GA frame):
-
-- "crop" (default, backward compatible): resize short side -> center crop/pad.
-- "squash": resize the whole frame to size x size, aspect ignored.
-- "letterbox": resize the long side to size, pad to size x size with mid-gray.
-
-All three optionally JPEG q95 round-trip first. See docs/INFERENCE_API.md.
-"""
+# inference preprocessing, must match training exactly (crop/squash/letterbox)
 from __future__ import annotations
 
 import io
@@ -18,7 +10,7 @@ from PIL import Image
 RESIZE_SHORT_SIDE = 256
 CROP_SIZE = 224
 JPEG_QUALITY = 95
-CROP_PRECROP_RATIO = 256 / 224  # matches train.data's margin at the original 224 crop
+CROP_PRECROP_RATIO = 256 / 224
 LETTERBOX_PAD_VALUE = (128, 128, 128)
 
 MODE_CROP = "crop"
@@ -28,7 +20,6 @@ MODES = (MODE_CROP, MODE_SQUASH, MODE_LETTERBOX)
 
 
 def to_pil(image) -> Image.Image:
-    """PIL Image, RGB/RGBA/gray ndarray, raw bytes, or path -> RGB PIL image."""
     if isinstance(image, Image.Image):
         img = image
     elif isinstance(image, (bytes, bytearray)):
@@ -69,9 +60,6 @@ def jpeg_roundtrip(img: Image.Image, quality: int = JPEG_QUALITY) -> Image.Image
 
 
 def _center_crop_pad(img: Image.Image, size: int = CROP_SIZE):
-    """Crop or zero-pad to size x size, centered (matches tf.image.resize_with_crop_or_pad).
-    Works for both cases via one paste: negative offsets pad, positive ones crop.
-    """
     w, h = img.size
     left, top = (w - size) // 2, (h - size) // 2
     canvas = Image.new("RGB", (size, size))
@@ -79,8 +67,8 @@ def _center_crop_pad(img: Image.Image, size: int = CROP_SIZE):
     return canvas, (left, top, left + size, top + size)
 
 
+# numpy copy of tf.image.resize bilinear (half-pixel, no antialias) so inference = training
 def _tf_bilinear(arr: np.ndarray, nh: int, nw: int) -> np.ndarray:
-    # same as tf.image.resize(method="bilinear"): half-pixel centers, no antialias
     h, w = arr.shape[:2]
     ys = np.clip((np.arange(nh) + 0.5) * (h / nh) - 0.5, 0, h - 1)
     xs = np.clip((np.arange(nw) + 0.5) * (w / nw) - 0.5, 0, w - 1)
@@ -93,7 +81,6 @@ def _tf_bilinear(arr: np.ndarray, nh: int, nw: int) -> np.ndarray:
 
 
 def _to_training_uint8(arr: np.ndarray) -> np.ndarray:
-    # training clips then casts to uint8 (truncates)
     return np.floor(np.clip(arr, 0.0, 255.0)).astype(np.float32)
 
 
@@ -103,10 +90,6 @@ def _squash_resize(img: Image.Image, size: int) -> np.ndarray:
 
 
 def _letterbox_resize(img: Image.Image, size: int, pad_value=LETTERBOX_PAD_VALUE):
-    """Long side -> size, pad to size x size with `pad_value`, centered.
-    Returns (canvas array, content_box) where content_box is the (left, top,
-    right, bottom) part of the canvas that holds the real image.
-    """
     w, h = img.size
     scale = size / max(w, h)
     nw, nh = max(1, round(w * scale)), max(1, round(h * scale))
@@ -119,7 +102,6 @@ def _letterbox_resize(img: Image.Image, size: int, pad_value=LETTERBOX_PAD_VALUE
 
 
 def preprocess(image, *, mode: str = MODE_CROP, size: int = CROP_SIZE, do_jpeg_roundtrip: bool = True):
-    """raw input -> ((size,size,3) float32 in [0,255], geometry for heatmap mapping)."""
     if mode not in MODES:
         raise ValueError(f"mode must be one of {MODES}, got {mode!r}")
 
@@ -134,7 +116,7 @@ def preprocess(image, *, mode: str = MODE_CROP, size: int = CROP_SIZE, do_jpeg_r
         w1, h1 = resized.size
         cropped, box = _center_crop_pad(resized, size)
         arr = np.asarray(cropped, dtype=np.float32)
-        scale = w1 / w0  # resize_short_side is uniform, == h1 / h0
+        scale = w1 / w0
         crop_box_orig = tuple(c / scale for c in box)
         geom = {
             "mode": mode, "size": size, "orig_size": (w0, h0),
@@ -143,7 +125,7 @@ def preprocess(image, *, mode: str = MODE_CROP, size: int = CROP_SIZE, do_jpeg_r
         }
         return arr, geom
 
-    # match the processed training copies: short side -> 256 (lanczos) + jpeg q95
+    # same as the saved training copies: short side 256 + jpeg q95
     src = resize_short_side(orig, RESIZE_SHORT_SIDE)
     if do_jpeg_roundtrip:
         src = jpeg_roundtrip(src)
@@ -152,7 +134,7 @@ def preprocess(image, *, mode: str = MODE_CROP, size: int = CROP_SIZE, do_jpeg_r
         geom = {"mode": mode, "size": size, "orig_size": (w0, h0)}
         return arr, geom
 
-    # content box is in canvas coords; heatmap maps it back to orig_size
     arr, content_box = _letterbox_resize(src, size)
     geom = {"mode": mode, "size": size, "orig_size": (w0, h0), "content_box_canvas": content_box}
     return arr, geom
+

@@ -1,23 +1,4 @@
-"""End-to-end, deterministic, re-runnable manifest build.
-
-    cd flood-ml && PYTHONPATH=src ../my_env/bin/python -m prep.build_manifest [--smoke N] [--skip-clip]
-
-Pipeline:
-  1. gather raw rows from every source (prep.sources)
-  2. compute water_frac_road + label for mask-backed rows (prep.mask_rules)
-  3. CLIP road-scene filter on external sources (prep.clip_filter)
-  4. resize to data/processed/images/<source>/..., compute phash + width/height
-  5. temporal thinning of FRED sequences + FMD test videos, then global
-     cross-source phash dedup (prep.dedup)
-  6. group-aware split assignment (prep.splits), with an assertion that no
-     group_id/camera_id/dup_cluster spans two splits
-  7. write data/processed/manifest.csv + data/processed/VERSION
-
-Long, per-image progress goes to logs/jobs/build_manifest.log; the console
-only prints stage summaries. Designed to be started detached
-(`--daemon`) since a full run over ~8k images (mask decode + CLIP + resize)
-can take several minutes.
-"""
+# builds data/processed/manifest.csv from every source
 from __future__ import annotations
 
 import argparse
@@ -63,7 +44,7 @@ from prep.sources import (
     INCLUDE_ALLEYFLOODNET,
     iter_alleyfloodnet,
     iter_eu_flood_2013,
-    iter_flood_area_segmentation,  # noqa: F401 - kept importable/documented; excluded below, see EXCLUDED note
+    iter_flood_area_segmentation,  # noqa: F401
     iter_fmd_test,
     iter_fred,
     iter_ga511,
@@ -76,25 +57,10 @@ from prep.splits import assert_disjoint, ga511_camera_splits, greedy_group_strat
 
 log = setup_job_logger("build_manifest")
 
-# v3: sources gathered before this retrain pass. EVERY row of theirs (any
-# split) must keep its split across a rebuild -- checked programmatically by
-# assert_legacy_test_rows_unchanged (test rows) and enforced by
-# legacy_forced_splits (all rows) before the manifest is overwritten. ga511
-# is deliberately excluded: its frames.csv keeps growing and test-camera
-# frames still need manual labels, as documented in the v3 brief.
 LEGACY_SOURCES = ("roadway_flooding", "fred", "nysdot_road_surface", "flood_master_test")
 MANIFEST_BACKUP_PATH = PROCESSED_ROOT / "manifest_v1-703f0040.csv"
 IOWA_RWIS_SPLIT_SALT = "iowa-rwis-mixed-split-v1"
 
-# Orchestrator ruling (val was unusable for threshold tuning with 0 FRED
-# rows): of the 4 FRED locations with BOTH dry and flooded sequences
-# (cambogan, dairycreek, holmview, pullenvale), force ~2 to train, 1 to val,
-# 1 to test -- a whole location (all its sequences) per split, so val and
-# test each get real FRED dry/flooded rows instead of relying on the greedy
-# stratified split (which was starving val of FRED entirely). The one
-# flooded-only location (mountcotton) goes to train, per the same ruling.
-# Locations not listed here (e.g. a newly-arrived one) fall back to the
-# greedy stratified split.
 FRED_FORCED_LOCATION_SPLITS = {
     "cambogan": "test",
     "pullenvale": "val",
@@ -103,35 +69,11 @@ FRED_FORCED_LOCATION_SPLITS = {
     "mountcotton": "train",
 }
 
-# Orchestrator ruling: NYSDOT (only 4 camera groups total, each with a good
-# dry/wet mix) had 0 test rows under the greedy stratified split. Force one
-# camera to test and one to val (each with both dry and wet rows) so both
-# splits get real wet-road negatives for Stage A/B threshold tuning; the
-# remaining 2 cameras go to train.
 NYSDOT_FORCED_CAMERA_SPLITS = {
     "I_495_at_Veterans_Memorial_Hwy(Exit_57)__Westbound__Skyline_1877": "test",
     "I_495_at_Terry_Road_(Exits_59_58)__Westbound__Skyline_1878": "val",
 }
 
-# EXCLUDED (Phase 2 finding, overrides PLAN.md/DATASETS.md): Flood Area
-# Segmentation and the Flood Master Database's ITALIAN test video turned out,
-# on visual spot-check (12 random images for Flood Area Segmentation, 24
-# spread across the whole Italian video, see docs/phase_reports/phase2_prep.md),
-# to be elevated drone/news-b-roll footage looking down on flooded towns and
-# fields -- not the ground-level DOT-camera view this classifier targets.
-# CLIP's generic prompts only weakly discriminate this specific "drone
-# hovering over a flooded town" case (mean pos-neg margin for Flood Area
-# Segmentation was -0.017, max +0.057 across all 290 images; even the
-# CLIP-preferred top-20 are unambiguously aerial by eye), so a per-image CLIP
-# threshold would either keep obviously-aerial images or exclude ~everything.
-# Excluded wholesale rather than row-by-row.
-#
-# The Flood Master GREEK test video was RE-VERIFIED this pass (the previous
-# worker had lumped it in with the Italian video sight-unseen): 20 frames
-# spread across its full range are a fixed, static-framing elevated camera
-# over a flooded street with submerged cars, not a drone shot. It is a real
-# flooded-road scene and is gathered below via `iter_fmd_test()` (which
-# defaults to Greek only).
 
 CLIP_MODEL = "ViT-B-32"
 CLIP_PRETRAINED = "laion2b_s34b_b79k"
@@ -145,9 +87,6 @@ def gather_rows(smoke: int | None = None, include_alleyfloodnet: bool = INCLUDE_
         ("fred", iter_fred),
         ("nysdot_road_surface", iter_nysdot),
         ("flood_master_test", iter_fmd_test),
-        # flood_area_segmentation is intentionally NOT gathered -- see the
-        # EXCLUDED note above. iter_fmd_test() defaults to the Greek video
-        # only (the Italian video is excluded the same way).
         ("iowa_rwis", iter_iowa_rwis),
         ("eu_flood_2013", iter_eu_flood_2013),
         ("alleyfloodnet", lambda: iter_alleyfloodnet(include=include_alleyfloodnet)),
@@ -172,11 +111,6 @@ def gather_rows(smoke: int | None = None, include_alleyfloodnet: bool = INCLUDE_
 
 
 def compute_labels(rows: list[dict]) -> None:
-    """Mutates rows in place: fills `water_frac_road` and `label` (where not
-    already known, e.g. FRED dry / NYSDOT) from each row's mask. Rows that
-    end up with no usable label are marked `_drop=True` rather than removed
-    here, so counts stay easy to report.
-    """
     t0 = time.time()
     n_by_outcome: Counter = Counter()
     for r in rows:
@@ -198,7 +132,7 @@ def compute_labels(rows: list[dict]) -> None:
                 wf = water_frac_grayscale_mask(mask_path)
             else:
                 raise ValueError(f"unknown mask_kind {mask_kind}")
-        except Exception as e:  # noqa: BLE001 - log and drop, never crash the build
+        except Exception as e:  # noqa: BLE001
             log.warning("mask decode failed for %s (%s): %s", r["orig_path"], mask_path, e)
             r["_drop"] = True
             n_by_outcome["mask_decode_error"] += 1
@@ -216,30 +150,10 @@ def compute_labels(rows: list[dict]) -> None:
     log.info("compute_labels outcomes: %s (%.1fs)", dict(n_by_outcome), time.time() - t0)
 
 
-
-# Sources that mix view types within a single Kaggle/photo-collection download
-# and so benefit from the CLIP road-scene filter. FRED is deliberately NOT
-# here: every FRED frame is a single vehicle-mounted forward dashcam feed by
-# construction (there is no "wrong view type" contamination to remove), and
-# CLIP filtering it was found to strip real flooded/dry road-path frames --
-# on inspection, ~98% of FRED's 352 CLIP-removed frames were from ONE
-# location (Mount-Cotton) where the road is a paved park driveway/parking
-# area next to grass; CLIP's kept and removed samples from that same
-# location look visually indistinguishable (pos/neg scores both ~0.24-0.31,
-# right at the decision boundary) -- this is the dashcam's actual road, not
-# an aerial/indoor/river shot, so filtering it serves no purpose and only
-# throws away scarce flooded-road data. See docs/phase_reports/phase2_prep.md.
 CLIP_FILTERED_SOURCES = frozenset({"roadway_flooding", "nysdot_road_surface", "flood_master_test"})
 
 
 def apply_clip_filter(rows: list[dict], skip: bool = False) -> dict:
-    """Filters external (non-ga511) rows through the CLIP road-scene check.
-    Only applied to `CLIP_FILTERED_SOURCES` (mixed-view-type photo
-    collections) -- FRED is a single coherent dashcam sequence and is passed
-    through untouched (see the module-level note on `CLIP_FILTERED_SOURCES`).
-    Returns a dict of per-source removed/kept counts and a sample of removed
-    paths (for the report grids). Mutates `_drop` on rejected rows.
-    """
     stats: dict[str, dict] = defaultdict(lambda: {"kept": 0, "removed": 0, "removed_paths": []})
     passthrough = [
         r for r in rows
@@ -284,10 +198,6 @@ def apply_clip_filter(rows: list[dict], skip: bool = False) -> dict:
 
 
 def resize_copy_and_hash(rows: list[dict]) -> None:
-    """For every surviving row: apply the NYSDOT crop if needed, resize to
-    short-side 256 JPEG q95 under data/processed/images/<source>/, and record
-    phash + width/height. Mutates `path`, `width`, `height`, `phash`.
-    """
     t0 = time.time()
     counters_by_source: Counter = Counter()
     for r in rows:
@@ -314,11 +224,6 @@ def resize_copy_and_hash(rows: list[dict]) -> None:
 
 
 def thin_and_dedup(rows: list[dict]) -> dict:
-    """Temporal thinning within FRED/FMD-test sequences, then global
-    cross-source phash clustering. Cross-source duplicate clusters collapse
-    to a single surviving row; within-source clusters keep every row but
-    share `dup_cluster` (and therefore must land in the same split).
-    """
     alive = [r for r in rows if not r.get("_drop")]
 
     thinned_out = 0
@@ -361,11 +266,6 @@ def thin_and_dedup(rows: list[dict]) -> dict:
         sources_in_cluster = {alive[i]["source"] for i in idxs}
         if len(sources_in_cluster) <= 1:
             continue
-        # Cross-source duplicate: keep exactly one representative row.
-        # Preference: has a mask_path > forced_split (test videos) >
-        # legacy source (so a v3 addition can never bump an old source's
-        # row, which would silently break the old-test-rows-unchanged
-        # guarantee) > deterministic order.
         def score(i):
             r = alive[i]
             return (
@@ -386,7 +286,6 @@ def thin_and_dedup(rows: list[dict]) -> dict:
     alive = [r for r, keep in zip(alive, keep_final) if keep]
     log.info("cross-source dedup collapsed %d duplicate rows", cross_source_collapsed)
 
-    # Still-image sets (no natural grouping) use dup_cluster as their split group.
     for r in alive:
         if r["source"] in ("roadway_flooding", "flood_area_segmentation", "alleyfloodnet") and not r.get("group_id"):
             r["group_id"] = r["dup_cluster"]
@@ -403,12 +302,6 @@ def thin_and_dedup(rows: list[dict]) -> dict:
 
 
 def iowa_rwis_forced_splits(ext_rows: list[dict], n_test: int = 6, n_val: int = 6) -> dict[str, str]:
-    """v3 brief: val AND test must each get several iowa_rwis cameras with
-    both wet and dry frames. Deterministically hash-ranks the cameras that
-    have both labels and pins the top `n_test` to test, the next `n_val` to
-    val; everything else (including non-mixed iowa_rwis cameras) falls
-    through to the normal greedy stratified split.
-    """
     labels_by_cam: dict[str, set] = defaultdict(set)
     for r in ext_rows:
         if r["source"] == "iowa_rwis" and r.get("label"):
@@ -424,23 +317,6 @@ def iowa_rwis_forced_splits(ext_rows: list[dict], n_test: int = 6, n_val: int = 
 
 
 def legacy_forced_splits(ext_rows: list[dict], old_manifest_path: Path | None = None) -> dict[str, str]:
-    """v3 bug found and fixed: `greedy_group_stratified_split` recomputes
-    every group's split FROM SCRATCH over the whole external pool, so simply
-    adding thousands of new v3 groups (eu_flood_2013 uploaders, alleyfloodnet
-    dup clusters) reshuffled OLD groups' assignments too, including
-    roadway_flooding's, whose group_id (a dup_cluster id) is also just a
-    renumbered id, not stable content identity -- a first real run of this
-    rebuild flipped 66 old test rows before this existed.
-
-    Looks up each legacy-source row's split by `orig_path` (the one truly
-    stable identity) in the pre-rebuild manifest, then pins its NEW group_id
-    to that split, so `greedy_group_stratified_split` only ever decides
-    genuinely new groups. If a brand-new image happens to pHash-bridge two
-    previously-separate old dup_clusters that had DIFFERENT old splits (only
-    possible via a new image, since old clustering only grows monotonically,
-    never splits), resolves test > val > train -- test-set identity is the
-    hard requirement -- and logs it.
-    """
     if old_manifest_path is None:
         old_manifest_path = MANIFEST_BACKUP_PATH if MANIFEST_BACKUP_PATH.exists() else MANIFEST_PATH
     if not old_manifest_path.exists():
@@ -473,7 +349,6 @@ def assign_splits(rows: list[dict]) -> tuple[dict, list[dict]]:
     ga_rows = [r for r in rows if r["source"] == "ga511"]
     ext_rows = [r for r in rows if r["source"] != "ga511"]
 
-    # --- 511GA: persisted, stable per-camera split ---
     existing_splits: dict[str, str] = {}
     if CAMERA_SPLITS_PATH.exists():
         existing_splits = json.loads(CAMERA_SPLITS_PATH.read_text())
@@ -489,11 +364,6 @@ def assign_splits(rows: list[dict]) -> tuple[dict, list[dict]]:
     for r in ga_rows:
         r["split"] = cam_splits[r["camera_id"]]
 
-    # The 511GA test split uses only manual/ai_review labels (per the Phase 2
-    # brief): a camera can still hash into "test" while its only usable label
-    # so far is a weak_precip likely_dry frame, which must NOT leak into the
-    # test set. Drop those rows entirely (they stay unlabeled/excluded, same
-    # as any other frame with no usable label) rather than writing them.
     n_weak_precip_test_dropped = sum(
         1 for r in ga_rows if r["split"] == "test" and r.get("label_source") == "weak_precip"
     )
@@ -508,8 +378,8 @@ def assign_splits(rows: list[dict]) -> tuple[dict, list[dict]]:
             n_weak_precip_test_dropped,
         )
 
-    # --- external: forced groups, then greedy stratified split ---
     iowa_forced = iowa_rwis_forced_splits(ext_rows)
+    # pin old rows to their old split so the test set stays comparable
     legacy_forced = legacy_forced_splits(ext_rows)
     forced: dict[str, str] = {}
     for r in ext_rows:
@@ -534,18 +404,6 @@ def assign_splits(rows: list[dict]) -> tuple[dict, list[dict]]:
         r["split"] = group_splits.get(r["group_id"], "train")
 
     all_rows = ga_rows + ext_rows
-    # 511GA's authoritative grouping key is camera_id (its split is a stable
-    # hash of camera_id, deliberately independent of anything else). Two
-    # different cameras' frames can occasionally share a phash-based
-    # dup_cluster by coincidence (generic-looking dark highway scenes at low
-    # detail), which must NOT force a camera to move split -- that would
-    # break the "a camera's split never changes" guarantee for a reason
-    # (an unrelated camera's frame) that has nothing to do with the camera
-    # itself. So dup_cluster disjointness is only enforced for external rows,
-    # where dup_cluster is the sole grouping key for still-image sources.
-    # (After cross-source dedup collapsing, no dup_cluster spans both a
-    # ga511 and an external row -- collapsing already reduced any such
-    # cluster to a single surviving row.)
     violations = assert_disjoint(ga_rows, keys=("camera_id",))
     violations += assert_disjoint(ext_rows, keys=("group_id", "dup_cluster"))
     if violations:
@@ -569,12 +427,6 @@ def write_splits_report(
     group_splits: dict[str, str],
     forced_groups: dict[str, str],
 ) -> None:
-    """Writes data/processed/splits_report.json: row counts per split, the
-    disjointness assertion result (always "passed" here -- `assign_splits`
-    raises before this is called if it isn't), and group/camera/dup_cluster
-    counts, so the split assignment is auditable without re-running the
-    build.
-    """
     rows_per_split = Counter(r["split"] for r in rows)
     n_cameras_per_split = Counter(cam_splits.values())
     n_groups_per_split = Counter(group_splits.values())
@@ -600,19 +452,6 @@ def write_splits_report(
 
 
 def assert_legacy_test_rows_unchanged(old_manifest_path: Path, new_rows: list[dict]) -> dict:
-    """v3 brief: existing sources and splits must not change. Checks EVERY
-    row of a source that existed before this pass (LEGACY_SOURCES -- ga511 is
-    exempt, see its constant docstring), not just test rows, since the brief
-    says "every existing row keeps its split." Compares by `orig_path` (the
-    true stable identity across a rebuild -- Phase 4 found that 511GA's
-    numbered `path` values shift when frames.csv grows, see
-    reports/EVALUATION.md), and raises if any old legacy row's label or split
-    changed, or if it disappeared. A `path` renumbering with the same
-    label/split is reported, not raised (expected for ga511 only; a legacy
-    source renumbering would itself be a red flag, so it's included in the
-    report for a human to check). Test rows get their own counted subset in
-    the result, since that's the literal invariant the brief names.
-    """
     if not old_manifest_path.exists():
         return {"skipped": "no prior manifest.csv to compare against"}
     old = pd.read_csv(old_manifest_path)
@@ -657,10 +496,6 @@ def assert_legacy_test_rows_unchanged(old_manifest_path: Path, new_rows: list[di
 
 
 def backup_old_manifest(old_manifest_path: Path = MANIFEST_PATH, backup_path: Path = MANIFEST_BACKUP_PATH) -> str:
-    """Copies the pre-rebuild manifest.csv to a version-tagged backup, once
-    (never overwrites an existing backup -- a re-run in the same session
-    must not clobber it with an already-rebuilt manifest).
-    """
     if not old_manifest_path.exists():
         return "skipped: no manifest.csv to back up"
     if backup_path.exists():
@@ -697,10 +532,6 @@ def run(smoke: int | None = None, skip_clip: bool = False, include_alleyfloodnet
     dedup_stats, alive = thin_and_dedup(rows)
     split_stats, alive = assign_splits(alive)
 
-    # Prefer the durable pre-v3 backup (data/processed/manifest_v1-703f0040.csv,
-    # sha256-verified by the orchestrator) as the reference: it stays a valid
-    # comparison point even after a successful rebuild overwrites manifest.csv
-    # itself, unlike comparing against the live file.
     reference_manifest = MANIFEST_BACKUP_PATH if MANIFEST_BACKUP_PATH.exists() else MANIFEST_PATH
     legacy_check = assert_legacy_test_rows_unchanged(reference_manifest, alive)
     backup_note = backup_old_manifest()
@@ -765,3 +596,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

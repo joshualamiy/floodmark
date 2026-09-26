@@ -1,38 +1,4 @@
-"""Flood Master Database (FMD): Google Drive listing, integrity checks, and
-cross-referencing against our public dataset downloads.
-
-RESTRICTED DATA. The Flood Master Database was created by the AIIA Lab,
-Aristotle University of Thessaloniki (AUTH), and is licensed to this team for
-non-commercial research only. See docs/FLOOD_MASTER.md for the license
-summary and credit line. This module must never print, log, or write raw
-pixel data, dataset contact information, or full annotation contents -- only
-paths, counts, and aggregate statistics, all of which stay under
-data/restricted/ (gitignored).
-
-Usage (run from flood-ml/, with src/ on PYTHONPATH):
-
-    PYTHONPATH=src ../my_env/bin/python -m acquire.flood_master list-drive
-    PYTHONPATH=src ../my_env/bin/python -m acquire.flood_master download-drive
-    PYTHONPATH=src ../my_env/bin/python -m acquire.flood_master diff-drive
-    PYTHONPATH=src ../my_env/bin/python -m acquire.flood_master verify
-    PYTHONPATH=src ../my_env/bin/python -m acquire.flood_master build-index
-
-Each subcommand is idempotent and safe to re-run. Long output goes to
-logs/jobs/flood_master_<subcommand>.log; the console only gets a summary.
-
-Contract for Phase 2 (data prep): `data/restricted/flood_master/index.csv`
-has one row per FMD annotation. For train/val rows, `local_image_path` is
-the path of the public image the FMD mask applies to (under data/raw/).
-Phase 2 should join its per-source manifest rows to this index on
-`local_image_path`; where a match exists, drop the public-dataset row's own
-mask in favor of `fmd_mask_path` (the FMD "cleaned" mask), and keep exactly
-one manifest row for that image. Rows with match_method="unresolved" have no
-usable local image and should be skipped. Test rows (`fmd_split=="test"`)
-have no `public_mask_path"` (FMD test masks have no public counterpart);
-their `local_image_path` is the FMD frame itself, and `group_id` must be
-kept intact as a single group per video when splitting.
-"""
-
+# flood master db: drive listing, integrity checks, index vs public data
 from __future__ import annotations
 
 import argparse
@@ -64,10 +30,8 @@ TRAIN_CSV = FMD_ROOT / "train" / "train.csv"
 VAL_CSV = FMD_ROOT / "val" / "val.csv"
 TEST_CSV = FMD_ROOT / "test" / "test.csv"
 
-MAX_DRIVE_DOWNLOAD_BYTES = 5 * 1024**3  # 5 GB guardrail from the brief
+MAX_DRIVE_DOWNLOAD_BYTES = 5 * 1024**3
 
-# Public raw folders used to resolve FMD train/val "Image path" values and to
-# check that FMD test frames don't duplicate anything we already downloaded.
 FAS_IMAGE_DIR = RAW_ROOT / "flood_area_segmentation" / "Image"
 FAS_MASK_DIR = RAW_ROOT / "flood_area_segmentation" / "Mask"
 ROADWAY_ROOT = RAW_ROOT / "roadway_flooding"
@@ -92,23 +56,11 @@ def _setup_file_logger(name: str) -> Path:
 
 
 def read_fmd_csv(path: Path) -> list[dict[str, str]]:
-    """Read a train/val/test CSV (BOM-safe), stripping stray whitespace."""
     with path.open(newline="", encoding="utf-8-sig") as fh:
         return [{k: v.strip() for k, v in row.items()} for row in csv.DictReader(fh)]
 
 
-# --------------------------------------------------------------------------
-# Path resolution: FMD row -> local file
-# --------------------------------------------------------------------------
-
-
 def resolve_train_val_annotation(split: str, row: dict[str, str]) -> Path:
-    """Resolve a train/val row's "Annotation path" to a file on disk.
-
-    Most rows point into data/restricted/flood_master/<split>/annotations/.
-    Roadway Flooding rows instead reuse the original dataset's own label
-    path (data/raw/roadway_flooding/Dataset/labels/...), per readme.txt.
-    """
     ann = row["Annotation path"]
     if ann.startswith("Dataset/labels/"):
         return ROADWAY_ROOT / ann
@@ -116,16 +68,10 @@ def resolve_train_val_annotation(split: str, row: dict[str, str]) -> Path:
 
 
 def resolve_train_val_public_image(row: dict[str, str]) -> Path | None:
-    """Resolve a train/val row's "Image path" to our local public download.
-
-    Returns None when we don't have that image locally (this happens for
-    the "flooding_pixabay" subset of the Water Dataset source, see the
-    report: that subset isn't in our Kaggle water_v1/water_v2 mirrors).
-    """
     source = row["Source"]
     img = row["Image path"]
     if source == "Flood Area Segmentation":
-        p = FAS_IMAGE_DIR.parent / img  # img already starts with "Image/"
+        p = FAS_IMAGE_DIR.parent / img
         return p if p.exists() else None
     if source == "Roadway Flooding Image Dataset":
         p = ROADWAY_ROOT / img
@@ -145,13 +91,6 @@ def resolve_train_val_public_image(row: dict[str, str]) -> Path | None:
 
 
 def resolve_train_val_public_mask(row: dict[str, str], public_image: Path | None) -> Path | None:
-    """Resolve the *public* mask/label that shipped with the source dataset
-    (as opposed to FMD's own cleaned mask), for the IoU comparison.
-
-    Roadway Flooding has no separate public mask to compare: FMD literally
-    reuses that dataset's own label path as its "annotation path" (same
-    file), so IoU there is 1.0 by construction and not informative.
-    """
     source = row["Source"]
     if public_image is None:
         return None
@@ -159,7 +98,6 @@ def resolve_train_val_public_mask(row: dict[str, str], public_image: Path | None
         p = FAS_MASK_DIR / f"{public_image.stem}.png"
         return p if p.exists() else None
     if source == "Water Dataset":
-        # Swap .../JPEGImages/... for .../Annotations/... at the same depth.
         parts = list(public_image.parts)
         try:
             i = parts.index("JPEGImages")
@@ -184,22 +122,7 @@ def test_group_id(row: dict[str, str]) -> str:
     return "fmd_greek_video" if row["Source"] == "greek video" else "fmd_italian_video"
 
 
-# --------------------------------------------------------------------------
-# Drive listing / download / diff
-# --------------------------------------------------------------------------
-
-
 def list_drive_folder(url: str = DRIVE_FOLDER_URL) -> list[dict[str, str]]:
-    """List every file in the shared Drive folder (metadata only, no bytes).
-
-    gdown 6.4.0's download_folder(skip_download=True) recurses the whole
-    folder tree in one call and returns every file, including subfolders;
-    there is no 50-file cap in this version (verified empirically: it
-    returned all 4320 files in the FMD folder in one call). If a future
-    gdown version reintroduces pagination, this will need `remaining_ok`
-    or manual paging; check the installed version's
-    `gdown.download_folder` signature first.
-    """
     import gdown
 
     result = gdown.download_folder(url, skip_download=True, quiet=True)
@@ -215,16 +138,6 @@ def list_drive_folder(url: str = DRIVE_FOLDER_URL) -> list[dict[str, str]]:
 def download_drive_folder(
     url: str = DRIVE_FOLDER_URL, output: Path = FMD_DRIVE_ROOT, max_bytes: int = MAX_DRIVE_DOWNLOAD_BYTES
 ) -> Path:
-    """Download the whole Drive folder to `output`, keeping its structure.
-
-    Caller should already know (via list_drive_folder + local file count)
-    that this is a reasonable size. Google Drive enforces a per-file /
-    per-folder download quota for heavily-accessed shared links ("Cannot
-    retrieve the public link of the file ... may have had many accesses").
-    That quota is not something we can or should work around (no bypassing
-    access gates); if it triggers, this function will raise/log failures
-    per file and the caller should retry later.
-    """
     import gdown
 
     output.mkdir(parents=True, exist_ok=True)
@@ -243,12 +156,6 @@ def _md5(path: Path) -> str:
 def diff_drive_vs_local(
     drive_root: Path = FMD_DRIVE_ROOT, local_root: Path = FMD_ROOT
 ) -> dict[str, Any]:
-    """Byte-level (md5) diff of whatever has actually been downloaded under
-    `drive_root` against the matching path in `local_root`. Only covers
-    files present in `drive_root` -- run `download_drive_folder` first for
-    full coverage; a partial download (e.g. stopped by Drive's quota) still
-    yields a partial, honestly-labeled diff.
-    """
     report: dict[str, Any] = {"checked": 0, "identical": 0, "different": [], "no_local_counterpart": []}
     if not drive_root.exists():
         report["note"] = f"{drive_root} does not exist; nothing downloaded to diff."
@@ -267,11 +174,6 @@ def diff_drive_vs_local(
         else:
             report["different"].append(str(rel))
     return report
-
-
-# --------------------------------------------------------------------------
-# Integrity checks (task 2)
-# --------------------------------------------------------------------------
 
 
 def _mask_unique_values(path: Path) -> tuple[int, ...]:
@@ -297,7 +199,7 @@ def verify_integrity() -> dict[str, Any]:
             try:
                 im = Image.open(ann)
                 arr = np.array(im)
-            except Exception as exc:  # noqa: BLE001 - want to record any decode failure
+            except Exception as exc:  # noqa: BLE001
                 decode_errors.append(f"{ann}: {exc}")
                 continue
             uv = tuple(int(v) for v in np.unique(arr))
@@ -337,7 +239,6 @@ def verify_integrity() -> dict[str, Any]:
             "size_mismatch_sample": size_mismatches[:10],
         }
 
-    # test split
     rows = read_fmd_csv(TEST_CSV)
     missing_rgb: list[str] = []
     missing_ann: list[str] = []
@@ -413,11 +314,6 @@ def verify_integrity() -> dict[str, Any]:
     return report
 
 
-# --------------------------------------------------------------------------
-# Index building (tasks 3-5): resolve, dedup, IoU, phash overlap
-# --------------------------------------------------------------------------
-
-
 @dataclass
 class IndexRow:
     fmd_split: str
@@ -433,7 +329,6 @@ class IndexRow:
 
 
 def _iou(mask_a: np.ndarray, mask_b: np.ndarray) -> float:
-    """IoU between two boolean masks, resizing b to a's shape if needed."""
     if mask_a.shape != mask_b.shape:
         img_b = Image.fromarray((mask_b.astype(np.uint8)) * 255)
         img_b = img_b.resize((mask_a.shape[1], mask_a.shape[0]), Image.NEAREST)
@@ -455,11 +350,6 @@ def _water_public_mask_bool(path: Path) -> np.ndarray:
 
 
 def build_public_image_corpus() -> list[Path]:
-    """Every still image under our public raw downloads, for the phash
-    overlap check against FMD's Greek/Italian test frames. FRED is included
-    (front camera only); tinycamml has no labeled roadway images (per
-    Subagent 1's brief) so it's skipped.
-    """
     paths: list[Path] = []
     if FAS_IMAGE_DIR.exists():
         paths.extend(sorted(FAS_IMAGE_DIR.glob("*.jpg")))
@@ -477,7 +367,6 @@ def build_public_image_corpus() -> list[Path]:
 
 
 def _phash_bytes(h: imagehash.ImageHash) -> int:
-    # imagehash stores a boolean array; pack to an int for fast Hamming ops.
     return int("".join("1" if b else "0" for b in h.hash.flatten()), 2)
 
 
@@ -492,7 +381,6 @@ def _band_keys(value: int, n_bands: int = 8, band_bits: int = 8) -> list[tuple[i
 def compute_phash_index(
     paths: list[Path], log_every: int = 2000
 ) -> dict[str, int]:
-    """phash (as packed int) for every path that decodes; skips failures."""
     out: dict[str, int] = {}
     for i, p in enumerate(paths):
         if log_every and i % log_every == 0:
@@ -510,15 +398,6 @@ def bucketed_overlap_search(
     corpus_hashes: dict[str, int],
     threshold: int = PHASH_HAMMING_THRESHOLD,
 ) -> dict[str, list[tuple[str, int]]]:
-    """For each query hash, find corpus hashes within Hamming `threshold`,
-    without O(n*m) pairwise comparison.
-
-    Uses 8-band LSH (8 bytes x 8 bits over a 64-bit phash): by pigeonhole,
-    any pair with Hamming distance <= 6 must match exactly in at least
-    8 - 6 = 2 of the 8 bands, so indexing by exact-byte-per-band and only
-    verifying true Hamming distance among band-sharing candidates is
-    lossless for threshold <= 7 while checking a small candidate set.
-    """
     band_index: dict[tuple[int, int], list[str]] = defaultdict(list)
     for path, h in corpus_hashes.items():
         for band in _band_keys(h):
@@ -569,9 +448,6 @@ def build_index(compute_test_overlap: bool = True) -> tuple[list[IndexRow], dict
                 except Exception:  # noqa: BLE001
                     phash_hex = ""
 
-                # IoU against the source dataset's own public mask, where we
-                # have one and the FMD mask decodes (source != Roadway,
-                # which reuses the same file and is IoU=1.0 by construction).
                 if public_mask is not None and ann.exists() and source != "Roadway Flooding Image Dataset":
                     try:
                         fmd_bool = np.array(Image.open(ann)) > 0
@@ -598,7 +474,6 @@ def build_index(compute_test_overlap: bool = True) -> tuple[list[IndexRow], dict
                 )
             )
 
-    # test rows
     test_rows = read_fmd_csv(TEST_CSV)
     test_phashes: dict[str, int] = {}
     for row in test_rows:
@@ -689,11 +564,6 @@ def write_index_csv(rows: list[IndexRow], path: Path = FMD_ROOT / "index.csv") -
             )
 
 
-# --------------------------------------------------------------------------
-# CLI
-# --------------------------------------------------------------------------
-
-
 def _cmd_list_drive(_args: argparse.Namespace) -> None:
     log_path = _setup_file_logger("list_drive")
     files = list_drive_folder()
@@ -775,3 +645,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

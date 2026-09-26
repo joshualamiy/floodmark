@@ -1,11 +1,4 @@
-"""Report generation: contact sheets (spot-check/CLIP/sample grids), the
-tracked class-counts report, and the augmentation before/after grid.
-
-Image-bearing outputs go to `reports/*.png` (gitignored, local only, per the
-repo's public-data rule). Only `reports/class_counts.md` and
-`reports/figures/class_counts.png` (a bar chart, no dataset pixels) are
-tracked.
-"""
+# contact sheets + class count report
 from __future__ import annotations
 
 import math
@@ -53,10 +46,6 @@ def _load_thumb(path_or_array, thumb_w: int, thumb_h: int) -> Image.Image:
 def contact_sheet(entries: list[tuple], out_path: Path, cols: int = 6,
                    cell_w: int = CELL_W, cell_h: int = CELL_H, thumb_h: int = THUMB_H,
                    title: str | None = None) -> Path:
-    """`entries`: list of (path_or_ndarray, caption_str). Missing/unreadable
-    images are rendered as a red placeholder tile with the caption, so one
-    bad path never kills the whole sheet.
-    """
     n = len(entries)
     rows = max(1, (n + cols - 1) // cols)
     title_h = 30 if title else 0
@@ -73,7 +62,6 @@ def contact_sheet(entries: list[tuple], out_path: Path, cols: int = 6,
         except Exception:  # noqa: BLE001
             thumb = Image.new("RGB", (cell_w - 8, thumb_h), (140, 30, 30))
         sheet.paste(thumb, (x0 + 4, y0 + 4))
-        # wrap caption crudely at ~34 chars/line, up to 3 lines
         words = str(caption).split()
         lines, cur = [], ""
         for w in words:
@@ -172,7 +160,6 @@ def write_class_counts_report(rows: list[dict], out_md: Path, out_png: Path) -> 
     out_md.parent.mkdir(parents=True, exist_ok=True)
     out_md.write_text("\n".join(lines))
 
-    # bar chart: counts per split, stacked by label. No dataset pixels.
     fig, ax = plt.subplots(figsize=(6, 4))
     splits = ("train", "val", "test")
     labels = ("dry", "wet", "flooded", "not_flooded")
@@ -194,19 +181,7 @@ def write_class_counts_report(rows: list[dict], out_md: Path, out_png: Path) -> 
     plt.close(fig)
 
 
-# ---------------------------------------------------------------------------
-# Per-(source, label) spot-check table (orchestrator ruling, Phase 2 resume):
-# the "wet band" and "dry-at-zero" mask rules are only trusted per source
-# once >= 20 images of that bucket have been viewed with >= 80% agreement.
-# These rows are the record of that manual review (see
-# docs/phase_reports/phase2_prep.md for the narrative and the contact sheets
-# under reports/spotcheck_*.png for the images themselves). Recomputing the
-# viewing/agreement numbers isn't possible from the manifest alone (it's a
-# human judgment), so this table is a static record, refreshed by hand only
-# when the rule set or population sizes change enough to warrant a re-check.
-# ---------------------------------------------------------------------------
 SPOTCHECK_TABLE = [
-    # (source, label, rule, population, n_viewed, agreement, verdict)
     ("roadway_flooding", "flooded", "mask f>=0.10", 429, 20, "20/20 (100%)", "kept"),
     ("roadway_flooding", "wet", "mask wet-band (unverified)", 8, 8, "~6/8 (75%)", "EXCLUDED (n<20)"),
     ("roadway_flooding", "dry", "mask dry-at-zero (unverified)", 1, 1, "0/1 (0%; road-closed/flood-adjacent scene, not dry)", "EXCLUDED (n<20)"),
@@ -223,11 +198,7 @@ SPOTCHECK_TABLE = [
     ("alleyfloodnet", "flooded/not_flooded", "dataset_label (folder name; not a mask rule)", 1110, None, "n/a -- this IS the label", "kept (INCLUDE_ALLEYFLOODNET switch)"),
 ]
 
-# Sources excluded wholesale (never gathered at all, so they don't appear in
-# the per-source table above) -- orchestrator asked these be accounted for
-# explicitly rather than silently missing. See docs/phase_reports/phase2_prep.md.
 EXCLUDED_SOURCES_TABLE = [
-    # (source/group, n_images, reason)
     (
         "flood_area_segmentation",
         290,
@@ -264,10 +235,6 @@ def append_pipeline_report_sections(
     spotcheck_table: list[tuple] | None = None,
     excluded_sources_table: list[tuple] | None = None,
 ) -> None:
-    """Appends CLIP removal counts, dedup/thinning counts, wholesale-excluded
-    sources, and the per-(source, label) spot-check table to an existing
-    class-counts report (call after `write_class_counts_report`).
-    """
     spotcheck_table = spotcheck_table if spotcheck_table is not None else SPOTCHECK_TABLE
     excluded_sources_table = (
         excluded_sources_table if excluded_sources_table is not None else EXCLUDED_SOURCES_TABLE
@@ -316,3 +283,4 @@ def append_pipeline_report_sections(
 
     with open(out_md, "a") as f:
         f.write("\n".join(lines))
+

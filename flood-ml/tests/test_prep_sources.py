@@ -1,6 +1,3 @@
-"""iter_ga511 label priority: manual > ai_review > weak_precip, and an
-ai_review wet/flooded that contradicts a likely_dry weather label is dropped.
-Also covers the v3 sources: iowa_rwis, eu_flood_2013, alleyfloodnet."""
 import csv
 
 from prep.sources import (
@@ -57,10 +54,6 @@ def test_ai_dry_on_likely_dry_is_kept(tmp_path, monkeypatch):
     assert (out[0]["label"], out[0]["label_source"]) == ("dry", "ai_review")
 
 
-# ---------------------------------------------------------------------------
-# v3: iowa_rwis
-# ---------------------------------------------------------------------------
-
 IOWA_FIELDS = ["frame_id", "path", "camera_id", "dead_reason", "weak_label"]
 
 
@@ -85,8 +78,6 @@ def test_iowa_rwis_only_manual_labels_never_weak_label(tmp_path, monkeypatch):
     frames = [
         {"frame_id": "a", "path": "frames/cam1/a.jpg", "camera_id": "cam1", "dead_reason": "", "weak_label": "likely_wet"},
     ]
-    # weak_label says wet, but no manual label exists -- must be dropped, not
-    # inferred from weak_label.
     _iowa_setup(tmp_path, monkeypatch, frames, [])
     out = iter_iowa_rwis()
     assert out == []
@@ -100,7 +91,7 @@ def test_iowa_rwis_unusable_is_dropped_and_last_write_wins(tmp_path, monkeypatch
     labels = [
         {"frame_id": "a", "label": "unusable", "labeled_at": "t0"},
         {"frame_id": "b", "label": "dry", "labeled_at": "t0"},
-        {"frame_id": "b", "label": "wet", "labeled_at": "t1"},  # last write wins
+        {"frame_id": "b", "label": "wet", "labeled_at": "t1"},
     ]
     _iowa_setup(tmp_path, monkeypatch, frames, labels)
     out = {r["frame_id"]: r for r in iter_iowa_rwis()}
@@ -119,10 +110,6 @@ def test_iowa_rwis_dead_frame_dropped(tmp_path, monkeypatch):
     _iowa_setup(tmp_path, monkeypatch, frames, [{"frame_id": "a", "label": "dry", "labeled_at": "t0"}])
     assert iter_iowa_rwis() == []
 
-
-# ---------------------------------------------------------------------------
-# v3: eu_flood_2013
-# ---------------------------------------------------------------------------
 
 EU_FIELDS = ["path", "label", "label_source", "road_score", "view_guess", "group_id", "license", "phash"]
 
@@ -182,10 +169,6 @@ def test_eu_flood_group_id_is_uploader(tmp_path, monkeypatch):
     assert out[0]["group_id"] == "euflood_user_Someone"
 
 
-# ---------------------------------------------------------------------------
-# v3: alleyfloodnet
-# ---------------------------------------------------------------------------
-
 ALLEY_FIELDS = ["path", "label", "label_source", "road_score", "view_guess", "group_id", "license", "phash"]
 
 
@@ -217,7 +200,7 @@ def test_alleyfloodnet_labels_and_no_pregrouping(tmp_path, monkeypatch):
     _alley_setup(tmp_path, monkeypatch, rows)
     out = iter_alleyfloodnet(include=True)
     assert {r["label"] for r in out} == {"flooded", "not_flooded"}
-    assert all(r["group_id"] is None for r in out)  # filled later from dup_cluster
+    assert all(r["group_id"] is None for r in out)
     assert all("CC BY 4.0" in r["license"] for r in out)
 
 
@@ -225,3 +208,4 @@ def test_alleyfloodnet_include_false_drops_source_entirely(tmp_path, monkeypatch
     rows = [_alley_row("flooded/a.jpg", "flooded")]
     _alley_setup(tmp_path, monkeypatch, rows)
     assert iter_alleyfloodnet(include=False) == []
+

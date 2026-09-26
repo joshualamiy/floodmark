@@ -44,3 +44,4 @@ def test_hamming_pairs():
     pairs = hamming_pairs(a, b, thr=6)
     assert pairs == [(0, 0, 6)]
     assert np.bitwise_count(a[1] ^ b[1]) == 52
+

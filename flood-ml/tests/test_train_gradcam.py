@@ -1,7 +1,3 @@
-"""Unit tests for train.gradcam: agreement between real GradientTape
-Grad-CAM and the plain Dense-kernel CAM used in the ONNX export graph, on a
-tiny randomly-initialized model (no downloads, no real data).
-"""
 import keras
 import numpy as np
 import pytest
@@ -20,14 +16,6 @@ INPUT_SIZE = 96
 
 
 def _toy_head_model(seed=0):
-    """A GAP -> Dropout -> Dense(1, sigmoid) head on top of a *shallow*
-    random conv trunk (not a 150+ layer real backbone). The CAM-agreement
-    property under test is about the head's math, not about any particular
-    backbone, and a real ImageNet backbone at `weights=None` produces mostly
-    dead-ReLU, ~1e-10-scale feature maps that make elementwise comparisons
-    numerically meaningless (float32 noise dominates a signal that small).
-    A shallow trunk keeps feature magnitudes well inside float32 precision.
-    """
     inputs = keras.Input(shape=(8, 8, 3))
     conv = keras.layers.Conv2D(
         6, 3, padding="same", activation="relu",
@@ -58,8 +46,6 @@ def test_cam_from_dense_weights_matches_gradcam_up_to_positive_scale():
 
     grad_norm = normalize_cam(grad_cam)
     dense_norm = normalize_cam(dense_cam)
-    # per-image: identical up to float precision, since normalizing cancels
-    # the positive scalar difference (see model.py's docstring)
     for i in range(x.shape[0]):
         a, b = grad_norm[i].reshape(-1), dense_norm[i].reshape(-1)
         if np.std(a) < 1e-9 or np.std(b) < 1e-9:
@@ -91,3 +77,4 @@ def test_overlay_heatmap_shape_and_dtype():
     overlay = overlay_heatmap(image, cam)
     assert overlay.shape == image.shape
     assert overlay.dtype == np.uint8
+

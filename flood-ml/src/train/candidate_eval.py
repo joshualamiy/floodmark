@@ -1,8 +1,4 @@
-"""improve_v2 per-candidate evaluation, val-only: perturbation robustness
-(reuses eval.shortcut._perturb, not edited) and live false alarms on 511GA
-frames from TRAIN/VAL cameras ("seen cameras" -- data/ga511/frames.csv).
-Pipeline precision/recall/tA/tB reuse train.pipeline_eval unchanged.
-"""
+# val-only candidate checks: perturbation flips + live false alarms
 from __future__ import annotations
 
 import json
@@ -17,9 +13,6 @@ from train.pipeline_eval import predict_probs, status_from_probs
 
 
 def _val_images_array(rows: pd.DataFrame, img_size: int, mode: str) -> np.ndarray:
-    """The exact deterministic (val-time, no augmentation) preprocessed batch
-    train.data would feed the model, as one numpy array.
-    """
     fake = rows.copy()
     fake["label_bin"] = 0.0
     fake["sample_weight"] = 1.0
@@ -31,12 +24,6 @@ def _val_images_array(rows: pd.DataFrame, img_size: int, mode: str) -> np.ndarra
 
 
 def perturb_flip_rate(stage_a_model, stage_b_model, flooded_rows, img_size, mode, ta, tb) -> dict:
-    """Fraction of true-flooded val rows that flip to "dry" under darkening
-    and a 511GA-style text box (eval.shortcut._perturb, imported not edited).
-    _perturb's box is sized for a 224 canvas, so for img_size != 224 we run
-    it at 224 (down/up-resizing around the call) to keep the box's
-    proportion of the frame roughly consistent across candidate sizes.
-    """
     from eval.shortcut import _perturb
 
     base = _val_images_array(flooded_rows, img_size, mode)
@@ -75,10 +62,6 @@ def live_false_alarms(
     max_frames: int | None = None,
     seed: int = 0,
 ) -> dict:
-    """"Seen cameras" = TRAIN/VAL 511GA cameras (train-camera frames were in
-    training; val cameras were seen at threshold-selection time), good
-    frames only (empty dead_reason).
-    """
     f = pd.read_csv(frames_csv)
     f = f[f["dead_reason"].isna() & f["path"].notna()].copy()
     splits = json.loads(Path(cam_splits_json).read_text())
@@ -146,3 +129,4 @@ if __name__ == "__main__":
     if args.out_json:
         Path(args.out_json).parent.mkdir(parents=True, exist_ok=True)
         Path(args.out_json).write_text(json.dumps(out, indent=2))
+

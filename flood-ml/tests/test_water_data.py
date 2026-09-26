@@ -80,3 +80,4 @@ def test_test_evaluation_requires_reviewer_opt_in():
     from train.water_eval import evaluate
     with pytest.raises(ValueError, match="independent Phase4"):
         evaluate("absent-model", "absent-manifest", "test")
+

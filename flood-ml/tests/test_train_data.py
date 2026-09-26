@@ -1,7 +1,3 @@
-"""Unit tests for train.data: stage/variant row selection, class/sample
-weights, and the tf.data pipeline shapes -- all on tiny synthetic data
-written to tmp_path, no network and no real dataset.
-"""
 import numpy as np
 import pandas as pd
 import pytest
@@ -55,7 +51,7 @@ def test_stage_a_excludes_not_flooded_rows():
     df = _manifest_df_with_not_flooded()
     rows = select_stage_rows(df, STAGE_A, split="train")
     assert "not_flooded" not in set(rows["label"])
-    assert len(rows) == 33  # same count as without not_flooded rows at all
+    assert len(rows) == 33
 
 
 def test_stage_b_mixed_treats_not_flooded_as_negative():
@@ -78,7 +74,6 @@ def test_not_flooded_never_gets_wet_upweight():
     weights = compute_sample_weights(rows, STAGE_B, VARIANT_MIXED, wet_upweight=5.0)
     wet_w = weights[(rows["label"] == "wet").to_numpy()]
     nf_w = weights[(rows["label"] == "not_flooded").to_numpy()]
-    # not_flooded gets the plain balanced class weight, never the wet multiplier
     assert not np.any(np.isin(nf_w, wet_w))
 
 
@@ -124,9 +119,7 @@ def test_split_filter_never_mixes_splits():
 def test_compute_class_weights_balances_by_inverse_frequency():
     label_bin = np.array([0] * 8 + [1] * 2)
     weights = compute_class_weights(label_bin)
-    # rarer class (1) gets a bigger weight
     assert weights[1] > weights[0]
-    # sanity: n / (n_classes * count)
     assert weights[0] == pytest.approx(10 / (2 * 8))
     assert weights[1] == pytest.approx(10 / (2 * 2))
 
@@ -142,8 +135,6 @@ def test_sample_weights_upweight_wet_only_for_mixed_variant():
     w_mixed = compute_sample_weights(rows_mixed, STAGE_B, VARIANT_MIXED, wet_upweight=5.0)
     w_spec = compute_sample_weights(rows_mixed, STAGE_B, VARIANT_SPEC, wet_upweight=5.0)
     wet_mask = (rows_mixed["label"] == "wet").to_numpy()
-    # mixed upweights wet rows relative to spec (which ignores the multiplier
-    # entirely since it only applies for stage b + mixed)
     assert np.all(w_mixed[wet_mask] > w_spec[wet_mask])
     assert np.allclose(w_mixed[wet_mask] / w_spec[wet_mask], 5.0)
 
@@ -228,8 +219,6 @@ def test_squash_and_letterbox_val_are_deterministic(tmp_path):
 
 
 def test_letterbox_pads_a_wide_image_with_mid_gray(tmp_path):
-    # a fixture image is 256x300 (h x w in numpy, so w=300>h=256): letterbox
-    # scales the long side (300) to img_size and pads top/bottom with gray.
     df = _manifest_df()
     rows = select_stage_rows(df, STAGE_A, split="val").iloc[:1].reset_index(drop=True)
     _write_fixture_images(tmp_path, rows)
@@ -237,4 +226,5 @@ def test_letterbox_pads_a_wide_image_with_mid_gray(tmp_path):
     images, _, _ = next(iter(ds))
     img = images.numpy()[0]
     assert img.shape == (64, 64, 3)
-    assert img[0, 0, 0] == pytest.approx(128.0, abs=1.0)  # top-left corner is padding, not content
+    assert img[0, 0, 0] == pytest.approx(128.0, abs=1.0)
+

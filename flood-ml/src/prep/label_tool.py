@@ -1,21 +1,4 @@
-"""A tiny local labeling tool for 511GA frames: stdlib `http.server` plus one
-embedded HTML page, no new heavy dependencies.
-
-Launch (serves on 127.0.0.1:8765 by default):
-
-    cd flood-ml && PYTHONPATH=src ../my_env/bin/python -m prep.label_tool
-    cd flood-ml && PYTHONPATH=src ../my_env/bin/python -m prep.label_tool --port 8000 --ga511-root data/ga511
-
-Then open http://127.0.0.1:8765/ in a browser. Filters: unlabeled, disputed, likely_wet,
-by camera, by split (from `data/processed/ga511_camera_splits.json` if it
-exists). Keyboard: 1=dry, 2=wet, 3=flooded, 0=unusable, left/right arrows to
-navigate. Every keypress POSTs to `/api/label` and appends one row to
-`data/ga511/labels.csv` (`frame_id, label, labeled_at`); if a frame is
-labeled twice, the last row wins (readers of labels.csv reduce that way, see
-`prep.sources.load_labels_csv`). This file is only ever written by this tool
-and the user manually -- `prep.sources` treats it as `label_source=manual`
-and it always overrides `ai_review`.
-"""
+# local labeling page (keys: 1 dry, 2 wet, 3 flooded, 0 unusable)
 from __future__ import annotations
 
 import argparse
@@ -178,12 +161,6 @@ def _last_write_wins(rows: list[dict], key: str = "frame_id") -> dict[str, dict]
 
 
 class FrameStore:
-    """Reads frames.csv / labels.csv / ai_review_labels.csv / the camera
-    splits file fresh on every call, so the tool always reflects the latest
-    state written by the concurrently running collector, the user's own
-    earlier labels, and this process's own appends.
-    """
-
     def __init__(self, ga511_root: Path):
         self.ga511_root = Path(ga511_root)
 
@@ -236,8 +213,6 @@ class FrameStore:
                 continue
             if filt == "likely_wet" and r.get("weak_label") != "likely_wet":
                 continue
-            # ai_review said wet/flooded but the weather said dry: these are
-            # held out of the manifest until a person checks them
             if filt == "disputed" and not (
                 not manual_label
                 and ai_label in ("wet", "flooded")
@@ -370,3 +345,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

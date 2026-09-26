@@ -1,20 +1,4 @@
-"""Grad-CAM for the Stage A/B classifiers built in `model.py`.
-
-Two implementations that should agree up to a positive per-image scale
-(see `model.py`'s docstring for why):
-
-- `gradcam_batch`: real GradientTape Grad-CAM. Backprops the sigmoid output
-  through to the last conv feature map, averages gradients spatially per
-  channel, and applies ReLU. This is the reference / ground truth used in
-  tests and to verify the ONNX export.
-- `cam_from_dense_weights`: no gradients at all -- just `ReLU(sum_k w_k *
-  A_k)` using the Dense(1, sigmoid) head's kernel directly. This is what
-  `export_onnx.py` bakes into the ONNX graph, since ONNX Runtime has no
-  autodiff at inference time.
-
-Both take/return numpy arrays so callers (train.py, export_onnx.py, tests)
-don't need to juggle tf tensors directly.
-"""
+# grad-cam for stage a/b
 from __future__ import annotations
 
 from pathlib import Path
@@ -23,11 +7,6 @@ import numpy as np
 
 
 def gradcam_batch(grad_model, images: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """`images`: float32 array (N,H,W,3), pixel values in [0,255] (raw,
-    un-preprocessed -- preprocessing is built into the model). Returns
-    `(cam, prob)`: `cam` is (N,h,w) float32, ReLU'd but NOT normalized;
-    `prob` is (N,1) float32, the sigmoid output.
-    """
     import tensorflow as tf
 
     images_t = tf.convert_to_tensor(images, dtype=tf.float32)
@@ -36,18 +15,13 @@ def gradcam_batch(grad_model, images: np.ndarray) -> tuple[np.ndarray, np.ndarra
         conv_out, prob = grad_model(images_t, training=False)
         target = prob[:, 0]
     grads = tape.gradient(target, conv_out)
-    weights = tf.reduce_mean(grads, axis=(1, 2))  # (N, C)
+    weights = tf.reduce_mean(grads, axis=(1, 2))
     cam = tf.einsum("nhwc,nc->nhw", conv_out, weights)
     cam = tf.nn.relu(cam)
     return cam.numpy(), prob.numpy()
 
 
 def cam_from_dense_weights(conv_out: np.ndarray, kernel: np.ndarray) -> np.ndarray:
-    """`conv_out`: (N,h,w,C) feature map (numpy or tf tensor). `kernel`:
-    (C, 1) Dense kernel (as returned by `model.dense_kernel`). Returns (N,h,w)
-    float32, ReLU'd, not normalized -- the same convention as
-    `gradcam_batch`'s `cam` output.
-    """
     import tensorflow as tf
 
     conv_out = tf.convert_to_tensor(conv_out, dtype=tf.float32)
@@ -57,11 +31,6 @@ def cam_from_dense_weights(conv_out: np.ndarray, kernel: np.ndarray) -> np.ndarr
 
 
 def normalize_cam(cam: np.ndarray, eps: float = 1e-8) -> np.ndarray:
-    """Per-image min-max normalize (min is usually 0 after ReLU) to [0,1].
-    Cancels the positive scalar difference between `gradcam_batch` and
-    `cam_from_dense_weights`, so normalized CAMs from the two methods should
-    be (near-)identical.
-    """
     cam = np.asarray(cam, dtype=np.float32)
     flat = cam.reshape(cam.shape[0], -1)
     lo = flat.min(axis=1, keepdims=True)
@@ -72,11 +41,6 @@ def normalize_cam(cam: np.ndarray, eps: float = 1e-8) -> np.ndarray:
 
 
 def overlay_heatmap(image_uint8: np.ndarray, cam: np.ndarray, alpha: float = 0.45) -> np.ndarray:
-    """`image_uint8`: (H,W,3) RGB uint8. `cam`: (h,w) float32 in [0,1] (already
-    normalized). Returns an (H,W,3) RGB uint8 overlay: `cam` is resized to the
-    image's resolution with bilinear interpolation, colored with OpenCV's
-    JET colormap, and alpha-blended over the image.
-    """
     import cv2
 
     h, w = image_uint8.shape[:2]
@@ -97,11 +61,6 @@ def save_gradcam_gallery(
     seed: int = 0,
     repo_root: str = "",
 ) -> list[str]:
-    """Picks a seeded sample of up to `n_per_label` val rows per label,
-    runs GradientTape Grad-CAM, and writes overlay PNGs to `out_dir`
-    (reports/gradcam_val/, local-only per PLAN.md -- never committed).
-    Returns the list of written file paths (as strings).
-    """
     import cv2
     from PIL import Image
 
@@ -131,3 +90,4 @@ def save_gradcam_gallery(
             cv2.imwrite(str(out_path), cv2.cvtColor(overlay, cv2.COLOR_RGB2BGR))
             written.append(str(out_path))
     return written
+

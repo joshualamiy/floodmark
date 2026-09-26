@@ -1,6 +1,3 @@
-"""Integration test against the real shipped ONNX models. Skipped when
-models/ isn't present (it's gitignored, so CI never has it).
-"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -30,3 +27,4 @@ def test_real_models_load_and_predict_on_a_real_frame():
     assert total == pytest.approx(1.0, abs=1e-4)
     assert pred.heatmap_png is not None
     assert pred.heatmap_png[:8] == b"\x89PNG\r\n\x1a\n"
+

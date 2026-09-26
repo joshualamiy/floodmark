@@ -15,10 +15,9 @@ def test_parse_county_missing_parens_returns_none():
 
 
 def test_in_atlanta_bbox():
-    assert in_atlanta_bbox(33.8, -84.4)  # downtown Atlanta
-    assert not in_atlanta_bbox(31.0, -84.4)  # too far south
-    assert not in_atlanta_bbox(33.8, -83.0)  # too far east
-    # boundary values are inclusive
+    assert in_atlanta_bbox(33.8, -84.4)
+    assert not in_atlanta_bbox(31.0, -84.4)
+    assert not in_atlanta_bbox(33.8, -83.0)
     assert in_atlanta_bbox(33.5, -84.7)
     assert in_atlanta_bbox(34.1, -84.1)
 
@@ -50,7 +49,7 @@ def test_build_atlanta_rows_filters_bbox_and_disabled_views():
         ),
         _camera(
             "2",
-            30.0,  # outside bbox (Savannah-ish latitude)
+            30.0,
             -84.4,
             "I-95 NB at Somewhere (Chatham)",
             [{"Id": "v3", "Url": "https://511ga.org/map/Cctv/v3", "Status": "Enabled"}],
@@ -70,3 +69,4 @@ def test_build_atlanta_rows_filters_bbox_and_disabled_views():
     assert row["camera_id"] == "1"
     assert row["county"] == "Fulton"
     assert row["view_status"] == "Enabled"
+

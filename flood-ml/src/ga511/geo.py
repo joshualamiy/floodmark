@@ -1,9 +1,8 @@
-"""Small geometry helpers: bounding box and haversine distance."""
+# bbox + haversine
 from __future__ import annotations
 
 import math
 
-# Atlanta metro bounding box (lat, lon) per PLAN.md.
 ATLANTA_LAT_MIN, ATLANTA_LAT_MAX = 33.5, 34.1
 ATLANTA_LON_MIN, ATLANTA_LON_MAX = -84.7, -84.1
 
@@ -15,10 +14,10 @@ def in_atlanta_bbox(lat: float, lon: float) -> bool:
 
 
 def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """Great-circle distance between two lat/lon points, in kilometers."""
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     dphi = math.radians(lat2 - lat1)
     dlambda = math.radians(lon2 - lon1)
     a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return EARTH_RADIUS_KM * c
+

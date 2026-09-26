@@ -21,3 +21,4 @@ def test_uncertain_when_no_data():
 
 def test_uncertain_when_6h_unknown_and_below_wet_thresholds():
     assert classify_weak_label(0.05, 0.3, None) == "uncertain"
+

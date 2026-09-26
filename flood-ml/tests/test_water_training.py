@@ -26,3 +26,4 @@ def test_small_full_frame_model_no_download_and_frozen_encoder():
     assert np.isfinite(output.numpy()).all()
     assert model.count_params() < 1_100_000
     assert not model.get_layer("water_encoder").trainable
+

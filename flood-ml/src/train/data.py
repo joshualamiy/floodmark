@@ -1,35 +1,4 @@
-"""tf.data input pipeline for Stage A/B training, built from
-`data/processed/manifest.csv`.
-
-Stage / variant row selection (PLAN.md section 3, overridden for Stage B by
-the Phase 3 brief -- wet-but-not-flooded has only 15 train / 6 val rows, so
-we train and compare two Stage B variants rather than one):
-
-- Stage A: every row EXCEPT label == "not_flooded" (v3: eu_flood_2013/
-  alleyfloodnet negatives -- dry or rain-wet, unknown which, so excluded
-  from the dry-vs-wet task). label_bin = 0 if label == "dry" else 1.
-- Stage B "spec" (PLAN.md as written): wet + flooded rows only.
-  label_bin = 1 if label == "flooded" else 0 (i.e. wet == 0).
-- Stage B "mixed": every row. label_bin = 1 if label == "flooded" else 0, so
-  "not flooded" = wet + dry + the v3 not_flooded label. Wet rows get an
-  extra sample-weight multiplier (`wet_upweight`) so the rare wet class
-  still pulls its weight against the much larger dry negative pool.
-
-Images on disk already have short side ~256 (a few sources are a little
-under that, e.g. cropped NYSDOT frames), so the pipeline re-resizes the
-short side before cropping, rather than assuming it (mode="crop" only).
-
-Input geometry (`mode`, improve_v2 problem 1): "crop" is the original
-behavior (resize short side, then crop -- loses the sides of a wide frame).
-"squash" resizes the whole frame to size x size, aspect ignored. "letterbox"
-resizes the long side to size and pads to size x size with mid-gray, so nothing
-is cropped out. Inference (`inference/preprocess.py`) mirrors all three.
-
-Training augmentation: `prep.augment.tf_camera_style` (domain randomization,
-label-aware overlay rate) then a horizontal flip (no vertical flip, since
-roads never appear upside down), plus a random crop for mode="crop" only.
-Validation: the same deterministic resize, no crop jitter.
-"""
+# tf.data pipeline from the manifest (stage a/b)
 from __future__ import annotations
 
 import logging
@@ -54,16 +23,12 @@ VARIANT_SPEC = "spec"
 VARIANT_MIXED = "mixed"
 VARIANTS = (VARIANT_SPEC, VARIANT_MIXED)
 
-# input geometry (improve_v2, problem 1: crop only sees the middle ~49% of a
-# wide frame). crop = current behavior (pre-resize short side, then a crop).
-# squash = whole frame -> SxS, aspect ignored. letterbox = long side -> S,
-# pad to SxS with mid-gray. Inference mirrors these in inference/preprocess.py.
 MODE_CROP = "crop"
 MODE_SQUASH = "squash"
 MODE_LETTERBOX = "letterbox"
 MODES = (MODE_CROP, MODE_SQUASH, MODE_LETTERBOX)
 
-CROP_PRECROP_RATIO = 256 / 224  # matches the original RESIZE_SHORT_SIDE/IMG_SIZE margin
+CROP_PRECROP_RATIO = 256 / 224
 LETTERBOX_PAD_VALUE = 128.0
 
 WET_UPWEIGHT_DEFAULT = 8.0
@@ -85,21 +50,13 @@ def select_stage_rows(
     variant: str | None = None,
     split: str | None = None,
 ) -> pd.DataFrame:
-    """Filters `df` (already loaded from the manifest) to the rows a given
-    stage/variant trains or evaluates on, restricted to `split` if given, and
-    attaches a float32 `label_bin` column. Never call with split="test": the
-    caller is responsible for that rule (see PLAN.md rule 4 / the Phase 3
-    brief); this function itself has no special-casing that would stop it.
-    """
     if stage not in STAGES:
         raise ValueError(f"stage must be one of {STAGES}, got {stage!r}")
     if split is not None:
         df = df[df["split"] == split]
 
     if stage == STAGE_A:
-        # not_flooded rows (eu_flood_2013/alleyfloodnet negatives) can be
-        # dry OR rain-wet -- their dry/wet state is unknown, so Stage A
-        # (dry vs wet-or-flooded) must never train or eval on them.
+        # not_flooded could be dry or wet, so stage a can't use it
         rows = df[df["label"] != "not_flooded"].copy()
         rows["label_bin"] = (rows["label"] != "dry").astype("float32")
     else:
@@ -107,7 +64,7 @@ def select_stage_rows(
             raise ValueError(f"stage b needs variant in {VARIANTS}, got {variant!r}")
         if variant == VARIANT_SPEC:
             rows = df[df["label"].isin(["wet", "flooded"])].copy()
-        else:  # mixed
+        else:
             rows = df.copy()
         rows["label_bin"] = (rows["label"] == "flooded").astype("float32")
 
@@ -115,11 +72,6 @@ def select_stage_rows(
 
 
 def select_all_rows(df: pd.DataFrame, split: str | None = None) -> pd.DataFrame:
-    """Every manifest row regardless of label (including "not_flooded"),
-    optionally restricted to one split. For callers that need the full row
-    set -- pipeline evaluation in particular, which must still report
-    not_flooded's false-flood rate even though Stage A itself excludes it.
-    """
     rows = df.copy()
     if split is not None:
         rows = rows[rows["split"] == split]
@@ -127,10 +79,6 @@ def select_all_rows(df: pd.DataFrame, split: str | None = None) -> pd.DataFrame:
 
 
 def compute_class_weights(label_bin: np.ndarray) -> dict[int, float]:
-    """Balanced class weights: n_samples / (n_classes * n_class_i). Falls
-    back to {0: 1.0, 1: 1.0} if only one class is present (degenerate, but
-    keeps callers from crashing on a tiny synthetic test set).
-    """
     label_bin = np.asarray(label_bin).astype(int)
     classes, counts = np.unique(label_bin, return_counts=True)
     if len(classes) < 2:
@@ -145,11 +93,6 @@ def compute_sample_weights(
     variant: str | None = None,
     wet_upweight: float = WET_UPWEIGHT_DEFAULT,
 ) -> np.ndarray:
-    """Per-row sample weight = balanced class weight, times `wet_upweight`
-    for wet rows when training Stage B's "mixed" variant (where wet rows are
-    a small slice of the negative class and would otherwise be drowned out
-    by dry negatives).
-    """
     class_w = compute_class_weights(rows["label_bin"].to_numpy())
     weights = rows["label_bin"].map(lambda v: class_w[int(v)]).astype("float32").to_numpy()
     if stage == STAGE_B and variant == VARIANT_MIXED:
@@ -179,10 +122,6 @@ def _squash_resize(image, size: int):
 
 
 def _letterbox_resize(image, size: int, pad_value: float = LETTERBOX_PAD_VALUE):
-    """Long side -> size, then pad to size x size with `pad_value` (a flat
-    mid-gray), centered. Padding trick: shift by -pad_value, zero-pad (the
-    only value tf.image.pad_to_bounding_box supports), shift back.
-    """
     import tensorflow as tf
 
     image = tf.cast(image, tf.float32)
@@ -249,14 +188,6 @@ def make_dataset(
     num_parallel_calls=None,
     night_aug: bool = True,
 ):
-    """Builds a batched `tf.data.Dataset` of (image[0..255] float32, label,
-    sample_weight) from an already-selected rows DataFrame (see
-    `select_stage_rows`). `repo_root` lets callers run from any cwd; paths in
-    the manifest are relative to flood-ml/, so pass that directory's
-    absolute path when cwd isn't already flood-ml/. `mode` in MODES picks the
-    input geometry (see the MODE_* constants above). `night_aug=False` drops
-    the dark/glare augmentation op for training-time comparison (v3).
-    """
     import tensorflow as tf
 
     if mode not in MODES:
@@ -300,11 +231,6 @@ class ThroughputResult:
 
 
 def benchmark_throughput(ds, n_batches: int = 20, warmup_batches: int = 2) -> ThroughputResult:
-    """Iterates `n_batches` batches (after `warmup_batches` to prime the
-    tf.data pipeline / thread pool) and reports images/sec, so we can confirm
-    the input pipeline isn't the bottleneck for the reported CPU fine-tune
-    speeds (~280 img/s MobileNetV3Small, ~73 img/s EfficientNetB0).
-    """
     it = iter(ds)
     batch_size = None
     for _ in range(warmup_batches):
@@ -371,3 +297,4 @@ if __name__ == "__main__":
     }
     logger.info("throughput: %s", json.dumps(payload))
     print(json.dumps(payload, indent=2))
+

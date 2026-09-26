@@ -1,4 +1,4 @@
-"""Backend-facing inference package: onnxruntime + numpy + pillow only, no TF."""
+# what the backend imports (onnxruntime + numpy + pillow only)
 from .camera_move import CameraMoveDetector
 from .predict import Prediction, predict, predict_batch
 from .session import load_models
@@ -15,3 +15,4 @@ __all__ = [
     "predict_batch",
     "predict_water",
 ]
+

@@ -1,11 +1,4 @@
-"""Fetch 511GA camera snapshot images.
-
-Snapshot URLs (https://511ga.org/map/Cctv/{view_id}?t={ts}) carry no API key,
-so they don't touch the shared `RateLimiter` directly. We still throttle
-them politely: at most one fetch per view every 5 minutes, persisted to disk
-so the limit holds across restarts and across processes, plus a soft global
-cap of ~1-2 requests/second.
-"""
+# fetch camera snapshots (max 1 per view per 5 min)
 from __future__ import annotations
 
 import argparse
@@ -22,8 +15,8 @@ from ga511.ratelimit import get_default_limiter, locked_file, read_json_fd, reda
 SNAPSHOT_URL_TMPL = "https://511ga.org/map/Cctv/{view_id}?t={ts}"
 USER_AGENT = "floodmark-research/0.1 (+https://github.com/joshualamiy/floodmark)"
 
-VIEW_MIN_INTERVAL_S = 300.0  # at most one fetch per camera view per 5 minutes
-GLOBAL_MIN_INTERVAL_S = 0.7  # ~1.4 req/s overall, within the 1-2 req/s budget
+VIEW_MIN_INTERVAL_S = 300.0
+GLOBAL_MIN_INTERVAL_S = 0.7
 
 log = setup_logging("ga511_snapshot")
 
@@ -39,7 +32,7 @@ class SnapshotResult:
     width: int | None = None
     height: int | None = None
     image: Image.Image | None = None
-    error_reason: str | None = None  # "http_error" | "non_image" | "tiny_response"
+    error_reason: str | None = None
 
 
 def seconds_since_last_fetch(view_id, state_path=LAST_FETCH_PATH) -> float | None:
@@ -58,9 +51,6 @@ def _wait_for_view_slot(
     state_path=LAST_FETCH_PATH,
     max_wait_s: float = 330.0,
 ) -> None:
-    """Block (cross-process) until this view is allowed to be fetched again,
-    then reserve the slot. Raises TimeoutError past `max_wait_s`.
-    """
     start = time.time()
     while True:
         with locked_file(state_path) as fd:
@@ -90,10 +80,6 @@ def fetch_view(
     min_interval: float = VIEW_MIN_INTERVAL_S,
     max_wait_s: float = 330.0,
 ) -> SnapshotResult:
-    """Fetch one snapshot for `view_id`, decoding it with PIL to confirm it's
-    really an image. Never logs the full URL (it carries no key, but we keep
-    the habit consistent).
-    """
     if enforce_interval:
         _wait_for_view_slot(view_id, min_interval=min_interval, max_wait_s=max_wait_s)
     ts = int(time.time())
@@ -132,7 +118,7 @@ def fetch_view(
         img = Image.open(io.BytesIO(resp.content))
         img.load()
         width, height = img.size
-    except Exception as e:  # noqa: BLE001 - any PIL decode failure counts as non_image
+    except Exception as e:  # noqa: BLE001
         log.info("view %s: PIL decode failed: %s", view_id, e)
         return SnapshotResult(
             ok=False,
@@ -157,12 +143,6 @@ def fetch_view(
 
 
 def check_image_fetch_throttle(view_ids: list, n: int = 15) -> dict:
-    """Empirical check: fetch `n` different camera views' snapshots (no API
-    key involved) within about a minute, then make one real API call through
-    the shared limiter and confirm it doesn't get a 429.
-
-    Returns a small dict summarizing the result for the phase report.
-    """
     from ga511.api import get_events
 
     sample = view_ids[:n]
@@ -207,3 +187,4 @@ def _main() -> None:
 
 if __name__ == "__main__":
     _main()
+

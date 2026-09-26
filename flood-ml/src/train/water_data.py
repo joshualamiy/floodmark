@@ -1,4 +1,4 @@
-"""Pixel annotations only, with immutable manifest splits and full-frame geometry."""
+# water segmentation data (train/val masks only)
 from __future__ import annotations
 
 import csv
@@ -21,7 +21,6 @@ def resolve_path(path, root=ROOT):
 
 
 def audit_splits(rows, relevant_sources=None):
-    """Metadata-only guard, including held-out groups; no test pixels are opened."""
     for field in ("group_id", "dup_cluster", "orig_path", "mask_path", "phash"):
         assignments = defaultdict(set)
         relevant = set()
@@ -50,7 +49,6 @@ def annotated_rows(rows, split):
 
 
 def capped_rows(rows, per_source=192, per_group=96, seed=42):
-    """Stable hash ordering and group round-robin prevent one sequence dominating."""
     selected = []
     for source in SOURCES:
         groups = defaultdict(list)
@@ -71,7 +69,6 @@ def capped_rows(rows, per_source=192, per_group=96, seed=42):
 
 
 def original_pair(row, root=ROOT):
-    """FRED 2=water; roadway 1=water. Never substitute sequence/class labels."""
     if not row.get("mask_path"):
         raise ValueError("Pixel mask required; unannotated frames are excluded")
     with Image.open(resolve_path(row["orig_path"], root)) as image:
@@ -91,7 +88,6 @@ def original_pair(row, root=ROOT):
     if abs(w / h - mw / mh) > 0.01:
         raise ValueError("Mask/frame aspect mismatch; crop alignment must be reviewed")
     water = values == (2 if row["source"] == "fred" else 1)
-    # FRED labels are 1728x1080 for 1920x1200 frames: same FOV, nearest only.
     mask = Image.fromarray(water.astype(np.uint8)).resize(
         image.size, Image.Resampling.NEAREST
     )
@@ -117,3 +113,4 @@ def load_arrays(rows, size=320, root=ROOT):
 
 def counts(rows):
     return dict(Counter(r["source"] for r in rows))
+

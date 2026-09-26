@@ -1,8 +1,3 @@
-"""Unit tests for train.export_onnx: builds a tiny (weights=None) model,
-exports it with tf2onnx, and checks the ONNX `cam` output shape matches the
-Keras conv feature map, plus Keras/ONNX numerical agreement -- all on
-random weights and random input, no downloads and no real data.
-"""
 import numpy as np
 import pytest
 
@@ -17,7 +12,7 @@ from train.export_onnx import (
 )
 from train.model import build_model, make_grad_model
 
-INPUT_SIZE = 64  # small: keeps tf2onnx conversion fast in CI-like runs
+INPUT_SIZE = 64
 
 
 def _export_tiny(tmp_path, backbone_name="mobilenetv3small"):
@@ -84,3 +79,4 @@ def test_benchmark_latency_returns_positive_timings(tmp_path):
     result = benchmark_latency(out_path, INPUT_SIZE, n_runs=5, intra_op_threads=1)
     assert result["median_ms"] > 0
     assert result["p95_ms"] >= result["median_ms"] * 0
+

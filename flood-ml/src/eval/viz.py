@@ -1,3 +1,4 @@
+# pr curves and eval charts
 from __future__ import annotations
 
 import base64
@@ -24,7 +25,6 @@ def overlay(img: np.ndarray, cam: np.ndarray, alpha: float = 0.45) -> np.ndarray
 
 
 def tile(path, cam=None, caption: str = "", size: int = 224, spec: dict | None = None) -> Image.Image:
-    # model input (+ cam overlay), shown at `size` px per panel
     img = load_image(path, spec)
     pair = [img.astype(np.uint8)]
     if cam is not None:
@@ -55,3 +55,4 @@ def b64_jpeg(img: Image.Image, q: int = 80) -> str:
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=q)
     return base64.b64encode(buf.getvalue()).decode()
+

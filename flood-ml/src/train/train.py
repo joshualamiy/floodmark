@@ -1,24 +1,4 @@
-"""Trains a Stage A or Stage B classifier and logs the run.
-
-Usage (from flood-ml/, per project convention):
-    PYTHONPATH=src ../my_env/bin/python -m train.train \\
-        --stage a --backbone mobilenetv3small --epochs-head 8 --epochs-ft 0
-
-Two-phase training (PLAN.md section 3):
-    Phase 1: backbone frozen, train the head only (fast).
-    Phase 2 (--epochs-ft > 0): unfreeze the top `--ft-layers` backbone
-    layers (BatchNorm layers always stay frozen / inference-mode) and
-    fine-tune at a low learning rate.
-
-Early stopping watches val AUC-PR (`--monitor` to override) and restores the
-best weights. Every run appends one row to `reports/runs.csv` and writes a
-checkpoint to `models/<run_id>/model.keras` plus TensorBoard logs to
-`logs/<run_id>/`.
-
-Never pass split="test" here -- this module has no access to it beyond
-whatever manifest rows the caller selects, but the CLI only exposes
-train/val for exactly that reason.
-"""
+# train stage a or b, log to tensorboard + reports/runs.csv
 from __future__ import annotations
 
 import argparse
@@ -61,7 +41,6 @@ DATA_VERSION_PATH = Path("data/processed/VERSION")
 
 def read_data_version(path: Path = DATA_VERSION_PATH) -> str:
     text = path.read_text().strip()
-    # "data_version = v1-c7dea35e"
     return text.split("=", 1)[1].strip() if "=" in text else text
 
 
@@ -101,16 +80,12 @@ def _youden_threshold(y_true: np.ndarray, scores: np.ndarray) -> float:
     j = tpr - fpr
     best = int(np.argmax(j))
     thr = float(thresholds[best])
-    # roc_curve's first threshold can be inf; clip to a valid probability.
     return float(np.clip(thr, 0.0, 1.0))
 
 
 def _precision_target_threshold(
     y_true: np.ndarray, scores: np.ndarray, target_precision: float = 0.90
 ) -> tuple[float, str]:
-    """Lowest threshold reaching `target_precision`; else the threshold that
-    maximizes F0.5 (precision-weighted), with a note saying so.
-    """
     candidates = np.unique(np.clip(scores, 0.0, 1.0))
     candidates = np.concatenate([candidates, [1.0]])
     candidates.sort()
@@ -123,12 +98,9 @@ def _precision_target_threshold(
         fn = int(np.sum(~pred & (y_true == 1)))
         precision = tp / (tp + fp) if (tp + fp) > 0 else 1.0
         recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-        beta2 = 0.25  # beta=0.5
+        beta2 = 0.25
         denom = beta2 * precision + recall
         f05 = (1 + beta2) * precision * recall / denom if denom > 0 else 0.0
-        # require at least one predicted positive: otherwise precision is
-        # vacuously 1.0 (0/0) and would let a threshold that flags nothing
-        # "reach" the target, which is meaningless (recall 0).
         if (tp + fp) > 0 and precision >= target_precision and best_reaching is None:
             best_reaching = float(thr)
         if f05 > best_f05[0]:
@@ -145,11 +117,6 @@ def evaluate_val(
     stage: str,
     false_alarm_label: np.ndarray,
 ) -> ValMetrics:
-    """`false_alarm_label`: boolean array, True for rows whose *true* label is
-    the one we report the false-alarm rate against (dry, for Stage A;
-    wet-not-flooded, for Stage B) -- i.e. the denominator of "how often do we
-    wrongly call this thing positive".
-    """
     from sklearn.metrics import (
         average_precision_score,
         f1_score,
@@ -270,7 +237,6 @@ def run_training(args: argparse.Namespace) -> dict:
 
     start = time.perf_counter()
 
-    # --- Phase 1: head only ---
     set_backbone_trainable(built, 0)
     built.model.compile(optimizer=keras.optimizers.Adam(args.lr_head), loss="binary_crossentropy", metrics=metrics)
     callbacks = build_callbacks(logdir_root / "head", args.monitor, args.patience)
@@ -279,7 +245,6 @@ def run_training(args: argparse.Namespace) -> dict:
     )
     epochs_head_ran = len(history_head.history.get("loss", []))
 
-    # --- Phase 2: fine-tune top N layers ---
     epochs_ft_ran = 0
     if args.epochs_ft > 0:
         set_backbone_trainable(built, args.ft_layers)
@@ -292,7 +257,6 @@ def run_training(args: argparse.Namespace) -> dict:
 
     train_time_s = time.perf_counter() - start
 
-    # --- Validation predictions for thresholding / reporting ---
     val_probs = built.model.predict(val_ds, verbose=0).reshape(-1)
     val_labels = val_rows["label_bin"].to_numpy().astype(int)
     if args.stage == STAGE_A:
@@ -389,3 +353,4 @@ def parse_args(argv=None) -> argparse.Namespace:
 
 if __name__ == "__main__":
     run_training(parse_args())
+

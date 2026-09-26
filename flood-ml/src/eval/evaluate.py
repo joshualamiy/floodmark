@@ -1,3 +1,4 @@
+# test metrics per set with group bootstrap cis
 from __future__ import annotations
 
 import argparse
@@ -24,7 +25,6 @@ from eval.common import (
     thresholds,
 )
 
-# reference palette slots 1-2 + ink
 C1, C2 = "#2a78d6", "#eb6834"
 INK, INK2, SURF, GRID = "#0b0b0b", "#52514e", "#fcfcfb", "#e4e3df"
 TAGS = ("v1", "v3")
@@ -48,7 +48,6 @@ def _cm(t, p) -> list:
 
 
 def set_metrics(d: pd.DataFrame, ta: float, tb: float) -> dict:
-    # not_flooded rows only count toward "called flooded or not"
     g, y, st = d["boot_group"], d["label"].to_numpy(), d["status"].to_numpy()
     pa, pb = d["pA"].to_numpy(), d["pB"].to_numpy()
     known = y != "not_flooded"
@@ -101,7 +100,6 @@ def load_preds(tag: str, name: str = "test_preds.csv") -> pd.DataFrame:
 
 
 def paired(d1: pd.DataFrame, d3: pd.DataFrame) -> dict:
-    # v3 - v1 on identical rows
     assert (d1["orig_path"].to_numpy() == d3["orig_path"].to_numpy()).all()
     y, g = d1["label"].to_numpy(), d1["boot_group"]
     f1, f3 = d1["status"].to_numpy() == "flooded", d3["status"].to_numpy() == "flooded"
@@ -111,10 +109,7 @@ def paired(d1: pd.DataFrame, d3: pd.DataFrame) -> dict:
     return out
 
 
-# live frames -----------------------------------------------------------
-
 def smoothed_alerts(f: pd.DataFrame, n: int = 3) -> pd.DataFrame:
-    # replay each camera through the deployed TemporalSmoother, in time order
     from inference.smoothing import TemporalSmoother
 
     rows = []
@@ -174,7 +169,6 @@ def live_metrics(f: pd.DataFrame) -> dict:
 
 
 def threshold_whatif(d: pd.DataFrame, live: pd.DataFrame | None, ta0: float, tb0: float) -> list:
-    # sensitivity only: never pick thresholds from this
     rows = []
     y = d["label"].to_numpy()
     for ta in sorted({0.5, 0.7, round(ta0, 3)}):
@@ -192,8 +186,6 @@ def threshold_whatif(d: pd.DataFrame, live: pd.DataFrame | None, ta0: float, tb0
             rows.append(r)
     return rows
 
-
-# figure ----------------------------------------------------------------
 
 def _axes(ax, title, xlabel, ylabel):
     ax.set_facecolor(SURF)
@@ -231,7 +223,6 @@ def pr_figure(preds: dict[str, pd.DataFrame], live: dict[str, pd.DataFrame] | No
             ax.plot(r, p, color=col, lw=2, label=f"{tag} (AP {average_precision_score(y, sc):.2f})")
             ax.plot([tp / y.sum()], [tp / max(op.sum(), 1)], "o", ms=9, color=col, mec=SURF, mew=1.5, zorder=5)
         ax.legend(fontsize=8, frameon=False, loc="lower left", labelcolor=INK)
-    # greek recall vs live false floods, same score sweep
     ax = axs[1]
     _axes(ax, "Greek video recall vs live false floods", "live test-camera frames called flooded (of 1,602)",
           "Greek video recall (62 frames)")
@@ -306,3 +297,4 @@ def main() -> dict:
 if __name__ == "__main__":
     argparse.ArgumentParser().parse_args()
     main()
+

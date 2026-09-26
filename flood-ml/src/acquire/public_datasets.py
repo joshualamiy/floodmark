@@ -1,52 +1,4 @@
-"""Public dataset acquisition and verification for the flood-ml workstream.
-
-Owns `data/raw/**` (additions only -- never edit or delete an existing file
-here except `data/raw/SOURCES.md`), and is the single source of truth for how
-each dataset in `data/raw/SOURCES.md` was obtained, so a fresh machine can
-reproduce the same layout from official sources only.
-
-Datasets, all fetched from their official host:
-
-- ``roadway_flooding``: Kaggle `saurabhshahane/roadway-flooding-image-dataset`
-  (Sazara, Cetin & Iftekharuddin 2019, CC BY 4.0). ~18 MB.
-- ``flood_area_segmentation``: Kaggle `faizalkarim/flood-area-segmentation`
-  (CC0 1.0). ~109 MB.
-- ``water_segmentation``: Kaggle `gvclsu/water-segmentation-dataset`, the
-  LSU GVCLSU water set behind WaterNet (2020) / V-FloodNet (2023). License is
-  **unverified / likely all-rights-reserved** -- see docs/DATASETS.md. ~5 GB.
-- ``fred``: Hugging Face dataset `CMalone-Jupiter/FRED` (CC BY-NC-SA 4.0).
-  Only the KITTI-style front camera images, front semantic labels, the small
-  per-frame imu/utm text files, and each sequence's ``ground_plane_eqn.txt``
-  are pulled -- never the rear camera, LiDAR (ouster), or native-RTmaps data.
-  ~11 GB.
-- ``tinycamml``: git clone of `github.com/TinyCamML/TinyCamML` (MIT). No
-  labeled roadway image dataset lives in this repo -- see docs/DATASETS.md.
-  ~107 MB.
-- ``nysdot_road_surface``: Zenodo record 10.5281/zenodo.8370665 (Sutter et
-  al., "Quantitative Content Analysis Data for Hand Labeling Road Surface
-  Conditions in New York State Department of Transportation Camera Images",
-  CC BY 4.0). Gap-fill candidate downloaded in Phase 1: 176 real 511NY-style
-  DOT traffic-camera images with human dry/wet/snow/poor-vis/obstructed
-  labels from 6 coders. ~61 MB zip, ~117 MB extracted.
-
-Usage (run from flood-ml/, with src/ on PYTHONPATH):
-
-    PYTHONPATH=src ../my_env/bin/python -m acquire.public_datasets download
-    PYTHONPATH=src ../my_env/bin/python -m acquire.public_datasets download --dataset fred
-    PYTHONPATH=src ../my_env/bin/python -m acquire.public_datasets download --allow-large
-    PYTHONPATH=src ../my_env/bin/python -m acquire.public_datasets verify
-
-Every ``download`` step is idempotent: it checks whether the destination
-already looks populated and skips the network call if so, so re-running
-this module never re-downloads data that is already on disk. ``water_segmentation``
-and ``fred`` are each several GB; a fresh (non-idempotent) download of either
-is gated behind ``--allow-large`` per the "ask before any download over 5 GB"
-rule. ``verify`` never downloads anything: it walks whatever is already on
-disk, opens every image with Pillow (``Image.verify()`` then a real decode),
-and writes counts plus any corrupt/zero-byte files to
-``data/raw/inventory.json`` and ``logs/jobs/public_datasets_verify.log``.
-"""
-
+# download + verify the public datasets
 from __future__ import annotations
 
 import argparse
@@ -65,7 +17,7 @@ FLOOD_ML_ROOT = Path(__file__).resolve().parents[2]
 DATA_RAW = FLOOD_ML_ROOT / "data" / "raw"
 LOG_DIR = FLOOD_ML_ROOT / "logs" / "jobs"
 
-LARGE_DATASET_GB = 5.0  # rule: ask before any download over 5 GB
+LARGE_DATASET_GB = 5.0
 
 NYSDOT_ZENODO_RECORD = "8370665"
 NYSDOT_ZIP_NAME = "NYSDOT_quantitative_content_analysis.zip"
@@ -97,11 +49,6 @@ def _nonempty_dir(path: Path) -> bool:
 def _run(cmd: list[str], cwd: Path | None = None) -> None:
     print("+", " ".join(cmd))
     subprocess.run(cmd, cwd=cwd, check=True)
-
-
-# --------------------------------------------------------------------------
-# Downloads
-# --------------------------------------------------------------------------
 
 
 def download_roadway_flooding() -> None:
@@ -203,8 +150,6 @@ def download_fred(allow_large: bool) -> None:
         "flooded/KITTI-style/*/utm/*",
         "flooded/KITTI-style/*/ground_plane_eqn.txt",
     ]
-    # Deliberately excludes back-imgs/back-labels (rear camera), ouster and
-    # ouster_ground_labels (LiDAR), and native-RTmaps (raw recording format).
     snapshot_download(
         repo_id="CMalone-Jupiter/FRED",
         repo_type="dataset",
@@ -222,7 +167,6 @@ def download_tinycamml() -> None:
 
 
 def _extract_nysdot_labels(extracted_root: Path) -> int:
-    """Build labels.csv from the ICR spreadsheet. Returns row count."""
     import openpyxl
 
     xlsx_path = extracted_root / "NYSDOT_ICR_Example.xlsx"
@@ -296,13 +240,6 @@ def _extract_nysdot_labels(extracted_root: Path) -> int:
 
 
 def download_nysdot_road_surface() -> None:
-    """Gap-fill dataset: Zenodo 10.5281/zenodo.8370665, CC BY 4.0.
-
-    176 real DOT traffic-camera images (a subset used for the paper's
-    inter-coder-reliability trials) with human dry/wet/snow/poor-vis/
-    obstructed labels from 6 coders -- see docs/DATASETS.md for the full
-    verification writeup.
-    """
     import zipfile
 
     dest = DATA_RAW / "nysdot_road_surface"
@@ -350,13 +287,7 @@ def download(dataset: str, allow_large: bool) -> None:
         DOWNLOADERS[name](allow_large)
 
 
-# --------------------------------------------------------------------------
-# Verification
-# --------------------------------------------------------------------------
-
-
 def _check_images(paths: list[Path]) -> dict[str, Any]:
-    """Open every path with Pillow (verify() then a real decode)."""
     from PIL import Image
 
     corrupt: list[str] = []
@@ -376,7 +307,7 @@ def _check_images(paths: list[Path]) -> dict[str, Any]:
                 im.verify()
             with Image.open(p) as im:
                 im.load()
-        except Exception:  # noqa: BLE001 - want to record any decode failure
+        except Exception:  # noqa: BLE001
             corrupt.append(str(p))
     return {"count": len(paths), "bytes": total_bytes, "corrupt": corrupt}
 
@@ -448,7 +379,6 @@ def verify() -> dict[str, Any]:
             }
         report["datasets"][name] = entry
 
-    # tinycamml: no labeled image dataset, just record file/byte counts.
     tcm = DATA_RAW / "tinycamml"
     if tcm.is_dir():
         files = [p for p in tcm.rglob("*") if p.is_file() and ".git" not in p.parts]
@@ -476,11 +406,6 @@ def verify() -> dict[str, Any]:
     print(f"wrote {inventory_path}")
     print(f"wrote {log_path} ({total_corrupt} corrupt file(s) found)")
     return report
-
-
-# --------------------------------------------------------------------------
-# CLI
-# --------------------------------------------------------------------------
 
 
 def main() -> None:
@@ -511,3 +436,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

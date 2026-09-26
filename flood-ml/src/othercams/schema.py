@@ -1,12 +1,10 @@
-"""Same frames.csv schema as data/ga511/frames.csv, so the ga511 labeling
-tool works unchanged via --ga511-root data/othercams/<source>.
-"""
+# same frames.csv schema as ga511 so the label tool works
 from __future__ import annotations
 
 import csv
 from pathlib import Path
 
-from ga511.ratelimit import locked_file  # read-only reuse, see PLAN.md
+from ga511.ratelimit import locked_file
 
 FRAME_CSV_FIELDS = [
     "frame_id",
@@ -52,3 +50,4 @@ def read_frame_rows(csv_path: Path) -> list[dict]:
         return []
     with open(csv_path, newline="", encoding="utf-8") as f:
         return list(csv.DictReader(f))
+

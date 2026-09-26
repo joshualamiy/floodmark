@@ -1,3 +1,4 @@
+# simple shortcut cues (size, jpeg quality, overlays, brightness, bars)
 from __future__ import annotations
 
 import cv2
@@ -14,7 +15,6 @@ STD_LUMA = np.array([
 
 
 def jpeg_quality(path) -> float:
-    # libjpeg-style estimate from the luma table; nan for non-jpeg
     try:
         with Image.open(ROOT / path) as im:
             q = getattr(im, "quantization", None)
@@ -28,7 +28,6 @@ def jpeg_quality(path) -> float:
 
 
 def band_text_score(gray: np.ndarray, frac: float = 0.16) -> float:
-    # overlay text rows: many sharp dark/bright flips, few mid-tones
     h = gray.shape[0]
     k = max(6, int(h * frac))
     best = 0.0
@@ -49,7 +48,6 @@ def letterbox(gray: np.ndarray) -> bool:
 
 
 def image_cues(x: np.ndarray) -> dict:
-    # x: model input crop, float 0-255 HxWx3 RGB
     u8 = np.clip(x, 0, 255).astype(np.uint8)
     gray = cv2.cvtColor(u8, cv2.COLOR_RGB2GRAY)
     hsv = cv2.cvtColor(u8, cv2.COLOR_RGB2HSV)
@@ -75,3 +73,4 @@ def tag_slices(c: dict) -> dict:
         "grayscale": c["saturation"] < 12,
         "overlay_text": c["text_score"] > 0.25,
     }
+

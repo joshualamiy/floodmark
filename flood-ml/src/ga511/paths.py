@@ -1,27 +1,19 @@
-"""Shared filesystem paths and logging setup for the ga511 package.
-
-All paths are computed relative to this file, so every module agrees on the
-same locations regardless of the working directory a script is launched
-from.
-"""
+# shared paths + logging for ga511
 from __future__ import annotations
 
 import logging
 import logging.handlers
 from pathlib import Path
 
-# .../flood-ml/src/ga511/paths.py
 _THIS_FILE = Path(__file__).resolve()
 SRC_DIR = _THIS_FILE.parents[1]
 FLOOD_ML_DIR = _THIS_FILE.parents[2]
 
 
 def _find_repo_root(start: Path) -> Path:
-    """Walk upward from `start` looking for a `.env` file (the gt-hacks root)."""
     for parent in [start, *start.parents]:
         if (parent / ".env").exists():
             return parent
-    # fall back to the known layout: flood-ml/../..
     return start.parents[0]
 
 
@@ -67,9 +59,6 @@ def ensure_dirs() -> None:
 
 
 def setup_logging(name: str, level: int = logging.INFO) -> logging.Logger:
-    """Configure a logger that writes to logs/jobs/<name>.log plus a short
-    console stream. Safe to call multiple times (handlers aren't duplicated).
-    """
     ensure_dirs()
     logger = logging.getLogger(f"ga511.{name}")
     logger.setLevel(level)
@@ -95,3 +84,4 @@ def setup_logging(name: str, level: int = logging.INFO) -> logging.Logger:
         logger.addHandler(ch)
     logger.propagate = False
     return logger
+

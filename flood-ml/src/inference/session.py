@@ -1,4 +1,4 @@
-"""Loads config.json + creates cached onnxruntime CPU sessions for both stages."""
+# loads config.json + cached onnx sessions
 from __future__ import annotations
 
 import json
@@ -30,7 +30,6 @@ def _resolve_model_dir(model_dir=None) -> Path:
 
 
 def load_models(model_dir: str | Path | None = None) -> Models:
-    """Cached by resolved model_dir so repeated calls are free."""
     d = _resolve_model_dir(model_dir)
     key = str(d.resolve())
     cached = _CACHE.get(key)
@@ -48,5 +47,5 @@ def load_models(model_dir: str | Path | None = None) -> Models:
 
 
 def clear_cache() -> None:
-    """Test helper: drop cached sessions."""
     _CACHE.clear()
+

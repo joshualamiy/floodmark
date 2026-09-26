@@ -1,4 +1,3 @@
-"""Pure-logic tests for acquire.flood_photos -- no network, no data."""
 import sys
 from pathlib import Path
 
@@ -45,6 +44,6 @@ def test_parse_eu_flood_labels_flooded_and_not():
 
 
 def test_parse_eu_flood_labels_irrelevant_wins_over_flooding():
-    # shouldn't happen upstream, but irrelevant.txt should still take priority
     labels = parse_eu_flood_labels(all_ids=["1"], flooding_ids={"1"}, irrelevant_ids={"1"})
     assert labels["1"] == "not_flooded"
+

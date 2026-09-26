@@ -40,3 +40,4 @@ def test_debug_request_and_water_panel_are_separate(monkeypatch):
 
 def test_app_builds():
     assert demo_app.build_app() is not None
+

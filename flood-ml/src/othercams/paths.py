@@ -1,4 +1,4 @@
-"""Paths for src/othercams, keyed by source name. Mirrors ga511/paths.py."""
+# othercams paths
 from __future__ import annotations
 
 import logging
@@ -79,3 +79,4 @@ def setup_logging(name: str, level: int = logging.INFO) -> logging.Logger:
         logger.addHandler(ch)
     logger.propagate = False
     return logger
+

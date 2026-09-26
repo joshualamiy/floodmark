@@ -1,6 +1,3 @@
-"""Unit tests for prep.augment.camera_style: shape/dtype/value-range
-invariants and determinism given a seeded RNG. No network, data, or models.
-"""
 import numpy as np
 import pytest
 
@@ -71,8 +68,6 @@ def test_many_seeds_never_crash_or_change_shape():
 
 
 def test_tf_camera_style_importable_without_tensorflow_installed():
-    # Importing the module (and calling camera_style directly) must never
-    # require tensorflow -- only tf_camera_style's internal lazy import does.
     import prep.augment as augment_mod
     assert hasattr(augment_mod, "tf_camera_style")
 
@@ -103,7 +98,6 @@ def test_wet_flooded_labels_get_overlays_more_often():
 
 
 def test_label_kwarg_is_optional_and_backward_compatible():
-    # old call sites (positional img, rng only) must still work unchanged
     img = _img()
     out = camera_style(img, _rng(3))
     assert out.shape == img.shape
@@ -117,3 +111,4 @@ def test_night_style_reachable_and_shape_preserving():
     assert out.shape == img.shape
     assert out.dtype == np.uint8
     assert out.min() >= 0 and out.max() <= 255
+

@@ -12,7 +12,6 @@ class FakeSession:
     def run(self, outputs, inputs):
         assert outputs == ["water_prob"]
         pixels = inputs["image"]
-        # Red pixels represent water; gray padding must not contribute.
         return [(pixels[..., :1] > 200).astype(np.float32)]
 
 
@@ -103,3 +102,4 @@ def test_import_has_no_training_dependencies():
     )
     environment = dict(os.environ, PYTHONPATH=str(Path(__file__).resolve().parents[1] / "src"))
     subprocess.run([sys.executable, "-B", "-c", code], env=environment, check=True)
+

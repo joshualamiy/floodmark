@@ -1,16 +1,4 @@
-"""Iowa DOT RWIS roadside cameras, archived by the Iowa Environmental Mesonet
-(IEM, Iowa State University). Public domain (see docs/OTHERCAMS.md). No key.
-
-Camera list:   https://mesonet.agron.iastate.edu/RWIS/camera.phtml (scraped)
-Site metadata: https://mesonet.agron.iastate.edu/geojson/network.php?network=IA_RWIS
-Archive list:  https://mesonet.agron.iastate.edu/json/webcam.py?cid=<cid>&date=YYYYMMDD
-Image fetch:   the "href" straight from the archive list JSON.
-
-Strategy: for each camera site, pull a year of daily precip (Open-Meteo,
-one call per site) to find rain days and dry days, then check the archive's
-actual image list for those days, then use ga511.weather's exact weak-label
-rule on the specific frame timestamp (a rainy day can still have dry hours).
-"""
+# iowa dot rwis cams from the iem archive: rainy + dry days
 from __future__ import annotations
 
 import argparse
@@ -28,7 +16,7 @@ from pathlib import Path
 import imagehash
 import requests
 
-from ga511 import quality  # read-only reuse, see PLAN.md othercams brief
+from ga511 import quality
 from ga511.ratelimit import backoff_delay, locked_file, read_json_fd, write_json_fd
 from othercams import paths, schema
 
@@ -40,18 +28,13 @@ SITE_GEOJSON_URL = "https://mesonet.agron.iastate.edu/geojson/network.php?networ
 ARCHIVE_LIST_URL = "https://mesonet.agron.iastate.edu/json/webcam.py"
 OPEN_METEO_ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
 
-# per-view: literal "at most one fetch per camera view every 5 minutes" (brief rule 4)
 VIEW_MIN_INTERVAL_S = 300.0
-GLOBAL_MIN_INTERVAL_S = 0.7  # ~1.4 req/s overall, matches ga511/snapshot.py's cap
+GLOBAL_MIN_INTERVAL_S = 0.7
 
-DAYTIME_UTC_HOURS = range(13, 23)  # rough daylight window, central US
-WET_MONTHS = (4, 5, 6, 7, 8, 9, 10)  # avoid snow-season false "wet"
+DAYTIME_UTC_HOURS = range(13, 23)
+WET_MONTHS = (4, 5, 6, 7, 8, 9, 10)
 WET_DAY_MIN_MM = 3.0
 
-# Global pacer for metadata calls (open-meteo daily + IEM archive listing +
-# the ga511.weather lookups this module triggers): many camera threads start
-# near-simultaneously, so without this we burst open-meteo and get 429s that
-# ga511.weather would cache as a permanent "no data" for that hour.
 _PACE_LOCK = threading.Lock()
 _LAST_CALL_MONO = [0.0]
 PACE_MIN_INTERVAL_S = 0.6
@@ -97,10 +80,7 @@ _NAME_STOP = {
 }
 
 
-# ---- camera list + site metadata parsing ----
-
 def parse_camera_options(html_text: str) -> list[dict]:
-    """<option value='IDOT-NNN-VV'>Label -- (first_seen)</option> -> rows."""
     out = []
     for m in _OPTION_RE.finditer(html_text):
         cid, label, first_seen = m.groups()
@@ -141,7 +121,6 @@ def _first_word(s: str) -> str:
 
 
 def match_group_to_site(label: str, sites: list[dict], min_score: float = 0.5) -> tuple[dict | None, float]:
-    """Fuzzy name match: town word overlap, no lat/lon in the camera feed itself."""
     ltoks = _normalize(label)
     if not ltoks:
         return None, 0.0
@@ -168,14 +147,12 @@ def parse_roadway(label: str) -> str:
 
 
 def choose_preferred_view(options: list[dict]) -> dict:
-    """Prefer a plain roadway view over bridge-deck/zoom/sensor close-ups."""
     plain = [o for o in options if not any(w in o["label"].lower() for w in _SKIP_VIEW_WORDS)]
     pool = plain or options
     return min(pool, key=lambda o: len(o["label"]))
 
 
 def build_camera_table(options: list[dict], sites: list[dict]) -> list[dict]:
-    """One row per physical site (group), with the chosen view + matched geo."""
     by_group: dict[str, list[dict]] = {}
     for o in options:
         by_group.setdefault(o["group"], []).append(o)
@@ -199,8 +176,6 @@ def build_camera_table(options: list[dict], sites: list[dict]) -> list[dict]:
         })
     return rows
 
-
-# ---- fetch camera list / site metadata (network) ----
 
 def fetch_camera_list() -> str:
     resp = requests.get(CAMERA_LIST_URL, headers={"User-Agent": USER_AGENT}, timeout=30)
@@ -226,8 +201,6 @@ def load_camera_table(refresh: bool = False) -> list[dict]:
     return rows
 
 
-# ---- daily precip search (Open-Meteo archive, no key) ----
-
 def daily_precip(lat: float, lon: float, start: date, end: date, cache_path: Path | None = None) -> list[tuple[str, float | None]]:
     if cache_path and cache_path.exists():
         obj = json.loads(cache_path.read_text())
@@ -249,9 +222,6 @@ def daily_precip(lat: float, lon: float, start: date, end: date, cache_path: Pat
 
 
 def pick_target_days(series: list[tuple[str, float | None]]) -> dict[str, list[str]]:
-    """Rank rain days (wettest first) and confirmed-dry days (most recent first,
-    zero precip that day and the two days before it).
-    """
     by_date = {d: mm for d, mm in series if mm is not None and int(d[5:7]) in WET_MONTHS}
     ordered = sorted(by_date)
     wet, dry = [], []
@@ -270,8 +240,6 @@ def pick_target_days(series: list[tuple[str, float | None]]) -> dict[str, list[s
     dry.sort(key=lambda x: x[0], reverse=True)
     return {"wet": [d for d, _ in wet], "dry": [d for d, _ in dry]}
 
-
-# ---- archive image listing ----
 
 def list_archive_images(cid: str, date_str: str) -> list[dict]:
     resp = _get_with_retry(ARCHIVE_LIST_URL, params={"cid": cid, "date": date_str}, timeout=20)
@@ -294,8 +262,6 @@ def subsample(items: list, k: int) -> list:
     step = len(items) / k
     return [items[int(i * step)] for i in range(k)]
 
-
-# ---- rate-limited fetch ----
 
 def _wait_for_view_slot(view_id: str, state_path: Path) -> None:
     start = time.time()
@@ -344,11 +310,10 @@ def fetch_and_build_row(cam: dict, ts: int, href: str, weak_info: dict, prev_pha
         return row
     try:
         img = quality.bytes_to_image(resp.content)
-    except Exception:  # noqa: BLE001 - any decode failure is a dead frame
+    except Exception:  # noqa: BLE001
         row["dead_reason"] = "non_image"
         return row
     row["width"], row["height"] = img.size
-    # no placeholder catalog for this source yet; still catches tiny/blank/frozen
     reason, phash = quality.classify(
         img, len(resp.content), prev_phash=prev_phash.get(cid), placeholder_hashes=[],
     )
@@ -370,7 +335,7 @@ def collect_group(
     cam: dict, wet_target: int, dry_target: int, max_wet_days: int, max_dry_days: int,
     prev_phash: dict, log, existing: list[dict] | None = None, on_row=None,
 ) -> list[dict]:
-    from ga511 import weather  # read-only reuse: same weak-label rule as ga511
+    from ga511 import weather
 
     existing = existing or []
     seen = {r["frame_id"] for r in existing}
@@ -554,3 +519,4 @@ def _main() -> None:
 
 if __name__ == "__main__":
     _main()
+
