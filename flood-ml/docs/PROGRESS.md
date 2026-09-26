@@ -318,3 +318,19 @@ PYTHONPATH=src ../my_env/bin/python -m prep.label_tool --port 8000 --ga511-root 
 **Fixes during the run:** the worker added a global pacer and backoff after Open-Meteo 429s. A failed lookup was being cached as "no data" and could silently poison labels.
 
 **Not committed:** a stray `reports/othercams_sample_rows.json` from the outside session. It's added to the final-cleanup list.
+
+**User review of the Iowa frames** (all 340 labeled): 226 dry, 114 wet, 0 unusable.
+- Weak label vs. user: `likely_wet` → 108 wet / 68 dry, so it's right 61% of the time. `likely_dry` → 158 dry / 6 wet, right 96% of the time.
+- 39 cameras have human-confirmed wet and dry frames.
+- Real wet-not-flooded images go from 31 to 145.
+- Labels are in `data/othercams/iowa_rwis/labels.csv`, and only these manual labels will be used for training.
+
+## 2026-09-26: Street and elevated flood photos
+
+Details in `docs/phase_reports/flood_photos.md`.
+
+- **eu_flood_2013** (cvjena, Wikimedia Commons, 2013 Central Europe floods): 3,107 flooded and 327 not_flooded images, each with a verified per-image license (mostly CC BY-SA 3.0; also CC BY and CC0). The 275 off-topic "pollution" images have unverified licenses and are excluded. Views are roughly 85–90% ground and 10–15% elevated, with no aerial shots. There are 149 uploader groups. Many flooded images are just rivers over their banks, so the road filter is needed. The not_flooded images include both dry and rain-wet streets.
+- **alleyfloodnet** (Lee & Joo 2025): 601 flooded and 509 not_flooded ground-level alley images. It's CC BY 4.0 at the dataset level (I confirmed with the Kaggle API), but some images carry Getty or news watermarks, so rights for individual photos are unverified. Included, with that flag. Weights stay private.
+- **floodimg**: skipped. 77% of it duplicates eu_flood_2013, and the rest is mostly aerial.
+
+Since "not_flooded" in these sets can mean either dry or wet, those rows get a new label, `not_flooded`. It's used only as a Stage B negative and excluded from Stage A.

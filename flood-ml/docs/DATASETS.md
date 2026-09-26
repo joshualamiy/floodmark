@@ -54,3 +54,27 @@ water-appearance augmentation rather than road-flood positives.
   attribution and impose no share-alike or non-commercial constraint.
 - The **Water Segmentation** dataset's unresolved license is treated as the
   most restrictive case (no redistribution) until further legal review.
+
+## Street/elevated flood photos (gap-fill pass)
+
+Added because the independent evaluation (`reports/EVALUATION.md`) found
+flood recall on the one elevated fixed-camera source (a Greek flood video) is
+0.29 vs. 0.91 on ground-level photos, and validation has zero elevated-view
+floods. Full per-source counts, license breakdowns and view-angle estimates
+are in `data/raw/SOURCES.md` and `docs/phase_reports/flood_photos.md`.
+
+| Dataset | Official source | License | Size | Images | Masks/labels | View | Role |
+|---|---|---|---|---|---|---|---|
+| European Flood 2013 Dataset | github.com/cvjena/eu-flood-dataset (Univ. Jena); Barz et al. 2018, arXiv:1908.03361 | Per-image Wikimedia license (verified for all 3,435 Wikimedia images): mostly CC BY-SA / CC BY, some CC0 / public domain, 5 GFDL. 275 "pollution" photos have no per-image license (unverified, manually harvested, off-topic). | 1.1 GB | 3,710 (3,435 Wikimedia + 275 pollution) | 0 masks; image-level relevance labels only | ground + some elevated (bridge/embankment); by-eye ~85-90% ground, ~10-15% elevated, 0% aerial | flooded (3,107) and **real non-flooded (327)** street/cleanup scenes of the same event -- the "similar non-flooded scenes" pool this gap-fill was looking for |
+| AlleyFloodNet | Kaggle `seonyseony/alleyfloodnet`; Lee & Joo 2025, *Electronics* 14(10):2082 | CC BY 4.0 (dataset-level grant; per-photo origin unverified -- filenames indicate stock/news/YouTube/Google-search compilation) | 64 MB | 1,110 (601 flooded / 509 not_flooded) | 0 masks; folder-name label | 100% ground-level (alleys, lowland streets, semi-basement entries) on a 48-image by-eye sample | best-balanced flooded/non-flooded ratio of any source in the pipeline; highest CLIP road-scene hit rate (99.4%) |
+| FloodIMG | Kaggle `hhrclemson/flooding-image-dataset`; Karanjit, Pally & Samadi 2023, *Data in Brief* 48:109164 | CC0-1.0 (dataset-level grant; no per-image license or source tag; visibly includes stock/news/social imagery) | ~12 GB upstream; downloaded a 530-image deterministic random sample instead (778 MB) | 530 of 9,296 available upstream | 0 (every image is "flooded" only by the dataset's own scope; 25 `Annotation/*.json` files carry unrelated object-detection polygons, not water masks) | **mixed and disappointing**: a large fraction of the sample is aerial/drone disaster photography, which this project excludes; genuine elevated DOT-camera views are a small, hard-to-isolate minority | **not recommended as-is** -- 77.4% (410/530) exact-pHash duplicate of European Flood 2013, and of the 120 non-duplicate rows only 51 (9.6% of the raw sample) score road-scene-positive by CLIP, and even those are still mostly aerial by eye; would need aggressive dedup + road-scene filtering + manual review before any training use |
+
+**Caveat that applies to AlleyFloodNet and FloodIMG alike**: both carry a
+single dataset-level CC BY 4.0 / CC0-1.0 tag from their Kaggle uploader, but
+neither publishes a per-image license or original-source record, and their
+filenames show real stock-photo/news/social-media compilation (Getty Images,
+a TV news watermark, YouTube thumbnails, saved Google Image Search results).
+The blanket license is the authors' grant over their curated dataset and
+labels, not a demonstrated redistribution right for every underlying photo.
+European Flood 2013 is the one new source here with real per-image (Wikimedia)
+license provenance.
