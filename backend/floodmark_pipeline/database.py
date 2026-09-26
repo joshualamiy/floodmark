@@ -5,14 +5,53 @@ from datetime import datetime
 
 import asyncpg
 
+from .alerting import HistoryFrame
 from .contracts import CaptureJob, Prediction
 
 
 async def active_cameras(pool: asyncpg.Pool) -> list[asyncpg.Record]:
     return await pool.fetch(
-        """SELECT id, source, source_camera_id, source_view_id
+        """SELECT id, source, source_camera_id, source_view_id, latitude, longitude
            FROM cameras WHERE is_active = true AND source_view_id IS NOT NULL"""
     )
+
+
+async def camera_frame_history(pool: asyncpg.Pool, image_id: str, limit: int) -> list[HistoryFrame]:
+    """Earlier predicted frames of the same camera, newest first."""
+    rows = await pool.fetch(
+        """SELECT i.sha256, p.status, p.alert_status,
+                  COALESCE((p.stage_probabilities->>'flooded')::float, 0.0) AS flood_score
+           FROM predictions p
+           JOIN images i ON i.id = p.image_id
+           WHERE i.camera_id = (SELECT camera_id FROM images WHERE id = $1)
+             AND i.id <> $1
+             AND i.captured_at < (SELECT captured_at FROM images WHERE id = $1)
+           ORDER BY i.captured_at DESC NULLS LAST, p.created_at DESC
+           LIMIT $2""",
+        image_id,
+        limit,
+    )
+    return [HistoryFrame(row["sha256"], row["status"], row["alert_status"], row["flood_score"]) for row in rows]
+
+
+async def camera_flood_baseline(pool: asyncpg.Pool, image_id: str, days: int, min_frames: int) -> float | None:
+    """Median flood score of the camera over the last ``days``; None until ``min_frames`` exist."""
+    row = await pool.fetchrow(
+        """SELECT count(*) AS frames,
+                  percentile_cont(0.5) WITHIN GROUP (
+                    ORDER BY COALESCE((p.stage_probabilities->>'flooded')::float, 0.0)
+                  ) AS median
+           FROM predictions p
+           JOIN images i ON i.id = p.image_id
+           WHERE i.camera_id = (SELECT camera_id FROM images WHERE id = $1)
+             AND i.id <> $1
+             AND i.captured_at >= now() - make_interval(days => $2)""",
+        image_id,
+        days,
+    )
+    if row is None or row["frames"] < min_frames or row["median"] is None:
+        return None
+    return float(row["median"])
 
 
 async def insert_image(

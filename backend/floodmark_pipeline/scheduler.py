@@ -39,6 +39,8 @@ async def schedule_captures(ctx: dict) -> None:
             source_view_id=camera["source_view_id"],
             scheduled_at=scheduled_at,
             capture_id=str(uuid.uuid5(uuid.NAMESPACE_URL, job_id)),
+            latitude=None if camera["latitude"] is None else float(camera["latitude"]),
+            longitude=None if camera["longitude"] is None else float(camera["longitude"]),
         )
         result = await ctx["redis"].enqueue_job(
             "capture_camera", job.payload(), _job_id=job_id, _queue_name=CAPTURE_QUEUE_NAME

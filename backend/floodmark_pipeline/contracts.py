@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+import uuid
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime
 
 
@@ -12,6 +13,20 @@ class CaptureJob:
     source_view_id: str
     scheduled_at: datetime
     capture_id: str
+    # optional so jobs queued before coordinates were added still deserialize
+    latitude: float | None = None
+    longitude: float | None = None
+    # how many fast re-polls preceded this capture; 0 for a regular five-minute capture
+    fast_poll: int = 0
+
+    def follow_up(self, run_at: datetime) -> "CaptureJob":
+        """The next fast re-poll of this camera, keyed on its own run time."""
+        return replace(
+            self,
+            scheduled_at=run_at,
+            capture_id=str(uuid.uuid5(uuid.NAMESPACE_URL, f"{self.capture_id}:fast:{self.fast_poll + 1}")),
+            fast_poll=self.fast_poll + 1,
+        )
 
     def payload(self) -> dict[str, str]:
         data = asdict(self)

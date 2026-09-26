@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 import unittest
 
-from floodmark_pipeline.keys import capture_job_id, capture_slot, object_key, skipped_key
+from floodmark_pipeline.keys import capture_job_id, capture_slot, fast_poll_job_id, object_key, skipped_key
 
 
 class KeyTests(unittest.TestCase):
@@ -21,3 +21,13 @@ class KeyTests(unittest.TestCase):
     def test_invalid_view_id_is_rejected(self):
         with self.assertRaises(ValueError):
             object_key("captures", "camera/18558", datetime.now(timezone.utc))
+
+    def test_fast_poll_keys_carry_seconds_and_a_distinct_job_id(self):
+        run_at = datetime(2026, 9, 26, 21, 16, 30, tzinfo=timezone.utc)
+
+        self.assertEqual(fast_poll_job_id("GA511", "10651", run_at), "capture:ga511:10651:2026-09-26T21:15Z:fast:211630")
+        self.assertNotEqual(fast_poll_job_id("GA511", "10651", run_at), capture_job_id("GA511", "10651", run_at))
+        self.assertEqual(object_key("captures", "18558", run_at, seconds=True), "captures/18558/20260926T211630Z.jpg")
+        self.assertEqual(object_key("heatmaps", "18558", run_at, seconds=True), "heatmaps/18558/20260926T211630Z.png")
+        self.assertEqual(skipped_key("18558", run_at, seconds=True), "skipped/18558/20260926T211630Z.jpg")
+        self.assertEqual(object_key("captures", "18558", run_at), "captures/18558/20260926T2116Z.jpg")
