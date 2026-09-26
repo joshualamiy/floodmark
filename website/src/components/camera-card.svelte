@@ -15,6 +15,7 @@
 	import { Spinner } from "$components/ui/spinner";
 	import { Toggle } from "$components/ui/toggle";
 	import MapPlus from "@lucide/svelte/icons/map-plus";
+	import NotificationSignup from "$components/notification-signup.svelte";
 
 	let { camera }: { camera: Camera } = $props();
 
@@ -168,15 +169,18 @@
 		</div>
 	</div>
 
-	{#if camera.sourceUrl}
-		<Button
-			class="m-4 h-10 justify-between rounded-xl bg-accent-foreground px-4 text-white shadow-sm hover:bg-accent-foreground/90"
-			href={camera.sourceUrl}
-			target="_blank"
-			rel="noreferrer"
-		>
-			<span>Open source (511ga.org)</span>
-			<SquareArrowOutUpRight class="size-4" />
-		</Button>
-	{/if}
+	<div class="m-4 flex flex-col gap-2">
+		<NotificationSignup {camera} />
+		{#if camera.sourceUrl}
+			<Button
+				class="h-10 justify-between rounded-xl bg-accent-foreground px-4 text-white shadow-sm hover:bg-accent-foreground/90"
+				href={camera.sourceUrl}
+				target="_blank"
+				rel="noreferrer"
+			>
+				<span>Open source (511ga.org)</span>
+				<SquareArrowOutUpRight class="size-4" />
+			</Button>
+		{/if}
+	</div>
 </div>

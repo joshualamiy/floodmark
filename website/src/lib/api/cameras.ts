@@ -4,8 +4,8 @@ import type { HistoryPage } from "$lib/types/history";
 
 export type ApiFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
-async function request<T>(fetcher: ApiFetch, path: string): Promise<T> {
-	const response = await fetcher(path);
+async function request<T>(fetcher: ApiFetch, path: string, init?: RequestInit): Promise<T> {
+	const response = await fetcher(path, init);
 	let payload: ApiResponse<T>;
 
 	try {
@@ -23,6 +23,18 @@ async function request<T>(fetcher: ApiFetch, path: string): Promise<T> {
 
 export function api(fetcher: ApiFetch = globalThis.fetch.bind(globalThis)) {
 	return {
+		notifications: {
+			subscribe: (cameraId: string, email: string) =>
+				request<{ status: "subscribed" | "verification_sent" }>(
+					fetcher,
+					"/api/notifications/subscribe",
+					{
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ cameraId, email }),
+					},
+				),
+		},
 		camera(id: string) {
 			return {
 				get: () => request<Camera | null>(fetcher, `/api/cameras/${encodeURIComponent(id)}/get`),

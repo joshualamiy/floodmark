@@ -6,6 +6,7 @@ import {
 	numeric,
 	pgEnum,
 	pgTable,
+	primaryKey,
 	text,
 	timestamp,
 	uniqueIndex,
@@ -117,5 +118,37 @@ export const predictions = pgTable(
 	(table) => [
 		uniqueIndex("predictions_image_model_unique").on(table.imageId, table.modelVersion),
 		index("predictions_status_idx").on(table.status),
+	],
+);
+
+export const notificationEmails = pgTable(
+	"notification_emails",
+	{
+		id: uuid("id").defaultRandom().primaryKey(),
+		email: text("email").notNull(),
+		verifiedAt: timestamp("verified_at", { withTimezone: true }),
+		confirmed: boolean("confirmed").notNull().default(false),
+		verificationTokenHash: text("verification_token_hash"),
+		verificationTokenExpiresAt: timestamp("verification_token_expires_at", { withTimezone: true }),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+	},
+	(table) => [uniqueIndex("notification_emails_email_unique").on(table.email)],
+);
+
+export const cameraNotificationEmails = pgTable(
+	"camera_notification_emails",
+	{
+		cameraId: uuid("camera_id")
+			.notNull()
+			.references(() => cameras.id, { onDelete: "cascade" }),
+		emailId: uuid("email_id")
+			.notNull()
+			.references(() => notificationEmails.id, { onDelete: "cascade" }),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+	},
+	(table) => [
+		primaryKey({ columns: [table.cameraId, table.emailId], name: "camera_notification_emails_pk" }),
+		index("camera_notification_emails_email_idx").on(table.emailId),
 	],
 );

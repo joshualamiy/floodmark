@@ -19,6 +19,7 @@ from .image_quality import InvalidImageError, ensure_usable_image
 from .keys import object_key, skipped_key
 from .queues import CAPTURE_QUEUE_NAME
 from .resources import ByteBudget, content_sha256, download_image, normalize_jpeg, s3_client, upload_object
+from .notifications import send_flood_alerts
 
 logger = logging.getLogger(__name__)
 settings = Settings.from_env()
@@ -123,8 +124,17 @@ async def capture_camera(ctx: dict, payload: dict[str, str]) -> None:
         completed_at = datetime.now(timezone.utc)
         async with ctx["database_limit"]:
             database_started = time.perf_counter()
-            await persist_prediction(ctx["pool"], image_id, prediction, heatmap_key, started_at, completed_at)
+            _, flood_transition = await persist_prediction(ctx["pool"], image_id, prediction, heatmap_key, started_at, completed_at)
             database_seconds += time.perf_counter() - database_started
+        if flood_transition:
+            await send_flood_alerts(
+                ctx["pool"],
+                ctx["session"],
+                settings,
+                job.camera_id,
+                job.scheduled_at,
+                prediction.confidence,
+            )
         if settings.debug:
             logger.info(
                 "capture completed capture_id=%s camera_id=%s download_seconds=%.3f s3_seconds=%.3f "

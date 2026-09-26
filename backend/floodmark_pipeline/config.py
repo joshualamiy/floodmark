@@ -13,6 +13,10 @@ class Settings:
     s3_access_key_id: str
     s3_secret_access_key: str
     s3_bucket: str
+    resend_api_key: str
+    resend_alerts_from: str
+    public_app_url: str
+    notification_unsubscribe_secret: str
     camera_base_url: str
     download_concurrency: int
     s3_upload_concurrency: int
@@ -57,6 +61,10 @@ class Settings:
             s3_access_key_id=os.environ["S3_ACCESS_KEY_ID"],
             s3_secret_access_key=os.environ["S3_SECRET_ACCESS_KEY"],
             s3_bucket=os.environ["S3_BUCKET"],
+            resend_api_key=os.getenv("RESEND_API_KEY", ""),
+            resend_alerts_from=os.getenv("RESEND_ALERTS_FROM", "alerts@floodmark.tech"),
+            public_app_url=os.getenv("PUBLIC_APP_URL", "http://localhost:5173").rstrip("/"),
+            notification_unsubscribe_secret=os.getenv("NOTIFICATION_UNSUBSCRIBE_SECRET", ""),
             camera_base_url=os.getenv("CAMERA_BASE_URL", "https://511ga.org/map/Cctv").rstrip("/"),
             download_concurrency=int(number("DOWNLOAD_CONCURRENCY", "300")),
             s3_upload_concurrency=int(number("S3_UPLOAD_CONCURRENCY", "32")),
