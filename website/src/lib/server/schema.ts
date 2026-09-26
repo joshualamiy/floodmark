@@ -57,8 +57,8 @@ export const images = pgTable(
 			.references(() => cameras.id, { onDelete: "cascade" }),
 
 		sourceUrl: text("source_url"),
-		r2Bucket: text("r2_bucket").notNull(),
-		r2Key: text("r2_key").notNull(),
+		s3Bucket: text("s3_bucket").notNull(),
+		s3Key: text("s3_key").notNull(),
 		contentType: text("content_type"),
 		byteSize: integer("byte_size"),
 		sha256: text("sha256"),
@@ -73,7 +73,7 @@ export const images = pgTable(
 		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
-		uniqueIndex("images_r2_object_unique").on(table.r2Bucket, table.r2Key),
+		uniqueIndex("images_r2_object_unique").on(table.s3Bucket, table.s3Key),
 		index("images_camera_captured_idx").on(table.cameraId, table.capturedAt),
 		index("images_processing_queue_idx").on(table.processingStatus, table.createdAt),
 		index("images_sha256_idx").on(table.sha256),
@@ -108,7 +108,7 @@ export const predictions = pgTable(
 			.notNull(),
 		thresholds: jsonb("thresholds").$type<{ tA: number; tB: number }>().notNull(),
 		note: text("note"),
-		heatmapR2Key: text("heatmap_r2_key"),
+		heatmapS3Key: text("heatmap_r2_key"),
 
 		inferenceStartedAt: timestamp("inference_started_at", { withTimezone: true }),
 		inferenceCompletedAt: timestamp("inference_completed_at", { withTimezone: true }),

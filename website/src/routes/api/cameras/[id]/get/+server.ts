@@ -1,4 +1,4 @@
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { api } from "$lib/server/api";
 import { getDB } from "$lib/server/database";
@@ -7,13 +7,14 @@ import { cameraSchema } from "$lib/types/camera";
 import { PredictionStatus } from "$lib/types/image-processing";
 
 export const GET = api({
-	id: "cameras.list",
-	name: "List cameras",
-	description: "List active cameras ordered by their configured sort order",
+	id: "cameras.get",
+	name: "Get camera",
+	description: "Get a camera by its database ID",
 	schema: {
-		output: z.array(cameraSchema),
+		params: z.object({ id: z.uuid() }),
+		output: cameraSchema.nullable(),
 	},
-	handle: async () => {
+	handle: async ({ params }) => {
 		const db = getDB();
 		const latestImages = db
 			.selectDistinctOn([images.cameraId], {
@@ -39,7 +40,7 @@ export const GET = api({
 			.orderBy(predictions.imageId, desc(predictions.createdAt))
 			.as("latest_predictions");
 
-		const rows = await db
+		const [result] = await db
 			.select({
 				camera: cameras,
 				latestImage: {
@@ -57,24 +58,27 @@ export const GET = api({
 			.from(cameras)
 			.leftJoin(latestImages, eq(cameras.id, latestImages.cameraId))
 			.leftJoin(latestPredictions, eq(latestImages.id, latestPredictions.imageId))
-			.where(eq(cameras.isActive, true))
-			.orderBy(asc(cameras.sortOrder), asc(cameras.name));
+			.where(eq(cameras.id, params.id))
+			.limit(1);
 
-		return rows.map((result) => ({
+		if (!result) return null;
+		const latestImage = result.latestImage.id
+			? {
+					id: result.latestImage.id,
+					s3Key: result.latestImage.s3Key!,
+					capturedAt: result.latestImage.capturedAt,
+					processingStatus: result.latestImage.processingStatus!,
+					processedAt: result.latestImage.processedAt,
+					processingError: result.latestImage.processingError,
+					predictionStatus: result.latestImage.predictionStatus as PredictionStatus | null,
+					predictionConfidence: result.latestImage.predictionConfidence,
+					heatmapS3Key: result.latestImage.heatmapS3Key,
+				}
+			: null;
+
+		return {
 			...result.camera,
-			latestImage: result.latestImage.id
-				? {
-						id: result.latestImage.id,
-						s3Key: result.latestImage.s3Key!,
-						capturedAt: result.latestImage.capturedAt,
-						processingStatus: result.latestImage.processingStatus!,
-						processedAt: result.latestImage.processedAt,
-						processingError: result.latestImage.processingError,
-						predictionStatus: result.latestImage.predictionStatus as PredictionStatus | null,
-						predictionConfidence: result.latestImage.predictionConfidence,
-						heatmapS3Key: result.latestImage.heatmapS3Key,
-					}
-				: null,
-		}));
+			latestImage,
+		};
 	},
 });
