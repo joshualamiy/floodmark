@@ -18,6 +18,7 @@ opencv-python-headless==5.0.0.93
 folium==0.20.0
 requests==2.34.2
 python-dotenv==1.2.3
+openpyxl==3.1.5
 
 # dataset downloads
 gdown==6.4.0
