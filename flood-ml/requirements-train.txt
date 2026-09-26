@@ -20,6 +20,11 @@ requests==2.34.2
 python-dotenv==1.2.3
 openpyxl==3.1.5
 
+# clip road-scene filter (phase 2)
+torch==2.14.0
+torchvision==0.29.0
+open-clip-torch==3.3.0
+
 # dataset downloads
 gdown==6.4.0
 kaggle==2.2.4

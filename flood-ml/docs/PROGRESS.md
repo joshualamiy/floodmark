@@ -55,6 +55,25 @@ Three worker subagents are running in parallel:
 - Test videos: Greek (567 frames) and Italian (1,406 frames), 1280×720, with no near-duplicates in any public download.
 - Credit: https://aiia.csd.auth.gr/flood-master-database/
 
-**511GA collector (in progress).**
-- There are 2,215 enabled camera views in the Atlanta bounding box, and the map is written.
-- The first worker was killed by a session restart after only 60 test frames. A new worker is resuming from its code.
+**511GA collector (done, Checkpoint 1).** Details in `docs/phase_reports/phase1_ga511.md`.
+- The first worker was killed by a session restart, and a later one was stopped by accident. Each new worker resumed from the existing code.
+- There are 4,332 cameras statewide and 2,215 enabled views in the Atlanta bounding box. Map: `reports/ga511_camera_map.html` (local) and `reports/figures/ga511_cameras.png`.
+- Image fetches do **not** count against the API key's rate limit (checked empirically). API calls go through a cross-process limiter capped at 8 per 60 s, and a grep confirms the key appears in no log or file.
+- **Sweep:** one full pass over all 2,215 views gave 1,248 good frames from about 1,080 cameras. Dead frames: 1,428 placeholders (about 52% of views are offline right now), 41 frozen repeats, and a few others. Resolutions: 450×253 (most), 352×240, 320×240.
+- **Weak labels:** all `likely_dry`, with a few `uncertain`. It's a dry night. Nearby NWS stations returned null precipitation, so Open-Meteo was used as the fallback.
+- **Daemon:** running detached (PPID 1), about one frame per view every 85–90 minutes, plus an event poll every 5 minutes with flood-event capture. So far 150 events were checked and none were flagged.
+  - Status: `cd flood-ml && PYTHONPATH=src ../my_env/bin/python -m ga511.daemon status`
+  - Stop: `cd flood-ml && PYTHONPATH=src ../my_env/bin/python -m ga511.daemon stop`
+- **Not yet exercised live:** the NWS precipitation path and end-to-end flood-event capture. Both are unit-tested only.
+
+## 2026-09-25: Phase 2 (data prep) started
+
+The user said not to wait for the collector. One worker is building the manifest, road filter, dedup, splits, augmentation, and labeling tool. The manifest build can be re-run as more 511GA frames arrive.
+
+Decisions passed to the worker:
+- **Excluded:** Water Segmentation / V-FloodNet, and the Flood Master rows that use its images.
+- **NYSDOT:** crop to the camera frame to remove the label-leaking header. Keep majority dry/wet labels with ≥ 0.67 coder agreement.
+- **511GA test labels:** the test split uses only `manual` (the user, via the labeling tool) or `ai_review` labels. `ai_review` means the worker looked at the frame itself; these go in a separate file, and the user's labels always override them.
+- **Stable splits:** each 511GA camera's split comes from a salted hash of its ID, so new frames never move a camera between splits.
+
+Installed `torch` 2.14, `torchvision` 0.29, and `open-clip-torch` 3.3.0 (MPS works) and pinned them in `requirements-train.txt`.
