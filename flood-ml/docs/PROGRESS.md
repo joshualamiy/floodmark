@@ -299,3 +299,22 @@ The user had ChatGPT work in parallel and asked me to validate it. I reviewed ev
 - Deleted a stray tool session file, `flood-ml/:memory:.ses`.
 
 **Team note:** `main` now has the backend (PR #4). Its `model_run()` is still a stub. The real `predict()` matches its `model_version` keys exactly. Its adapter will need to map `stage_a_probs` → `stage_a_probabilities`, `stage_b_probs` → `stage_b_probabilities`, and `heatmap_png` → `heatmap_bytes`.
+
+## 2026-09-26: Real wet-road frames from Iowa DOT RWIS cameras
+
+Details in `docs/OTHERCAMS.md` and `docs/phase_reports/othercams.md`.
+
+**Source:** the Iowa Environmental Mesonet archive of Iowa DOT RWIS webcams. It's public domain (I verified the statement on the IEM disclaimer page), needs no key, and has archives back to about 2010. Other options found:
+- 511WI, 511NY, and UDOT all need keys and signed agreements, so they weren't registered. That's the user's call.
+- Caltrans CCTV is open but live-only.
+
+**Frames:** 340 good daytime frames from 44 cameras, 176 `likely_wet` and 164 `likely_dry`. **41 cameras have both wet and dry frames**, so camera identity can't act as a label. Resolutions are 800×450, 640×480, and 480×270.
+
+**Weak labels are noisy near the threshold.** In the worker's spot check of 8 wet frames, 2 clearly wet, 2 plausible, 2 ambiguous, and 2 looked dry. The labels need the user's review in the labeling tool before training:
+```
+PYTHONPATH=src ../my_env/bin/python -m prep.label_tool --port 8000 --ga511-root data/othercams/iowa_rwis
+```
+
+**Fixes during the run:** the worker added a global pacer and backoff after Open-Meteo 429s. A failed lookup was being cached as "no data" and could silently poison labels.
+
+**Not committed:** a stray `reports/othercams_sample_rows.json` from the outside session. It's added to the final-cleanup list.
