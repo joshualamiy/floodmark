@@ -3,11 +3,29 @@ from __future__ import annotations
 from inference.smoothing import SmoothedStatus, TemporalSmoother
 
 
-def test_reports_wet_until_n_consecutive_flooded():
+def test_reports_potential_flooding_until_n_consecutive_water_detections():
     sm = TemporalSmoother(n=3)
-    assert sm.update("cam1", "flooded").status == "wet"
-    assert sm.update("cam1", "flooded").status == "wet"
+    first = sm.update("cam1", "flooded")
+    second = sm.update("cam1", "flooded")
+    assert first.status == "wet"
+    assert first.note == "potential flooding; water frame 1/3; awaiting confirmation"
+    assert second.status == "wet"
+    assert second.note == "potential flooding; water frame 2/3; awaiting confirmation"
     assert sm.update("cam1", "flooded").status == "flooded"
+
+
+def test_three_wet_detections_report_wet():
+    sm = TemporalSmoother(n=3)
+    assert sm.update("cam1", "wet").status == "wet"
+    assert sm.update("cam1", "wet").status == "wet"
+    assert sm.update("cam1", "wet").status == "wet"
+
+
+def test_wet_and_flooded_detections_share_water_streak():
+    sm = TemporalSmoother(n=3)
+    assert sm.update("cam1", "wet").status == "wet"
+    assert sm.update("cam1", "flooded").status == "wet"
+    assert sm.update("cam1", "wet").status == "wet"
 
 
 def test_non_flooded_frame_resets_streak():
@@ -18,7 +36,7 @@ def test_non_flooded_frame_resets_streak():
     assert sm.update("cam1", "flooded").status == "wet"
 
 
-def test_dry_and_wet_pass_through_unsmoothed():
+def test_dry_passes_through_and_wet_reports_potential_flooding():
     sm = TemporalSmoother(n=3)
     assert sm.update("cam1", "dry").status == "dry"
     assert sm.update("cam1", "wet").status == "wet"
@@ -77,4 +95,3 @@ def test_smoothed_status_unpacks_as_tuple():
     status, note = SmoothedStatus("wet", "hello")
     assert status == "wet"
     assert note == "hello"
-

@@ -34,3 +34,7 @@ class Prediction:
     thresholds: dict[str, float]
     note: str | None
     heatmap_bytes: bytes | None
+    heatmap_status: str = "disabled"
+    heatmap_note: str | None = None
+    alert_status: str | None = None
+    alert_note: str | None = None

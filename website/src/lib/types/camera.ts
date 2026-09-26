@@ -30,8 +30,13 @@ export const cameraSchema = z.object({
 			processedAt: z.date().nullable(),
 			processingError: z.string().nullable(),
 			predictionStatus: z.enum(PredictionStatus).nullable(),
+			alertStatus: z.enum(PredictionStatus).nullable(),
+			alertNote: z.string().nullable(),
 			predictionConfidence: z.string().nullable(),
+			predictionNote: z.string().nullable(),
 			heatmapS3Key: z.string().nullable(),
+			heatmapStatus: z.string().nullable(),
+			heatmapNote: z.string().nullable(),
 		})
 		.nullable(),
 });

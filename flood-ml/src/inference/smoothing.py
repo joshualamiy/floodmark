@@ -1,4 +1,4 @@
-# per-camera smoothing: n flooded frames in a row before alerting
+# per-camera smoothing: n consecutive water detections before alerting
 from __future__ import annotations
 
 from typing import NamedTuple
@@ -22,15 +22,15 @@ class TemporalSmoother:
     def update(self, camera_id: str, prediction_or_status) -> SmoothedStatus:
         status = self._raw_status(prediction_or_status)
         streak = self._streaks.get(camera_id, 0)
-        streak = streak + 1 if status == "flooded" else 0
+        streak = streak + 1 if status in {"wet", "flooded"} else 0
         self._streaks[camera_id] = streak
 
         if camera_id in self.blocklist:
             if status == "dry":
                 return SmoothedStatus("dry")
             return SmoothedStatus("wet", "camera blocklisted; flood alerts suppressed")
-        if status == "flooded" and streak < self.n:
-            return SmoothedStatus("wet", f"flooded frame {streak}/{self.n}; awaiting confirmation")
+        if status in {"wet", "flooded"} and streak < self.n:
+            return SmoothedStatus("wet", f"potential flooding; water frame {streak}/{self.n}; awaiting confirmation")
         return SmoothedStatus(status)
 
     # skipped frames (camera moved) don't count and don't reset the streak
@@ -45,4 +45,3 @@ class TemporalSmoother:
         obj = cls(n=d.get("n", 3), blocklist=d.get("blocklist", ()))
         obj._streaks = dict(d.get("streaks", {}))
         return obj
-

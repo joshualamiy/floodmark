@@ -28,10 +28,10 @@ async def insert_image(
 ) -> str:
     return await pool.fetchval(
         """INSERT INTO images (
-             camera_id, source_url, r2_bucket, r2_key, content_type, byte_size, sha256,
+             camera_id, source_url, s3_bucket, s3_key, content_type, byte_size, sha256,
              captured_at, fetched_at, processing_status, processing_error
            ) VALUES ($1, $2, $3, $4, 'image/jpeg', $5, $6, $7, $8, $9::image_processing_status, $10)
-           ON CONFLICT (r2_bucket, r2_key) DO UPDATE SET r2_key = EXCLUDED.r2_key
+           ON CONFLICT (s3_bucket, s3_key) DO UPDATE SET s3_key = EXCLUDED.s3_key
            RETURNING id""",
         job.camera_id,
         f"https://511ga.org/map/Cctv/{job.source_view_id}",
@@ -47,12 +47,17 @@ async def insert_image(
 
 
 async def persist_prediction(
-    pool: asyncpg.Pool, image_id: str, prediction: Prediction, heatmap_key: str | None, started_at: datetime, completed_at: datetime
+    pool: asyncpg.Pool,
+    image_id: str,
+    prediction: Prediction,
+    heatmap_key: str | None,
+    started_at: datetime,
+    completed_at: datetime,
 ) -> tuple[bool, bool]:
     async with pool.acquire() as connection:
         async with connection.transaction():
             previous_status = await connection.fetchval(
-                """SELECT p.status
+                """SELECT p.alert_status
                    FROM predictions p
                    JOIN images i ON i.id = p.image_id
                    WHERE i.camera_id = (SELECT camera_id FROM images WHERE id = $1)
@@ -64,15 +69,17 @@ async def persist_prediction(
             )
             inserted_id = await connection.fetchval(
                 """INSERT INTO predictions (
-                     image_id, model_version, status, confidence, stage_a_probabilities, stage_b_probabilities,
-                     stage_probabilities, thresholds, note, heatmap_r2_key, inference_started_at, inference_completed_at
-                   ) VALUES ($1, $2::jsonb, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8::jsonb, $9, $10, $11, $12)
-                   ON CONFLICT (image_id, model_version) DO NOTHING
-                   RETURNING id""",
+                      image_id, model_version, status, confidence, stage_a_probabilities, stage_b_probabilities,
+                      stage_probabilities, thresholds, note, heatmap_r2_key, alert_status, alert_note,
+                      heatmap_status, heatmap_note, inference_started_at, inference_completed_at
+                    ) VALUES ($1, $2::jsonb, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8::jsonb, $9, $10, $11, $12, $13, $14, $15, $16)
+                    ON CONFLICT (image_id, model_version) DO NOTHING
+                    RETURNING id""",
                 image_id, json.dumps(prediction.model_version), prediction.status, prediction.confidence,
                 json.dumps(prediction.stage_a_probabilities), json.dumps(prediction.stage_b_probabilities),
                 json.dumps(prediction.stage_probabilities), json.dumps(prediction.thresholds), prediction.note,
-                heatmap_key, started_at, completed_at,
+                heatmap_key, prediction.alert_status, prediction.alert_note, prediction.heatmap_status,
+                prediction.heatmap_note, started_at, completed_at,
             )
             await connection.execute(
                 """UPDATE images SET processing_status = 'processed', processed_at = $2, processing_error = NULL
@@ -80,7 +87,7 @@ async def persist_prediction(
                 image_id, completed_at,
             )
             inserted = inserted_id is not None
-            return inserted, inserted and prediction.status == "flooded" and previous_status != "flooded"
+            return inserted, inserted and prediction.alert_status == "flooded" and previous_status != "flooded"
 
 
 async def mark_image_error(pool: asyncpg.Pool, image_id: str, error: str) -> None:

@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	export type MapFilterOption = "all" | "clear" | "wet" | "flooded";
+	export type MapFilterOption = "all" | "clear" | "wet" | "flooded" | "no-data";
 	export type MapFreshnessFilter = "all" | "recent" | "stale" | "no-capture";
 	export type MapAvailabilityFilter = "all" | "available" | "unavailable" | "error";
 </script>
@@ -8,7 +8,7 @@
 	import Filter from "@lucide/svelte/icons/filter";
 	import Button from "./ui/button/button.svelte";
 	import * as Popover from "./ui/popover";
-	type FilterOption = "all" | "clear" | "wet" | "flooded";
+	type FilterOption = MapFilterOption;
 
 	interface Props {
 		filter?: FilterOption;
@@ -27,6 +27,7 @@
 		{ value: "flooded", label: "Flooded" },
 		{ value: "wet", label: "Wet" },
 		{ value: "clear", label: "Clear" },
+		{ value: "no-data", label: "No data" },
 	];
 	const freshnessFilters: Array<{ value: MapFreshnessFilter; label: string }> = [
 		{ value: "all", label: "Any capture age" },
@@ -63,7 +64,7 @@
 		<div class="flex flex-col gap-4">
 			<div class="flex flex-col gap-1" aria-label="Condition filters" role="group">
 				<p class="px-2 text-xs font-medium text-muted-foreground">Condition</p>
-				<div class="grid grid-cols-4 gap-1">
+				<div class="grid grid-cols-5 gap-1">
 					{#each filters as option (option.value)}
 						<Button
 							aria-pressed={filter === option.value}

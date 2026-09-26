@@ -22,6 +22,7 @@ export class MapState {
 	camerasQuery = createQuery(() => ({
 		queryKey: ["cameras"],
 		queryFn: () => api().cameras.list(),
+		refetchInterval: 60_000,
 	}));
 
 	activeCameraId = $state<string | null>(null);

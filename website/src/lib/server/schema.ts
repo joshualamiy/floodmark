@@ -49,6 +49,12 @@ export const cameras = pgTable(
 	],
 );
 
+export const cameraAlertState = pgTable("camera_alert_state", {
+	cameraId: text("camera_id").primaryKey(),
+	floodedStreak: integer("flooded_streak").notNull().default(0),
+	updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const images = pgTable(
 	"images",
 	{
@@ -67,7 +73,9 @@ export const images = pgTable(
 		capturedAt: timestamp("captured_at", { withTimezone: true }),
 		fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull(),
 
-		processingStatus: imageProcessingStatus("processing_status").notNull().default(ImageProcessingStatus.Unprocessed),
+		processingStatus: imageProcessingStatus("processing_status")
+			.notNull()
+			.default(ImageProcessingStatus.Unprocessed),
 		processedAt: timestamp("processed_at", { withTimezone: true }),
 		processingError: text("processing_error"),
 
@@ -110,6 +118,10 @@ export const predictions = pgTable(
 		thresholds: jsonb("thresholds").$type<{ tA: number; tB: number }>().notNull(),
 		note: text("note"),
 		heatmapS3Key: text("heatmap_r2_key"),
+		alertStatus: predictionStatus("alert_status"),
+		alertNote: text("alert_note"),
+		heatmapStatus: text("heatmap_status").notNull().default("disabled"),
+		heatmapNote: text("heatmap_note"),
 
 		inferenceStartedAt: timestamp("inference_started_at", { withTimezone: true }),
 		inferenceCompletedAt: timestamp("inference_completed_at", { withTimezone: true }),

@@ -48,7 +48,7 @@
 				id: string;
 				name: string;
 				location: string;
-				predictionStatus: string | null;
+				alertStatus: string | null;
 			};
 		}>;
 	};
@@ -70,7 +70,7 @@
 						properties: {
 							id: camera.id,
 							name: camera.name,
-							predictionStatus: camera.latestImage?.predictionStatus ?? null,
+							alertStatus: camera.latestImage?.alertStatus ?? null,
 							location: [camera.locationDescription, camera.roadway, camera.direction]
 								.filter(Boolean)
 								.join(" | "),
@@ -81,15 +81,16 @@
 		};
 	}
 
-	function matchesFilter(predictionStatus: string | null): boolean {
+	function matchesFilter(alertStatus: string | null): boolean {
 		if (filter === "all") return true;
-		if (filter === "flooded") return predictionStatus === "flooded";
-		if (filter === "wet") return predictionStatus === "wet";
-		return predictionStatus === "dry" || predictionStatus === null;
+		if (filter === "flooded") return alertStatus === "flooded";
+		if (filter === "wet") return alertStatus === "wet";
+		if (filter === "clear") return alertStatus === "dry";
+		return alertStatus === null;
 	}
 
 	function matchesFilters(camera: Camera): boolean {
-		if (!matchesFilter(camera.latestImage?.predictionStatus ?? null)) return false;
+		if (!matchesFilter(camera.latestImage?.alertStatus ?? null)) return false;
 
 		const processingStatus = camera.latestImage?.processingStatus;
 		const hasProcessingError = processingStatus === "error";
@@ -216,8 +217,9 @@
 						clusterMaxZoom: 14,
 						clusterRadius: 50,
 						clusterProperties: {
-							hasFlooded: ["max", ["case", ["==", ["get", "predictionStatus"], "flooded"], 1, 0]],
-							hasWet: ["max", ["case", ["==", ["get", "predictionStatus"], "wet"], 1, 0]],
+							hasFlooded: ["max", ["case", ["==", ["get", "alertStatus"], "flooded"], 1, 0]],
+							hasWet: ["max", ["case", ["==", ["get", "alertStatus"], "wet"], 1, 0]],
+							hasClear: ["max", ["case", ["==", ["get", "alertStatus"], "dry"], 1, 0]],
 						},
 					});
 					currentMap.addLayer({
@@ -232,7 +234,9 @@
 								"#dc2626",
 								[">", ["coalesce", ["get", "hasWet"], 0], 0],
 								"#facc15",
+								[">", ["coalesce", ["get", "hasClear"], 0], 0],
 								"#00A6AD",
+								"#94a3b8",
 							],
 							"circle-radius": ["step", ["get", "point_count"], 16, 100, 20, 750, 24],
 							"circle-stroke-color": "#ffffff",
@@ -258,11 +262,13 @@
 						paint: {
 							"circle-color": [
 								"case",
-								["==", ["get", "predictionStatus"], "flooded"],
+								["==", ["get", "alertStatus"], "flooded"],
 								"#dc2626",
-								["==", ["get", "predictionStatus"], "wet"],
+								["==", ["get", "alertStatus"], "wet"],
 								"#facc15",
+								["==", ["get", "alertStatus"], "dry"],
 								"#00A6AD",
+								"#94a3b8",
 							],
 							"circle-radius": 10,
 							"circle-stroke-color": "#ffffff",

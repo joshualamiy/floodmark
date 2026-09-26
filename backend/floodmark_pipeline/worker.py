@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from dataclasses import replace
 from datetime import datetime, timezone
 from urllib.parse import quote
 
@@ -10,6 +11,7 @@ import aiohttp
 import asyncpg
 from arq import Retry
 from arq.connections import RedisSettings
+from inference import TemporalSmoother
 
 from .config import Settings
 from .contracts import CaptureJob
@@ -23,6 +25,7 @@ from .notifications import send_flood_alerts
 
 logger = logging.getLogger(__name__)
 settings = Settings.from_env()
+smoother = TemporalSmoother(n=3, blocklist={"11372"})
 
 
 async def startup(ctx: dict) -> None:
@@ -121,10 +124,14 @@ async def capture_camera(ctx: dict, payload: dict[str, str]) -> None:
                 upload_started = time.perf_counter()
                 await upload_object(ctx["s3"], settings.s3_bucket, heatmap_key, prediction.heatmap_bytes, "image/png")
                 s3_seconds += time.perf_counter() - upload_started
+        alert = smoother.update(job.source_camera_id, prediction)
+        prediction = replace(prediction, alert_status=alert.status, alert_note=alert.note)
         completed_at = datetime.now(timezone.utc)
         async with ctx["database_limit"]:
             database_started = time.perf_counter()
-            _, flood_transition = await persist_prediction(ctx["pool"], image_id, prediction, heatmap_key, started_at, completed_at)
+            _, flood_transition = await persist_prediction(
+                ctx["pool"], image_id, prediction, heatmap_key, started_at, completed_at,
+            )
             database_seconds += time.perf_counter() - database_started
         if flood_transition:
             await send_flood_alerts(

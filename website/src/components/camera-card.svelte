@@ -22,19 +22,20 @@
 	const map = useMapState();
 
 	let heatmapToggle = $state(false);
+	const latestImageId = $derived(camera.latestImage?.id);
 
 	const image = createQuery(() => ({
-		queryKey: ["cameras", camera.id, heatmapToggle ? "heatmap" : "snapshot"],
-		queryFn: () => api().camera(camera.id).snapshot(heatmapToggle),
-		enabled: Boolean(camera.id),
+		queryKey: ["cameras", camera.id, latestImageId, heatmapToggle ? "heatmap" : "snapshot"],
+		queryFn: () => api().camera(camera.id).snapshot(heatmapToggle, latestImageId),
+		enabled: Boolean(camera.id && latestImageId),
 	}));
 
 	const formatter = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" });
 
 	const url = $derived(image.data?.url);
 	const hasFeed = $derived(Boolean(url && !url.includes("/skipped")));
-	const isFlooded = $derived(camera.latestImage?.predictionStatus === PredictionStatus.Flooded);
-	const isWet = $derived(camera.latestImage?.predictionStatus === PredictionStatus.Wet);
+	const isFlooded = $derived(camera.latestImage?.alertStatus === PredictionStatus.Flooded);
+	const isWet = $derived(camera.latestImage?.alertStatus === PredictionStatus.Wet);
 	const location = $derived(camera.locationDescription);
 
 	const minutesSinceCapture = $derived(
@@ -103,10 +104,12 @@
 {/snippet}
 
 {#snippet predictionStatus()}
-	{#if isFlooded}
+	{#if !camera.latestImage?.alertStatus}
+		<Badge variant="secondary" class="p-3">No data</Badge>
+	{:else if isFlooded}
 		<Badge variant="destructive" class="p-3">Flood detected</Badge>
 	{:else if isWet}
-		<Badge variant="warning" class="p-3">Wet conditions</Badge>
+		<Badge variant="warning" class="p-3">Possible flooding</Badge>
 	{:else}
 		<Badge variant="success" class="p-3">Clear</Badge>
 	{/if}
@@ -165,6 +168,14 @@
 				</div>
 				{@render predictionStatus()}
 			</div>
+			{#if camera.latestImage?.alertNote || camera.latestImage?.predictionNote}
+				<p class="mt-2 text-xs text-muted-foreground">
+					{camera.latestImage.alertNote ?? camera.latestImage.predictionNote}
+				</p>
+			{/if}
+			{#if camera.latestImage?.heatmapNote}
+				<p class="mt-1 text-xs text-muted-foreground">{camera.latestImage.heatmapNote}</p>
+			{/if}
 			<CameraHistory cameraId={camera.id} cameraName={camera.name} />
 		</div>
 	</div>

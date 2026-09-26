@@ -86,9 +86,9 @@
 	}
 
 	function historyStatus(entry: (typeof historyEntries)[number]): string {
-		if (entry.predictionStatus === PredictionStatus.Flooded) return "Flooded";
-		if (entry.predictionStatus === PredictionStatus.Wet) return "Wet";
-		if (entry.predictionStatus === PredictionStatus.Dry) return "Clear";
+		if (entry.alertStatus === PredictionStatus.Flooded) return "Flooded";
+		if (entry.alertStatus === PredictionStatus.Wet) return "Possible flooding";
+		if (entry.alertStatus === PredictionStatus.Dry) return "Clear";
 		return "Unprocessed";
 	}
 
@@ -194,9 +194,9 @@
 							>
 								{#snippet child({ props })}
 									<Button
-										variant={entry.predictionStatus === PredictionStatus.Flooded
+										variant={entry.alertStatus === PredictionStatus.Flooded
 											? "destructive"
-											: entry.predictionStatus === PredictionStatus.Wet
+											: entry.alertStatus === PredictionStatus.Wet
 												? "warning"
 												: "secondary"}
 										{...props}
