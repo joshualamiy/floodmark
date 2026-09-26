@@ -46,14 +46,17 @@
 
 <Popover.Root>
 	<Popover.Trigger>
-		<Button
-			aria-label="Filter map markers"
-			aria-pressed={isFiltered}
-			class="rounded-full"
-			size="icon"
-		>
-			<Filter />
-		</Button>
+		{#snippet child({ props })}
+			<Button
+				{...props}
+				aria-label="Filter map markers"
+				aria-pressed={isFiltered}
+				class="rounded-full"
+				size="icon"
+			>
+				<Filter />
+			</Button>
+		{/snippet}
 	</Popover.Trigger>
 	<Popover.Content align="start" class="w-72" side="top">
 		<Popover.Title>Filter map markers</Popover.Title>

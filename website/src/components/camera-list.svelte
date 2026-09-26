@@ -142,7 +142,7 @@
 		</div>
 	</div>
 
-	<div bind:clientHeight={viewportHeight} class="min-h-0 flex-1 pl-3 py-3 sm:pl-4">
+	<div bind:clientHeight={viewportHeight} class="min-h-0 flex-1 py-3 pl-3 sm:pl-4">
 		<ScrollArea
 			bind:viewportRef={scrollViewport}
 			class="size-full"
