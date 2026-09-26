@@ -160,3 +160,53 @@ Details in `docs/phase_reports/phase3_modeling.md`, `reports/runs.csv`, and `rep
 **Bugs the worker found and fixed** (both regression-tested):
 - The EfficientNetB0 `name=` argument broke the weights URL.
 - Threshold search accepted "zero predicted positives" as meeting any precision target.
+
+## 2026-09-26: Phase 4 (independent evaluation) started
+
+I rebuilt the manifest with the user's labels, giving `data_version v1-703f0040`. The training-time manifest is saved as `data/processed/manifest_train_v1-c7dea35e.csv` for leakage checks.
+
+- **511GA test set:** 326 rows (324 manual, 2 ai_review), 325 dry and 1 wet.
+- **Splits:** no camera moved between train/val and test.
+
+The reviewer subagent (Opus) evaluates the ONNX deliverables on the test split only. It reports three things separately:
+- **(a)** held-out 511GA cameras
+- **(b)** external test sets
+- **(c)** false-alarm rates on every live frame from the held-out cameras during a verified dry period
+
+## 2026-09-26: Checkpoint 3 (independent evaluation done)
+
+Full write-up in `reports/EVALUATION.md`. The reviewer (Opus) tested only on `split == test` of `v1-703f0040`. CIs bootstrap over camera/sequence clusters.
+
+**Headline numbers:**
+
+| Set | Result |
+|---|---|
+| (a) 511GA held-out cameras (325 dry, human-labeled) | 0/325 false flood alarms. This set can't measure flood recall. |
+| (b) Roadway Flooding | flood recall 0.91 (81/89) |
+| (b) Greek elevated-camera video | flood recall **0.29** (18/62) |
+| (b) FRED cambogan | flood recall 8/17 |
+| (b) NYSDOT wet | detected **0/9** |
+| All test: flooded | precision 0.964 [0.90, 1.0], recall **0.637** [0.48, 0.93] |
+| All test: false alarms | 4/930 on dry |
+| (c) Live frames, held-out cameras, dry night | 0/466 flooded |
+
+**Verdicts:**
+- **Leakage:** clean.
+- **Shortcuts:** present and partly used.
+  - Source is predictable at 0.99 balanced accuracy.
+  - Darkening an image or adding a 511GA-style text box pushes floods toward "dry".
+  - 511GA is 100% dry and 100% night in the data, so the 0/325 may partly be a "looks like 511GA at night, so dry" shortcut.
+- **Grad-CAM:** good on Roadway Flooding and FRED floods, near chance on the Greek video.
+
+**Top failure modes:**
+1. Missed floods from elevated fixed cameras (the Greek video).
+2. Small or distant floods missed until water covers about 20% of the road.
+3. Wet pavement is never detected.
+4. False floods on non-road views (FRED field shots, 511GA camera 11372).
+5. "wet" in practice means a flood score between the thresholds: 33 of 36 test "wet" calls were real floods.
+
+**Decisions carried into Phase 5:**
+- Keep the API contract values (`dry`/`wet`/`flooded`), but document `wet` as "water detected, below the flood alert threshold (possible flooding)". Don't claim wet-pavement detection. Temporal smoothing defaults to N=3 consecutive frames, with an optional per-camera blocklist (11372 for the demo).
+- Pin inference preprocessing to exactly the training path.
+- Thresholds unchanged until new data exists.
+- Re-run the live check on daylight frames once the collector has them.

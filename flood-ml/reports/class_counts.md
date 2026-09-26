@@ -4,9 +4,9 @@
 
 | split | dry | wet | flooded | total |
 |---|---|---|---|---|
-| train | 1694 | 15 | 783 | 2492 |
-| val | 491 | 6 | 168 | 665 |
-| test | 812 | 10 | 168 | 990 |
+| train | 1717 | 15 | 783 | 2515 |
+| val | 500 | 6 | 168 | 674 |
+| test | 930 | 10 | 168 | 1108 |
 
 ## Per source x label
 
@@ -14,7 +14,7 @@
 |---|---|---|---|---|
 | flood_master_test | 0 | 0 | 62 | 62 |
 | fred | 1294 | 0 | 631 | 1925 |
-| ga511 | 1674 | 1 | 0 | 1675 |
+| ga511 | 1824 | 1 | 0 | 1825 |
 | nysdot_road_surface | 29 | 30 | 0 | 59 |
 | roadway_flooding | 0 | 0 | 426 | 426 |
 
@@ -22,19 +22,20 @@
 
 | split | flood_master_test | fred | ga511 | nysdot_road_surface | roadway_flooding |
 |---|---|---|---|---|---|
-| train | 0 | 1104 | 1177 | 28 | 183 |
-| val | 0 | 206 | 290 | 15 | 154 |
-| test | 62 | 615 | 208 | 16 | 89 |
+| train | 0 | 1104 | 1200 | 28 | 183 |
+| val | 0 | 206 | 299 | 15 | 154 |
+| test | 62 | 615 | 326 | 16 | 89 |
 
 ## label_source counts
 
 | label_source | count |
 |---|---|
-| weak_precip | 1467 |
+| weak_precip | 1472 |
 | sequence_condition | 1236 |
 | mask | 1177 |
-| ai_review | 208 |
+| manual | 351 |
 | dataset_label | 59 |
+| ai_review | 2 |
 
 ## water_frac_road stats by assigned label
 
@@ -65,7 +66,7 @@
 - thinned_frames: 3260
 - thinning_rule: keep a frame if phash Hamming > 6 from the last *kept* frame, or if 15 consecutive frames have been dropped (resample at least every 16th frame even during a long static stretch)
 - cross_source_duplicates_collapsed: 0
-- n_after: 4256
+- n_after: 4306
 
 | video/sequence group | frames before | frames after |
 |---|---|---|

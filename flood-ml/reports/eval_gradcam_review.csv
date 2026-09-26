@@ -1,0 +1,60 @@
+test_idx,path,source,label,status,pA,pB,cam_A_region,stage_B_same_region,weak_evidence,note
+934,data/processed/images/ga511/ga511_001513.jpg,ga511,dry,dry,0.0010384619,0.00010728836,road,True,True,
+743,data/processed/images/ga511/ga511_000391.jpg,ga511,dry,dry,0.04022926,0.0044119954,sky_background,True,True,
+693,data/processed/images/ga511/ga511_000093.jpg,ga511,dry,dry,0.010268509,0.0034770668,road,True,True,
+744,data/processed/images/ga511/ga511_000392.jpg,ga511,dry,dry,0.003963381,0.0004017055,overlay_text,True,True,overlay text I-575 label is the peak in both A and B
+947,data/processed/images/ga511/ga511_001556.jpg,ga511,dry,dry,0.033426017,0.0014306307,road,True,True,
+915,data/processed/images/ga511/ga511_001433.jpg,ga511,dry,dry,0.307459,0.23889846,road,True,False,
+811,data/processed/images/ga511/ga511_000768.jpg,ga511,dry,dry,0.06351477,0.0118196905,road,True,True,
+948,data/processed/images/ga511/ga511_001557.jpg,ga511,dry,dry,0.0073216558,0.00041919947,vehicle,True,True,
+737,data/processed/images/ga511/ga511_000342.jpg,ga511,dry,dry,0.0006750226,2.682209e-05,sky_background,True,True,headlight glare
+741,data/processed/images/ga511/ga511_000381.jpg,ga511,dry,dry,0.69127905,0.32036263,vegetation_horizon,True,False,
+770,data/processed/images/ga511/ga511_000549.jpg,ga511,dry,dry,0.0011275709,5.2332878e-05,border_corner,True,True,
+775,data/processed/images/ga511/ga511_000573.jpg,ga511,dry,dry,0.0009085834,0.00013273954,border_corner,True,True,
+681,data/processed/images/ga511/ga511_000016.jpg,ga511,wet,dry,0.0007753074,7.376075e-05,road,True,True,
+206,data/processed/images/fred/fred_002296.jpg,fred,dry,dry,0.05791536,0.053568363,vegetation_horizon,True,True,
+127,data/processed/images/fred/fred_002182.jpg,fred,dry,dry,0.053819537,0.030569673,vegetation_horizon,True,True,
+564,data/processed/images/fred/fred_002886.jpg,fred,dry,dry,0.1972735,0.14095303,vegetation_horizon,True,True,
+486,data/processed/images/fred/fred_002739.jpg,fred,dry,dry,0.014162898,0.006567359,vegetation_horizon,True,True,
+304,data/processed/images/fred/fred_002470.jpg,fred,dry,dry,0.03424239,0.02003768,vegetation_horizon,True,True,
+417,data/processed/images/fred/fred_002614.jpg,fred,dry,dry,0.008286178,0.00696519,vegetation_horizon,True,True,
+318,data/processed/images/fred/fred_002491.jpg,fred,dry,dry,0.036762595,0.018498749,vegetation_horizon,True,True,
+601,data/processed/images/fred/fred_002935.jpg,fred,dry,dry,0.12668723,0.08964625,vegetation_horizon,True,True,
+63,data/processed/images/fred/fred_000002.jpg,fred,flooded,dry,0.2798852,0.17520207,water,True,False,
+68,data/processed/images/fred/fred_000010.jpg,fred,flooded,wet,0.8266051,0.7248516,water,True,False,
+70,data/processed/images/fred/fred_000015.jpg,fred,flooded,wet,0.8871578,0.83662766,water,True,False,
+71,data/processed/images/fred/fred_000019.jpg,fred,flooded,flooded,0.9713741,0.9619683,water,True,False,
+75,data/processed/images/fred/fred_000034.jpg,fred,flooded,flooded,0.9967779,0.996066,water,True,False,
+66,data/processed/images/fred/fred_000007.jpg,fred,flooded,dry,0.67379504,0.5447111,water,True,False,
+30,data/processed/images/flood_master_test/flood_master_test_000326.jpg,flood_master_test,flooded,flooded,0.87670434,0.9086673,structure,True,False,"fence/stairs and dark car edge, not the water"
+32,data/processed/images/flood_master_test/flood_master_test_000336.jpg,flood_master_test,flooded,flooded,0.8994068,0.90375364,structure,True,False,fence and left border
+33,data/processed/images/flood_master_test/flood_master_test_000344.jpg,flood_master_test,flooded,dry,0.790257,0.80262995,vehicle,True,False,
+48,data/processed/images/flood_master_test/flood_master_test_000465.jpg,flood_master_test,flooded,dry,0.7450342,0.39604872,structure,True,False,
+51,data/processed/images/flood_master_test/flood_master_test_000490.jpg,flood_master_test,flooded,wet,0.93066186,0.7717496,water,True,False,upper water plus car
+35,data/processed/images/flood_master_test/flood_master_test_000352.jpg,flood_master_test,flooded,wet,0.84192187,0.86682117,vehicle,True,False,
+11,data/processed/images/flood_master_test/flood_master_test_000112.jpg,flood_master_test,flooded,wet,0.88668215,0.8638191,vehicle,True,False,
+45,data/processed/images/flood_master_test/flood_master_test_000447.jpg,flood_master_test,flooded,dry,0.4318726,0.2186591,structure,True,False,
+2,data/processed/images/flood_master_test/flood_master_test_000022.jpg,flood_master_test,flooded,dry,0.734754,0.56859744,vehicle,True,False,
+43,data/processed/images/flood_master_test/flood_master_test_000429.jpg,flood_master_test,flooded,dry,0.65171677,0.57517576,water,True,False,
+1021,data/processed/images/roadway_flooding/roadway_flooding_000066.jpg,roadway_flooding,flooded,flooded,0.9991001,0.9993855,water,True,False,
+1032,data/processed/images/roadway_flooding/roadway_flooding_000088.jpg,roadway_flooding,flooded,flooded,0.99963874,0.99916816,water,True,False,
+1072,data/processed/images/roadway_flooding/roadway_flooding_000187.jpg,roadway_flooding,flooded,flooded,0.9999614,0.9999596,water,True,False,waterline at house facade
+1060,data/processed/images/roadway_flooding/roadway_flooding_000144.jpg,roadway_flooding,flooded,flooded,0.9999119,0.9999181,water,True,False,
+1085,data/processed/images/roadway_flooding/roadway_flooding_000276.jpg,roadway_flooding,flooded,flooded,0.95430124,0.95150566,water,True,False,
+1049,data/processed/images/roadway_flooding/roadway_flooding_000122.jpg,roadway_flooding,flooded,flooded,0.99980915,0.9998609,water,True,False,
+1064,data/processed/images/roadway_flooding/roadway_flooding_000152.jpg,roadway_flooding,flooded,flooded,0.99705297,0.99619365,water,True,False,
+1062,data/processed/images/roadway_flooding/roadway_flooding_000148.jpg,roadway_flooding,flooded,flooded,0.9999907,0.99998987,water,True,False,
+1097,data/processed/images/roadway_flooding/roadway_flooding_000359.jpg,roadway_flooding,flooded,flooded,0.99861693,0.9983103,water,True,False,
+1107,data/processed/images/roadway_flooding/roadway_flooding_000425.jpg,roadway_flooding,flooded,flooded,0.9997698,0.9997965,water,True,False,
+1026,data/processed/images/roadway_flooding/roadway_flooding_000076.jpg,roadway_flooding,flooded,flooded,0.99987084,0.9999602,water,True,False,
+1045,data/processed/images/roadway_flooding/roadway_flooding_000114.jpg,roadway_flooding,flooded,flooded,0.99989796,0.9998646,water,True,False,
+1018,data/processed/images/nysdot_road_surface/nysdot_road_surface_000016.jpg,nysdot_road_surface,dry,dry,0.55236065,0.019466162,vehicle,True,False,"a car, pA 0.55"
+1014,data/processed/images/nysdot_road_surface/nysdot_road_surface_000012.jpg,nysdot_road_surface,dry,dry,0.00093078613,2.2262335e-05,border_corner,True,True,
+1004,data/processed/images/nysdot_road_surface/nysdot_road_surface_000002.jpg,nysdot_road_surface,dry,dry,0.0014321804,0.00016069412,sky_background,True,True,street lights
+1015,data/processed/images/nysdot_road_surface/nysdot_road_surface_000013.jpg,nysdot_road_surface,dry,dry,0.0061912835,0.0002500713,border_corner,True,True,
+1012,data/processed/images/nysdot_road_surface/nysdot_road_surface_000010.jpg,nysdot_road_surface,wet,dry,0.011339039,0.00035494566,border_corner,True,True,
+1007,data/processed/images/nysdot_road_surface/nysdot_road_surface_000005.jpg,nysdot_road_surface,wet,dry,0.4576585,0.040887475,border_corner,True,False,snow bank at road edge
+1006,data/processed/images/nysdot_road_surface/nysdot_road_surface_000004.jpg,nysdot_road_surface,wet,dry,0.016685367,0.0014885366,road,True,True,"wet reflections on road, weak"
+1009,data/processed/images/nysdot_road_surface/nysdot_road_surface_000007.jpg,nysdot_road_surface,wet,dry,0.21647617,0.0016323924,overlay_text,True,False,overlay text top-left plus pole
+1013,data/processed/images/nysdot_road_surface/nysdot_road_surface_000011.jpg,nysdot_road_surface,wet,dry,0.033620507,0.000508517,structure,True,True,overhead sign gantry
+1011,data/processed/images/nysdot_road_surface/nysdot_road_surface_000009.jpg,nysdot_road_surface,wet,dry,0.0137465,0.0003877282,border_corner,True,True,

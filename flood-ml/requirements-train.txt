@@ -33,3 +33,6 @@ huggingface_hub==1.32.0
 # dev
 pytest==9.1.1
 ruff==0.16.9
+
+# demo app (phase 5)
+gradio==6.28.0

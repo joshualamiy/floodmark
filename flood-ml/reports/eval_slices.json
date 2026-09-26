@@ -1,0 +1,1907 @@
+{
+  "test_prevalence": {
+    "night": {
+      "flood_master_test": 0,
+      "fred": 0,
+      "ga511": 326,
+      "nysdot_road_surface": 6,
+      "roadway_flooding": 8
+    },
+    "glare": {
+      "flood_master_test": 0,
+      "fred": 0,
+      "ga511": 189,
+      "nysdot_road_surface": 6,
+      "roadway_flooding": 2
+    },
+    "blurry": {
+      "flood_master_test": 0,
+      "fred": 0,
+      "ga511": 16,
+      "nysdot_road_surface": 0,
+      "roadway_flooding": 0
+    },
+    "grayscale": {
+      "flood_master_test": 0,
+      "fred": 0,
+      "ga511": 48,
+      "nysdot_road_surface": 4,
+      "roadway_flooding": 0
+    },
+    "overlay_text": {
+      "flood_master_test": 0,
+      "fred": 0,
+      "ga511": 23,
+      "nysdot_road_surface": 0,
+      "roadway_flooding": 0
+    },
+    "odd_view": {
+      "flood_master_test": 37,
+      "fred": 8,
+      "ga511": 11,
+      "nysdot_road_surface": 0,
+      "roadway_flooding": 64
+    }
+  },
+  "test": {
+    "night=yes": {
+      "n": 340,
+      "fa_flooded|dry": {
+        "k": 0,
+        "n": 329,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.011541826502456422
+        ],
+        "n_groups": 220,
+        "flags": []
+      },
+      "fa_notdry|dry": {
+        "k": 1,
+        "n": 329,
+        "value": 0.00303951367781155,
+        "ci_group": [
+          0.0,
+          0.009318225931677011
+        ],
+        "ci_wilson_row": [
+          0.0005367366400418384,
+          0.017013954138995396
+        ],
+        "n_groups": 220,
+        "flags": []
+      },
+      "recall_flooded": {
+        "k": 8,
+        "n": 8,
+        "value": 1.0,
+        "ci_group": [
+          1.0,
+          1.0
+        ],
+        "ci_wilson_row": [
+          0.6755843804891231,
+          1.0
+        ],
+        "n_groups": 8,
+        "flags": [
+          "n<30"
+        ]
+      },
+      "wet_to_notdry": {
+        "k": 0,
+        "n": 3,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.5615060804490177
+        ],
+        "n_groups": 2,
+        "flags": [
+          "n<30",
+          "groups<5"
+        ]
+      },
+      "by_source_label": {
+        "ga511|dry": 325,
+        "ga511|wet": 1,
+        "nysdot_road_surface|dry": 4,
+        "nysdot_road_surface|wet": 2,
+        "roadway_flooding|flooded": 8
+      }
+    },
+    "night=no": {
+      "n": 768,
+      "fa_flooded|dry": {
+        "k": 4,
+        "n": 601,
+        "value": 0.0066555740432612314,
+        "ci_group": [
+          0.0,
+          0.058823529411764705
+        ],
+        "ci_wilson_row": [
+          0.0025911357715955466,
+          0.01698688267158032
+        ],
+        "n_groups": 5,
+        "flags": []
+      },
+      "fa_notdry|dry": {
+        "k": 6,
+        "n": 601,
+        "value": 0.009983361064891847,
+        "ci_group": [
+          0.0,
+          0.08823529411764706
+        ],
+        "ci_wilson_row": [
+          0.00458320776102125,
+          0.02160811241272341
+        ],
+        "n_groups": 5,
+        "flags": []
+      },
+      "recall_flooded": {
+        "k": 99,
+        "n": 160,
+        "value": 0.61875,
+        "ci_group": [
+          0.4623706873566896,
+          0.927710843373494
+        ],
+        "ci_wilson_row": [
+          0.5415420671016985,
+          0.6903892616939188
+        ],
+        "n_groups": 83,
+        "flags": []
+      },
+      "wet_to_notdry": {
+        "k": 0,
+        "n": 7,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.35433884297520657
+        ],
+        "n_groups": 1,
+        "flags": [
+          "n<30",
+          "groups<5"
+        ]
+      },
+      "by_source_label": {
+        "flood_master_test|flooded": 62,
+        "fred|dry": 598,
+        "fred|flooded": 17,
+        "nysdot_road_surface|dry": 3,
+        "nysdot_road_surface|wet": 7,
+        "roadway_flooding|flooded": 81
+      }
+    },
+    "glare=yes": {
+      "n": 197,
+      "fa_flooded|dry": {
+        "k": 0,
+        "n": 192,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.019615852811660034
+        ],
+        "n_groups": 135,
+        "flags": []
+      },
+      "fa_notdry|dry": {
+        "k": 1,
+        "n": 192,
+        "value": 0.005208333333333333,
+        "ci_group": [
+          0.0,
+          0.016216216216216217
+        ],
+        "ci_wilson_row": [
+          0.0009199674643243817,
+          0.02890822021388086
+        ],
+        "n_groups": 135,
+        "flags": []
+      },
+      "recall_flooded": {
+        "k": 2,
+        "n": 2,
+        "value": 1.0,
+        "ci_group": [
+          1.0,
+          1.0
+        ],
+        "ci_wilson_row": [
+          0.34237195288961925,
+          1.0
+        ],
+        "n_groups": 2,
+        "flags": [
+          "n<30",
+          "groups<5"
+        ]
+      },
+      "wet_to_notdry": {
+        "k": 0,
+        "n": 3,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.5615060804490177
+        ],
+        "n_groups": 2,
+        "flags": [
+          "n<30",
+          "groups<5"
+        ]
+      },
+      "by_source_label": {
+        "ga511|dry": 188,
+        "ga511|wet": 1,
+        "nysdot_road_surface|dry": 4,
+        "nysdot_road_surface|wet": 2,
+        "roadway_flooding|flooded": 2
+      }
+    },
+    "glare=no": {
+      "n": 911,
+      "fa_flooded|dry": {
+        "k": 4,
+        "n": 738,
+        "value": 0.005420054200542005,
+        "ci_group": [
+          0.0,
+          0.032434629751702915
+        ],
+        "ci_wilson_row": [
+          0.0021096778642720826,
+          0.013852759399963305
+        ],
+        "n_groups": 107,
+        "flags": []
+      },
+      "fa_notdry|dry": {
+        "k": 6,
+        "n": 738,
+        "value": 0.008130081300813009,
+        "ci_group": [
+          0.0,
+          0.048651944627554365
+        ],
+        "ci_wilson_row": [
+          0.0037312116358997286,
+          0.017623212273463133
+        ],
+        "n_groups": 107,
+        "flags": []
+      },
+      "recall_flooded": {
+        "k": 105,
+        "n": 166,
+        "value": 0.6325301204819277,
+        "ci_group": [
+          0.4722222222222222,
+          0.9325842696629213
+        ],
+        "ci_wilson_row": [
+          0.5569625882325872,
+          0.7021023287253313
+        ],
+        "n_groups": 89,
+        "flags": []
+      },
+      "wet_to_notdry": {
+        "k": 0,
+        "n": 7,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.35433884297520657
+        ],
+        "n_groups": 1,
+        "flags": [
+          "n<30",
+          "groups<5"
+        ]
+      },
+      "by_source_label": {
+        "flood_master_test|flooded": 62,
+        "fred|dry": 598,
+        "fred|flooded": 17,
+        "ga511|dry": 137,
+        "nysdot_road_surface|dry": 3,
+        "nysdot_road_surface|wet": 7,
+        "roadway_flooding|flooded": 87
+      }
+    },
+    "blurry=yes": {
+      "n": 16,
+      "fa_flooded|dry": {
+        "k": 0,
+        "n": 16,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.19361341827271994
+        ],
+        "n_groups": 14,
+        "flags": [
+          "n<30"
+        ]
+      },
+      "fa_notdry|dry": {
+        "k": 0,
+        "n": 16,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.19361341827271994
+        ],
+        "n_groups": 14,
+        "flags": [
+          "n<30"
+        ]
+      },
+      "recall_flooded": {
+        "k": 0,
+        "n": 0,
+        "value": NaN,
+        "ci_group": [
+          NaN,
+          NaN
+        ],
+        "ci_wilson_row": [
+          NaN,
+          NaN
+        ],
+        "n_groups": 0,
+        "flags": [
+          "n<30",
+          "groups<5"
+        ]
+      },
+      "wet_to_notdry": {
+        "k": 0,
+        "n": 0,
+        "value": NaN,
+        "ci_group": [
+          NaN,
+          NaN
+        ],
+        "ci_wilson_row": [
+          NaN,
+          NaN
+        ],
+        "n_groups": 0,
+        "flags": [
+          "n<30",
+          "groups<5"
+        ]
+      },
+      "by_source_label": {
+        "ga511|dry": 16
+      }
+    },
+    "blurry=no": {
+      "n": 1092,
+      "fa_flooded|dry": {
+        "k": 4,
+        "n": 914,
+        "value": 0.00437636761487965,
+        "ci_group": [
+          0.0,
+          0.02181818181818182
+        ],
+        "ci_wilson_row": [
+          0.001703132884369421,
+          0.011198439674555779
+        ],
+        "n_groups": 215,
+        "flags": []
+      },
+      "fa_notdry|dry": {
+        "k": 7,
+        "n": 914,
+        "value": 0.007658643326039387,
+        "ci_group": [
+          0.0,
+          0.03393008880654228
+        ],
+        "ci_wilson_row": [
+          0.0037146641112489626,
+          0.01572398412609395
+        ],
+        "n_groups": 215,
+        "flags": []
+      },
+      "recall_flooded": {
+        "k": 107,
+        "n": 168,
+        "value": 0.6369047619047619,
+        "ci_group": [
+          0.4770926301555105,
+          0.9340659340659341
+        ],
+        "ci_wilson_row": [
+          0.5618773358116735,
+          0.7058110469780583
+        ],
+        "n_groups": 91,
+        "flags": []
+      },
+      "wet_to_notdry": {
+        "k": 0,
+        "n": 10,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.2775401687666166
+        ],
+        "n_groups": 2,
+        "flags": [
+          "n<30",
+          "groups<5"
+        ]
+      },
+      "by_source_label": {
+        "flood_master_test|flooded": 62,
+        "fred|dry": 598,
+        "fred|flooded": 17,
+        "ga511|dry": 309,
+        "ga511|wet": 1,
+        "nysdot_road_surface|dry": 7,
+        "nysdot_road_surface|wet": 9,
+        "roadway_flooding|flooded": 89
+      }
+    },
+    "grayscale=yes": {
+      "n": 52,
+      "fa_flooded|dry": {
+        "k": 0,
+        "n": 48,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.0741026511527422
+        ],
+        "n_groups": 31,
+        "flags": []
+      },
+      "fa_notdry|dry": {
+        "k": 0,
+        "n": 48,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.0741026511527422
+        ],
+        "n_groups": 31,
+        "flags": []
+      },
+      "recall_flooded": {
+        "k": 0,
+        "n": 0,
+        "value": NaN,
+        "ci_group": [
+          NaN,
+          NaN
+        ],
+        "ci_wilson_row": [
+          NaN,
+          NaN
+        ],
+        "n_groups": 0,
+        "flags": [
+          "n<30",
+          "groups<5"
+        ]
+      },
+      "wet_to_notdry": {
+        "k": 0,
+        "n": 4,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.48990002040399916
+        ],
+        "n_groups": 1,
+        "flags": [
+          "n<30",
+          "groups<5"
+        ]
+      },
+      "by_source_label": {
+        "ga511|dry": 48,
+        "nysdot_road_surface|wet": 4
+      }
+    },
+    "grayscale=no": {
+      "n": 1056,
+      "fa_flooded|dry": {
+        "k": 4,
+        "n": 882,
+        "value": 0.0045351473922902496,
+        "ci_group": [
+          0.0,
+          0.02312250318030664
+        ],
+        "ci_wilson_row": [
+          0.0017649726284182906,
+          0.011602654270115264
+        ],
+        "n_groups": 195,
+        "flags": []
+      },
+      "fa_notdry|dry": {
+        "k": 7,
+        "n": 882,
+        "value": 0.007936507936507936,
+        "ci_group": [
+          0.0,
+          0.03571428571428571
+        ],
+        "ci_wilson_row": [
+          0.003849617335608041,
+          0.01629122951556716
+        ],
+        "n_groups": 195,
+        "flags": []
+      },
+      "recall_flooded": {
+        "k": 107,
+        "n": 168,
+        "value": 0.6369047619047619,
+        "ci_group": [
+          0.4770926301555105,
+          0.9340659340659341
+        ],
+        "ci_wilson_row": [
+          0.5618773358116735,
+          0.7058110469780583
+        ],
+        "n_groups": 91,
+        "flags": []
+      },
+      "wet_to_notdry": {
+        "k": 0,
+        "n": 6,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.3903430336530645
+        ],
+        "n_groups": 2,
+        "flags": [
+          "n<30",
+          "groups<5"
+        ]
+      },
+      "by_source_label": {
+        "flood_master_test|flooded": 62,
+        "fred|dry": 598,
+        "fred|flooded": 17,
+        "ga511|dry": 277,
+        "ga511|wet": 1,
+        "nysdot_road_surface|dry": 7,
+        "nysdot_road_surface|wet": 5,
+        "roadway_flooding|flooded": 89
+      }
+    },
+    "overlay_text=yes": {
+      "n": 23,
+      "fa_flooded|dry": {
+        "k": 0,
+        "n": 23,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.14312112541726274
+        ],
+        "n_groups": 15,
+        "flags": [
+          "n<30"
+        ]
+      },
+      "fa_notdry|dry": {
+        "k": 0,
+        "n": 23,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.14312112541726274
+        ],
+        "n_groups": 15,
+        "flags": [
+          "n<30"
+        ]
+      },
+      "recall_flooded": {
+        "k": 0,
+        "n": 0,
+        "value": NaN,
+        "ci_group": [
+          NaN,
+          NaN
+        ],
+        "ci_wilson_row": [
+          NaN,
+          NaN
+        ],
+        "n_groups": 0,
+        "flags": [
+          "n<30",
+          "groups<5"
+        ]
+      },
+      "wet_to_notdry": {
+        "k": 0,
+        "n": 0,
+        "value": NaN,
+        "ci_group": [
+          NaN,
+          NaN
+        ],
+        "ci_wilson_row": [
+          NaN,
+          NaN
+        ],
+        "n_groups": 0,
+        "flags": [
+          "n<30",
+          "groups<5"
+        ]
+      },
+      "by_source_label": {
+        "ga511|dry": 23
+      }
+    },
+    "overlay_text=no": {
+      "n": 1085,
+      "fa_flooded|dry": {
+        "k": 4,
+        "n": 907,
+        "value": 0.004410143329658214,
+        "ci_group": [
+          0.0,
+          0.02225338738352845
+        ],
+        "ci_wilson_row": [
+          0.0017162871837449797,
+          0.011284436542531905
+        ],
+        "n_groups": 210,
+        "flags": []
+      },
+      "fa_notdry|dry": {
+        "k": 7,
+        "n": 907,
+        "value": 0.007717750826901874,
+        "ci_group": [
+          0.0,
+          0.03526205936920216
+        ],
+        "ci_wilson_row": [
+          0.003743370366121615,
+          0.015844667773550525
+        ],
+        "n_groups": 210,
+        "flags": []
+      },
+      "recall_flooded": {
+        "k": 107,
+        "n": 168,
+        "value": 0.6369047619047619,
+        "ci_group": [
+          0.4770926301555105,
+          0.9340659340659341
+        ],
+        "ci_wilson_row": [
+          0.5618773358116735,
+          0.7058110469780583
+        ],
+        "n_groups": 91,
+        "flags": []
+      },
+      "wet_to_notdry": {
+        "k": 0,
+        "n": 10,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.2775401687666166
+        ],
+        "n_groups": 2,
+        "flags": [
+          "n<30",
+          "groups<5"
+        ]
+      },
+      "by_source_label": {
+        "flood_master_test|flooded": 62,
+        "fred|dry": 598,
+        "fred|flooded": 17,
+        "ga511|dry": 302,
+        "ga511|wet": 1,
+        "nysdot_road_surface|dry": 7,
+        "nysdot_road_surface|wet": 9,
+        "roadway_flooding|flooded": 89
+      }
+    },
+    "odd_view=yes": {
+      "n": 120,
+      "fa_flooded|dry": {
+        "k": 4,
+        "n": 19,
+        "value": 0.21052631578947367,
+        "ci_group": [
+          0.0,
+          0.4
+        ],
+        "ci_wilson_row": [
+          0.08507538491591576,
+          0.43334714240266087
+        ],
+        "n_groups": 12,
+        "flags": [
+          "n<30"
+        ]
+      },
+      "fa_notdry|dry": {
+        "k": 6,
+        "n": 19,
+        "value": 0.3157894736842105,
+        "ci_group": [
+          0.0,
+          0.6
+        ],
+        "ci_wilson_row": [
+          0.15364171004428598,
+          0.5398998982493537
+        ],
+        "n_groups": 12,
+        "flags": [
+          "n<30"
+        ]
+      },
+      "recall_flooded": {
+        "k": 64,
+        "n": 101,
+        "value": 0.6336633663366337,
+        "ci_group": [
+          0.3872832369942196,
+          0.9846153846153847
+        ],
+        "ci_wilson_row": [
+          0.5364085906465472,
+          0.721122770950376
+        ],
+        "n_groups": 65,
+        "flags": []
+      },
+      "wet_to_notdry": {
+        "k": 0,
+        "n": 0,
+        "value": NaN,
+        "ci_group": [
+          NaN,
+          NaN
+        ],
+        "ci_wilson_row": [
+          NaN,
+          NaN
+        ],
+        "n_groups": 0,
+        "flags": [
+          "n<30",
+          "groups<5"
+        ]
+      },
+      "by_source_label": {
+        "flood_master_test|flooded": 37,
+        "fred|dry": 8,
+        "ga511|dry": 11,
+        "roadway_flooding|flooded": 64
+      }
+    },
+    "odd_view=no": {
+      "n": 988,
+      "fa_flooded|dry": {
+        "k": 0,
+        "n": 911,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.004199196888291918
+        ],
+        "n_groups": 217,
+        "flags": []
+      },
+      "fa_notdry|dry": {
+        "k": 1,
+        "n": 911,
+        "value": 0.0010976948408342481,
+        "ci_group": [
+          0.0,
+          0.0056075421740441195
+        ],
+        "ci_wilson_row": [
+          0.00019379139498974535,
+          0.006191576301450817
+        ],
+        "n_groups": 217,
+        "flags": []
+      },
+      "recall_flooded": {
+        "k": 43,
+        "n": 67,
+        "value": 0.6417910447761194,
+        "ci_group": [
+          0.5607289719626167,
+          0.8888888888888888
+        ],
+        "ci_wilson_row": [
+          0.5221828769475225,
+          0.7460211161864552
+        ],
+        "n_groups": 27,
+        "flags": []
+      },
+      "wet_to_notdry": {
+        "k": 0,
+        "n": 10,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.2775401687666166
+        ],
+        "n_groups": 2,
+        "flags": [
+          "n<30",
+          "groups<5"
+        ]
+      },
+      "by_source_label": {
+        "flood_master_test|flooded": 25,
+        "fred|dry": 590,
+        "fred|flooded": 17,
+        "ga511|dry": 314,
+        "ga511|wet": 1,
+        "nysdot_road_surface|dry": 7,
+        "nysdot_road_surface|wet": 9,
+        "roadway_flooding|flooded": 25
+      }
+    }
+  },
+  "live_prevalence": {
+    "night": 2473,
+    "glare": 1468,
+    "blurry": 257,
+    "grayscale": 401,
+    "overlay_text": 247,
+    "odd_view": 139,
+    "view_changed": 228
+  },
+  "live_all": {
+    "night=yes": {
+      "n": 2473,
+      "flooded": {
+        "k": 2,
+        "n": 2473,
+        "value": 0.0008087343307723412,
+        "ci_group": [
+          0.0,
+          0.0024449877750611247
+        ],
+        "ci_wilson_row": [
+          0.0002218075040175964,
+          0.002944159992652356
+        ],
+        "n_groups": 1376,
+        "flags": []
+      },
+      "not_dry": {
+        "k": 11,
+        "n": 2473,
+        "value": 0.004448038819247877,
+        "ci_group": [
+          0.001635306268860597,
+          0.007594533835641988
+        ],
+        "ci_wilson_row": [
+          0.002485525127333775,
+          0.007947762168874425
+        ],
+        "n_groups": 1376,
+        "flags": []
+      }
+    },
+    "night=no": {
+      "n": 0,
+      "flooded": {
+        "k": 0,
+        "n": 0,
+        "value": NaN,
+        "ci_group": [
+          NaN,
+          NaN
+        ],
+        "ci_wilson_row": [
+          NaN,
+          NaN
+        ],
+        "n_groups": 0,
+        "flags": [
+          "n<30",
+          "groups<5"
+        ]
+      },
+      "not_dry": {
+        "k": 0,
+        "n": 0,
+        "value": NaN,
+        "ci_group": [
+          NaN,
+          NaN
+        ],
+        "ci_wilson_row": [
+          NaN,
+          NaN
+        ],
+        "n_groups": 0,
+        "flags": [
+          "n<30",
+          "groups<5"
+        ]
+      }
+    },
+    "glare=yes": {
+      "n": 1468,
+      "flooded": {
+        "k": 0,
+        "n": 1468,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.0026100634742216825
+        ],
+        "n_groups": 886,
+        "flags": []
+      },
+      "not_dry": {
+        "k": 3,
+        "n": 1468,
+        "value": 0.0020435967302452314,
+        "ci_group": [
+          0.0,
+          0.0047489823609226595
+        ],
+        "ci_wilson_row": [
+          0.0006952327629291145,
+          0.0059913563374197265
+        ],
+        "n_groups": 886,
+        "flags": []
+      }
+    },
+    "glare=no": {
+      "n": 1005,
+      "flooded": {
+        "k": 2,
+        "n": 1005,
+        "value": 0.001990049751243781,
+        "ci_group": [
+          0.0,
+          0.0076998967066673335
+        ],
+        "ci_wilson_row": [
+          0.0005459017402442948,
+          0.007226973605102289
+        ],
+        "n_groups": 652,
+        "flags": []
+      },
+      "not_dry": {
+        "k": 8,
+        "n": 1005,
+        "value": 0.007960199004975124,
+        "ci_group": [
+          0.002853486284021924,
+          0.014629176542549124
+        ],
+        "ci_wilson_row": [
+          0.004038925443544329,
+          0.015628780566992906
+        ],
+        "n_groups": 652,
+        "flags": []
+      }
+    },
+    "blurry=yes": {
+      "n": 257,
+      "flooded": {
+        "k": 2,
+        "n": 257,
+        "value": 0.007782101167315175,
+        "ci_group": [
+          0.0,
+          0.023715415019762844
+        ],
+        "ci_wilson_row": [
+          0.0021366887793855555,
+          0.027926000607583393
+        ],
+        "n_groups": 160,
+        "flags": []
+      },
+      "not_dry": {
+        "k": 2,
+        "n": 257,
+        "value": 0.007782101167315175,
+        "ci_group": [
+          0.0,
+          0.023715415019762844
+        ],
+        "ci_wilson_row": [
+          0.0021366887793855555,
+          0.027926000607583393
+        ],
+        "n_groups": 160,
+        "flags": []
+      }
+    },
+    "blurry=no": {
+      "n": 2216,
+      "flooded": {
+        "k": 0,
+        "n": 2216,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.001730573929238915
+        ],
+        "n_groups": 1273,
+        "flags": []
+      },
+      "not_dry": {
+        "k": 9,
+        "n": 2216,
+        "value": 0.004061371841155234,
+        "ci_group": [
+          0.0017863726372565668,
+          0.006805884855909241
+        ],
+        "ci_wilson_row": [
+          0.002138161905011264,
+          0.007701098698087624
+        ],
+        "n_groups": 1273,
+        "flags": []
+      }
+    },
+    "grayscale=yes": {
+      "n": 401,
+      "flooded": {
+        "k": 0,
+        "n": 401,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.009489143408187298
+        ],
+        "n_groups": 210,
+        "flags": []
+      },
+      "not_dry": {
+        "k": 3,
+        "n": 401,
+        "value": 0.007481296758104738,
+        "ci_group": [
+          0.0,
+          0.01678961178882979
+        ],
+        "ci_wilson_row": [
+          0.00254746626511667,
+          0.021762288463646376
+        ],
+        "n_groups": 210,
+        "flags": []
+      }
+    },
+    "grayscale=no": {
+      "n": 2072,
+      "flooded": {
+        "k": 2,
+        "n": 2072,
+        "value": 0.0009652509652509653,
+        "ci_group": [
+          0.0,
+          0.0029296875
+        ],
+        "ci_wilson_row": [
+          0.00026474101034263927,
+          0.0035128111882451528
+        ],
+        "n_groups": 1206,
+        "flags": []
+      },
+      "not_dry": {
+        "k": 8,
+        "n": 2072,
+        "value": 0.003861003861003861,
+        "ci_group": [
+          0.001413094677343382,
+          0.007160075578670577
+        ],
+        "ci_wilson_row": [
+          0.00195769819461012,
+          0.007600641902245053
+        ],
+        "n_groups": 1206,
+        "flags": []
+      }
+    },
+    "overlay_text=yes": {
+      "n": 247,
+      "flooded": {
+        "k": 0,
+        "n": 247,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.01531484410879216
+        ],
+        "n_groups": 121,
+        "flags": []
+      },
+      "not_dry": {
+        "k": 0,
+        "n": 247,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.01531484410879216
+        ],
+        "n_groups": 121,
+        "flags": []
+      }
+    },
+    "overlay_text=no": {
+      "n": 2226,
+      "flooded": {
+        "k": 2,
+        "n": 2226,
+        "value": 0.0008984725965858042,
+        "ci_group": [
+          0.0,
+          0.002748574233431902
+        ],
+        "ci_wilson_row": [
+          0.00024642302303773595,
+          0.0032702393264313926
+        ],
+        "n_groups": 1275,
+        "flags": []
+      },
+      "not_dry": {
+        "k": 11,
+        "n": 2226,
+        "value": 0.004941599281221923,
+        "ci_group": [
+          0.0021943530928761673,
+          0.008441068668091339
+        ],
+        "ci_wilson_row": [
+          0.0027615386786469906,
+          0.008827445938018158
+        ],
+        "n_groups": 1275,
+        "flags": []
+      }
+    },
+    "odd_view=yes": {
+      "n": 139,
+      "flooded": {
+        "k": 2,
+        "n": 139,
+        "value": 0.014388489208633094,
+        "ci_group": [
+          0.0,
+          0.044444444444444446
+        ],
+        "ci_wilson_row": [
+          0.003954669579790876,
+          0.050942503232611104
+        ],
+        "n_groups": 100,
+        "flags": []
+      },
+      "not_dry": {
+        "k": 5,
+        "n": 139,
+        "value": 0.03597122302158273,
+        "ci_group": [
+          0.006991792929292929,
+          0.07587523946360146
+        ],
+        "ci_wilson_row": [
+          0.015460613110063436,
+          0.08144112979956511
+        ],
+        "n_groups": 100,
+        "flags": []
+      }
+    },
+    "odd_view=no": {
+      "n": 2334,
+      "flooded": {
+        "k": 0,
+        "n": 2334,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.0016432251013071201
+        ],
+        "n_groups": 1326,
+        "flags": []
+      },
+      "not_dry": {
+        "k": 6,
+        "n": 2334,
+        "value": 0.002570694087403599,
+        "ci_group": [
+          0.0008496176720475786,
+          0.004706939547540753
+        ],
+        "ci_wilson_row": [
+          0.00117867218909437,
+          0.00559749262891554
+        ],
+        "n_groups": 1326,
+        "flags": []
+      }
+    },
+    "view_changed=yes": {
+      "n": 228,
+      "flooded": {
+        "k": 0,
+        "n": 228,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.016569933954907145
+        ],
+        "n_groups": 187,
+        "flags": []
+      },
+      "not_dry": {
+        "k": 0,
+        "n": 228,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.016569933954907145
+        ],
+        "n_groups": 187,
+        "flags": []
+      }
+    },
+    "view_changed=no": {
+      "n": 2245,
+      "flooded": {
+        "k": 2,
+        "n": 2245,
+        "value": 0.0008908685968819599,
+        "ci_group": [
+          0.0,
+          0.0026954480753505557
+        ],
+        "ci_wilson_row": [
+          0.00024433719264748245,
+          0.003242613600151797
+        ],
+        "n_groups": 1376,
+        "flags": []
+      },
+      "not_dry": {
+        "k": 11,
+        "n": 2245,
+        "value": 0.004899777282850779,
+        "ci_group": [
+          0.0017977528089887641,
+          0.008362952477979376
+        ],
+        "ci_wilson_row": [
+          0.002738148906427232,
+          0.00875292276353832
+        ],
+        "n_groups": 1376,
+        "flags": []
+      }
+    }
+  },
+  "live_test_cams": {
+    "night=yes": {
+      "n": 466,
+      "flooded": {
+        "k": 0,
+        "n": 466,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.008176372632819229
+        ],
+        "n_groups": 257,
+        "flags": []
+      },
+      "not_dry": {
+        "k": 2,
+        "n": 466,
+        "value": 0.004291845493562232,
+        "ci_group": [
+          0.0,
+          0.010893246187363835
+        ],
+        "ci_wilson_row": [
+          0.0011777442910197644,
+          0.015512135872848228
+        ],
+        "n_groups": 257,
+        "flags": []
+      }
+    },
+    "night=no": {
+      "n": 0,
+      "flooded": {
+        "k": 0,
+        "n": 0,
+        "value": NaN,
+        "ci_group": [
+          NaN,
+          NaN
+        ],
+        "ci_wilson_row": [
+          NaN,
+          NaN
+        ],
+        "n_groups": 0,
+        "flags": [
+          "n<30",
+          "groups<5"
+        ]
+      },
+      "not_dry": {
+        "k": 0,
+        "n": 0,
+        "value": NaN,
+        "ci_group": [
+          NaN,
+          NaN
+        ],
+        "ci_wilson_row": [
+          NaN,
+          NaN
+        ],
+        "n_groups": 0,
+        "flags": [
+          "n<30",
+          "groups<5"
+        ]
+      }
+    },
+    "glare=yes": {
+      "n": 282,
+      "flooded": {
+        "k": 0,
+        "n": 282,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.01343961130920062
+        ],
+        "n_groups": 168,
+        "flags": []
+      },
+      "not_dry": {
+        "k": 1,
+        "n": 282,
+        "value": 0.0035460992907801418,
+        "ci_group": [
+          0.0,
+          0.01098901098901099
+        ],
+        "ci_wilson_row": [
+          0.000626231989879154,
+          0.019810261508617914
+        ],
+        "n_groups": 168,
+        "flags": []
+      }
+    },
+    "glare=no": {
+      "n": 184,
+      "flooded": {
+        "k": 0,
+        "n": 184,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.020451273839234757
+        ],
+        "n_groups": 118,
+        "flags": []
+      },
+      "not_dry": {
+        "k": 1,
+        "n": 184,
+        "value": 0.005434782608695652,
+        "ci_group": [
+          0.0,
+          0.017241379310344827
+        ],
+        "ci_wilson_row": [
+          0.0009599929623922178,
+          0.030138549639459552
+        ],
+        "n_groups": 118,
+        "flags": []
+      }
+    },
+    "blurry=yes": {
+      "n": 38,
+      "flooded": {
+        "k": 0,
+        "n": 38,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.09181293258383999
+        ],
+        "n_groups": 27,
+        "flags": []
+      },
+      "not_dry": {
+        "k": 0,
+        "n": 38,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.09181293258383999
+        ],
+        "n_groups": 27,
+        "flags": []
+      }
+    },
+    "blurry=no": {
+      "n": 428,
+      "flooded": {
+        "k": 0,
+        "n": 428,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.008895854405874745
+        ],
+        "n_groups": 243,
+        "flags": []
+      },
+      "not_dry": {
+        "k": 2,
+        "n": 428,
+        "value": 0.004672897196261682,
+        "ci_group": [
+          0.0,
+          0.011933174224343675
+        ],
+        "ci_wilson_row": [
+          0.001282386865518595,
+          0.01687612310665639
+        ],
+        "n_groups": 243,
+        "flags": []
+      }
+    },
+    "grayscale=yes": {
+      "n": 84,
+      "flooded": {
+        "k": 0,
+        "n": 84,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.043733265332143306
+        ],
+        "n_groups": 44,
+        "flags": []
+      },
+      "not_dry": {
+        "k": 1,
+        "n": 84,
+        "value": 0.011904761904761904,
+        "ci_group": [
+          0.0,
+          0.03751186708860753
+        ],
+        "ci_wilson_row": [
+          0.002104528901587875,
+          0.06439699201788535
+        ],
+        "n_groups": 44,
+        "flags": []
+      }
+    },
+    "grayscale=no": {
+      "n": 382,
+      "flooded": {
+        "k": 0,
+        "n": 382,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.009956417348466313
+        ],
+        "n_groups": 224,
+        "flags": []
+      },
+      "not_dry": {
+        "k": 1,
+        "n": 382,
+        "value": 0.002617801047120419,
+        "ci_group": [
+          0.0,
+          0.008064516129032258
+        ],
+        "ci_wilson_row": [
+          0.0004622438330808354,
+          0.01467764777010555
+        ],
+        "n_groups": 224,
+        "flags": []
+      }
+    },
+    "overlay_text=yes": {
+      "n": 48,
+      "flooded": {
+        "k": 0,
+        "n": 48,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.0741026511527422
+        ],
+        "n_groups": 22,
+        "flags": []
+      },
+      "not_dry": {
+        "k": 0,
+        "n": 48,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.0741026511527422
+        ],
+        "n_groups": 22,
+        "flags": []
+      }
+    },
+    "overlay_text=no": {
+      "n": 418,
+      "flooded": {
+        "k": 0,
+        "n": 418,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.009106735798460844
+        ],
+        "n_groups": 238,
+        "flags": []
+      },
+      "not_dry": {
+        "k": 2,
+        "n": 418,
+        "value": 0.004784688995215311,
+        "ci_group": [
+          0.0,
+          0.012048920318956984
+        ],
+        "ci_wilson_row": [
+          0.001313088958859612,
+          0.017275879032917392
+        ],
+        "n_groups": 238,
+        "flags": []
+      }
+    },
+    "odd_view=yes": {
+      "n": 19,
+      "flooded": {
+        "k": 0,
+        "n": 19,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.16818436536845052
+        ],
+        "n_groups": 13,
+        "flags": [
+          "n<30"
+        ]
+      },
+      "not_dry": {
+        "k": 0,
+        "n": 19,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.16818436536845052
+        ],
+        "n_groups": 13,
+        "flags": [
+          "n<30"
+        ]
+      }
+    },
+    "odd_view=no": {
+      "n": 447,
+      "flooded": {
+        "k": 0,
+        "n": 447,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.008520952813582418
+        ],
+        "n_groups": 253,
+        "flags": []
+      },
+      "not_dry": {
+        "k": 2,
+        "n": 447,
+        "value": 0.0044742729306487695,
+        "ci_group": [
+          0.0,
+          0.011312217194570135
+        ],
+        "ci_wilson_row": [
+          0.0012278400720855268,
+          0.016165408465760138
+        ],
+        "n_groups": 253,
+        "flags": []
+      }
+    },
+    "view_changed=yes": {
+      "n": 51,
+      "flooded": {
+        "k": 0,
+        "n": 51,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.07004901388726806
+        ],
+        "n_groups": 39,
+        "flags": []
+      },
+      "not_dry": {
+        "k": 0,
+        "n": 51,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.07004901388726806
+        ],
+        "n_groups": 39,
+        "flags": []
+      }
+    },
+    "view_changed=no": {
+      "n": 415,
+      "flooded": {
+        "k": 0,
+        "n": 415,
+        "value": 0.0,
+        "ci_group": [
+          0.0,
+          0.0
+        ],
+        "ci_wilson_row": [
+          0.0,
+          0.009171963816392641
+        ],
+        "n_groups": 257,
+        "flags": []
+      },
+      "not_dry": {
+        "k": 2,
+        "n": 415,
+        "value": 0.004819277108433735,
+        "ci_group": [
+          0.0,
+          0.012106537530266344
+        ],
+        "ci_wilson_row": [
+          0.0013225883304342437,
+          0.017399525232306423
+        ],
+        "n_groups": 257,
+        "flags": []
+      }
+    }
+  },
+  "cams_with_multiple_frames": 844
+}
