@@ -79,23 +79,43 @@ def _center_crop_pad(img: Image.Image, size: int = CROP_SIZE):
     return canvas, (left, top, left + size, top + size)
 
 
-def _squash_resize(img: Image.Image, size: int) -> Image.Image:
-    return img.resize((size, size), Image.BILINEAR)
+def _tf_bilinear(arr: np.ndarray, nh: int, nw: int) -> np.ndarray:
+    # same as tf.image.resize(method="bilinear"): half-pixel centers, no antialias
+    h, w = arr.shape[:2]
+    ys = np.clip((np.arange(nh) + 0.5) * (h / nh) - 0.5, 0, h - 1)
+    xs = np.clip((np.arange(nw) + 0.5) * (w / nw) - 0.5, 0, w - 1)
+    y0, x0 = np.floor(ys).astype(int), np.floor(xs).astype(int)
+    y1, x1 = np.minimum(y0 + 1, h - 1), np.minimum(x0 + 1, w - 1)
+    wy, wx = (ys - y0)[:, None, None], (xs - x0)[None, :, None]
+    top = arr[y0][:, x0] * (1 - wx) + arr[y0][:, x1] * wx
+    bot = arr[y1][:, x0] * (1 - wx) + arr[y1][:, x1] * wx
+    return top * (1 - wy) + bot * wy
+
+
+def _to_training_uint8(arr: np.ndarray) -> np.ndarray:
+    # training clips then casts to uint8 (truncates)
+    return np.floor(np.clip(arr, 0.0, 255.0)).astype(np.float32)
+
+
+def _squash_resize(img: Image.Image, size: int) -> np.ndarray:
+    arr = np.asarray(img, dtype=np.float32)
+    return _to_training_uint8(_tf_bilinear(arr, size, size))
 
 
 def _letterbox_resize(img: Image.Image, size: int, pad_value=LETTERBOX_PAD_VALUE):
     """Long side -> size, pad to size x size with `pad_value`, centered.
-    Returns (canvas, content_box) where content_box is the (left, top, right,
-    bottom) sub-rectangle of the canvas that holds the real (non-pad) image.
+    Returns (canvas array, content_box) where content_box is the (left, top,
+    right, bottom) part of the canvas that holds the real image.
     """
     w, h = img.size
     scale = size / max(w, h)
     nw, nh = max(1, round(w * scale)), max(1, round(h * scale))
-    resized = img.resize((nw, nh), Image.BILINEAR)
-    canvas = Image.new("RGB", (size, size), pad_value)
+    resized = _tf_bilinear(np.asarray(img, dtype=np.float32), nh, nw)
+    canvas = np.empty((size, size, 3), dtype=np.float32)
+    canvas[:] = np.asarray(pad_value, dtype=np.float32)
     left, top = (size - nw) // 2, (size - nh) // 2
-    canvas.paste(resized, (left, top))
-    return canvas, (left, top, left + nw, top + nh)
+    canvas[top:top + nh, left:left + nw] = resized
+    return _to_training_uint8(canvas), (left, top, left + nw, top + nh)
 
 
 def preprocess(image, *, mode: str = MODE_CROP, size: int = CROP_SIZE, do_jpeg_roundtrip: bool = True):
@@ -123,14 +143,16 @@ def preprocess(image, *, mode: str = MODE_CROP, size: int = CROP_SIZE, do_jpeg_r
         }
         return arr, geom
 
-    src = jpeg_roundtrip(orig) if do_jpeg_roundtrip else orig
+    # match the processed training copies: short side -> 256 (lanczos) + jpeg q95
+    src = resize_short_side(orig, RESIZE_SHORT_SIDE)
+    if do_jpeg_roundtrip:
+        src = jpeg_roundtrip(src)
     if mode == MODE_SQUASH:
-        out = _squash_resize(src, size)
-        arr = np.asarray(out, dtype=np.float32)
+        arr = _squash_resize(src, size)
         geom = {"mode": mode, "size": size, "orig_size": (w0, h0)}
         return arr, geom
 
-    canvas, content_box = _letterbox_resize(src, size)
-    arr = np.asarray(canvas, dtype=np.float32)
+    # content box is in canvas coords; heatmap maps it back to orig_size
+    arr, content_box = _letterbox_resize(src, size)
     geom = {"mode": mode, "size": size, "orig_size": (w0, h0), "content_box_canvas": content_box}
     return arr, geom

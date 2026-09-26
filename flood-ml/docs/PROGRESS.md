@@ -365,3 +365,35 @@ The worker found and fixed a real bug on the way: adding new groups was reshuffl
 **Checks:** 348 tests pass, and the CI simulation gives 181 passed and 6 skipped.
 
 **Training** (`train.run_campaign_v3`, detached) is running. Night augmentation screened worse on val, so it's off. Candidates are crop224, letterbox224, and letterbox320. `train.select_v3` will then apply the pre-registered rule.
+
+## 2026-09-26: v3 selection. Shipped letterbox320 (old model kept in `models/v1/`)
+
+`train.select_v3` scored the candidates on the new val (n=1,502; wet is n=22, flagged) with the pre-registered rule. Eligible: crop224 and letterbox320. **Winner: letterbox320.** Details in `reports/eval/v3_candidates.json` (local).
+
+| Candidate | Precision | Recall | False floods on dry | on wet | on not_flooded | Live flooded (seen cams) | Dark / label-box flips |
+|---|---|---|---|---|---|---|---|
+| Old model, as deployed | 0.885 | 0.876 | 39/826 | 7/22 | 16/112 | 27 | 37 / 40 |
+| crop224 | 0.900 | 0.963 | 20/826 | 3/22 | 35/112 | 39 | 13 / 14 |
+| letterbox224 | 0.900 | 0.948 | 24/826 | 2/22 | 31/112 | 79 | 17 / 4 |
+| **letterbox320** | **0.901** | **0.972** | **12/826** | 2/22 | **44/112** | 42 | 23 / 14 |
+
+**Per source (false floods):**
+- Iowa dry: 16/32 → **0/32**.
+- 511GA labeled dry: 6/593 → 3/593.
+- FRED dry: 17 → 9.
+- **Worse:** AlleyFloodNet not_flooded 7 → 26 of 83, and EU not_flooded 9 → 18 of 29. These are rain-wet alleys and cleanup scenes.
+
+**Live false floods on seen 511GA cameras** (6,121 frames, 1,370 daytime): 29 → 42 frames (23 → 28 cameras). With 3-frame smoothing that's **1 → 2 alerts**. Both models false-alarm more in daylight.
+
+**Shipped:**
+- ONNX parity: max |Δprob| 7.7e-6 and 6.3e-6. Stage B CAM r=0.99999; Stage A CAM r=0.987 (Stage A's CAM is not used for display).
+- Latency: about 2.0 / 1.6 ms per stage.
+- New thresholds: tA 0.891, tB 0.298. `data_version v1-7251bbd2`.
+
+**Fix I made during shipping.** Inference letterbox didn't match training:
+- It skipped the 256 short-side + JPEG step.
+- It used PIL's antialiased bilinear, while training used TF's plain bilinear.
+
+It now mirrors training exactly, with a numpy TF-bilinear, the 256/JPEG step, and uint8 truncation. A regression test checks it against TF. Measured max |ΔpB| between inference and training fell from 0.186 to 0.045, with the remainder coming from JPEG decoder differences. Only NYSDOT raw files differ more, because training used header-cropped copies.
+
+**Next:** `src/eval` hardcodes crop-224 preprocessing, so it must be made mode-aware before the one test re-run.
