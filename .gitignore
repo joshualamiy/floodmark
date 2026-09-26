@@ -1,0 +1,25 @@
+# Python
+my_env/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Secrets
+.env
+
+# ML data and model artifacts
+flood-ml/data/
+flood-ml/models/
+*.onnx
+*.h5
+*.keras
+
+# Frontend
+node_modules/
+frontend/dist/
+frontend/build/
+
+# OS / tooling
+.DS_Store
+.claude/settings.local.json
+.claude/agents/
