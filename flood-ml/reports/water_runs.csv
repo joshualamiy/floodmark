@@ -1,0 +1,2 @@
+run_id,task,train_n,val_n,size,epochs,best_epoch,threshold,fred_iou,fred_dice,roadway_iou,roadway_dice,test_evaluated
+water_20260926_mnv3s320_v1,water_segmentation,308,186,320,8,7,0.3,0.3177101771021521,0.48221556245523695,0.8095267587163875,0.8947386434789573,False

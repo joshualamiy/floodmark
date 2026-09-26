@@ -11,6 +11,12 @@ Atlanta: is the road surface flooded?
 - Status logic: `dry` if `pA < tA`; else `flooded` if `pB >= tB`; else `wet`.
   See `docs/INFERENCE_API.md` for the full contract.
 
+The demo separates **flood-score attribution** from the optional **experimental
+predicted-water overlay**. Weak classifier evidence leaves the frame uncolored;
+raw attribution is opt-in for debugging. Heatmap colors are not pixel probabilities,
+water depth, or a road-safety assessment. The default classifier remains center-crop;
+full-frame experiments were not promoted (see `docs/phase_reports/improve_v2.md`).
+
 Full design history: `docs/PLAN.md`, `docs/PROGRESS.md`,
 `docs/phase_reports/`. Honest model limits: `reports/EVALUATION.md`.
 
@@ -84,8 +90,7 @@ PYTHONPATH=src ../my_env/bin/python -m train.train --stage b --variant mixed \
 
 `--mode` picks the input geometry: `crop` (short-side resize + crop, the
 original behavior), `squash` (whole frame -> SxS, aspect ignored), or
-`letterbox` (long side -> S, pad to SxS with mid-gray -- ships as of
-improve_v2, see `docs/phase_reports/improve_v2.md`, since a crop-only
+`letterbox` (long side -> S, pad to SxS with mid-gray; available as an experiment, see `docs/phase_reports/improve_v2.md`, since a crop-only
 pipeline only sees the middle of a wide 511GA frame). `--img-size` (S) must
 match between Stage A and Stage B training, `pipeline_eval`, `export_onnx`,
 and inference (`models/config.json`'s `preprocess` block).

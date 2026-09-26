@@ -11,7 +11,7 @@ Reads `<model_dir>/config.json`, creates two `onnxruntime` CPU
 `model_dir`. `model_dir` defaults to `flood-ml/models`, overridable by the
 `FLOODML_MODEL_DIR` env var, then by the `model_dir` argument (which wins).
 
-## `predict(image, models=None, heatmap=True, camera_id=None) -> Prediction`
+## `predict(image, models=None, heatmap=True, camera_id=None, *, raw_heatmap=False) -> Prediction`
 
 `image`: a `PIL.Image`, an RGB uint8 `ndarray` (HxWx3; RGBA and grayscale
 are also accepted and converted), raw JPEG/PNG bytes, or a path (`str` or
@@ -31,7 +31,11 @@ are identical to calling `predict()` per image.
 | `stage_a_probs` | `{dry, wet}` | Stage A's own two-class output |
 | `stage_b_probs` | `{not_flooded, flooded}` | Stage B's own two-class output (always computed) |
 | `stage_probabilities` | `{dry, wet, flooded}` | sums to 1; matches root `docs/API.md` |
-| `heatmap_png` | bytes or `None` | PNG overlay, `None` if `heatmap=False` |
+| `heatmap_png` | bytes or `None` | Display overlay; plain frame when evidence is suppressed; `None` if disabled |
+| `heatmap_status` | str | `shown`, `no_strong_evidence`, `unlocalized`, or `disabled` |
+| `heatmap_note` | str or `None` | Display explanation, including absence of strong evidence |
+| `heatmap_score` | float or `None` | `pA*pB`, used only for display strength; not pixel confidence |
+| `raw_heatmap_png` | bytes or `None` | Ungated relative Stage B attribution, opt-in via `raw_heatmap=True` |
 | `thresholds` | `{tA, tB}` | thresholds used for this call |
 | `model_version` | `{data_version, stage_a_run_id, stage_b_run_id}` | for logging/debugging |
 | `note` | str or `None` | set on `wet` predictions (see below), or by a blocklisted camera via `TemporalSmoother` |
@@ -54,8 +58,8 @@ stage_probabilities = {dry: 1-pA, wet: pA*(1-pB), flooded: pA*pB}
 confidence = stage_probabilities[status]
 ```
 
-Stage B always runs (it's cheap, ~1ms), regardless of Stage A's output, so
-the heatmap is always available even on frames Stage A calls dry.
+Stage B always runs, regardless of Stage A. Its raw attribution remains available
+for debugging; the user-facing overlay is suppressed when evidence is weak.
 
 ### What "wet" actually means
 
@@ -111,19 +115,39 @@ resized back onto the whole original frame.
 
 ## Heatmap (`src/inference/heatmap.py`)
 
-Always built from **Stage B's** `cam` (`ReLU(sum_k w_k*A_k)`, 7x7, raw --
-"where the model sees water"), regardless of `status`:
+The explanation is **Stage B flood-score attribution**, not water segmentation.
+The deployed classifier still produces a 7x7 map; interpolation adds no detail.
 
-1. Bilinear-upsample 7x7 -> 224x224 (the crop box).
-2. Per-image min-max normalize; if the CAM is ~all-zero, the heat is blank
-   (still returns a valid PNG -- just the plain frame, no color).
-3. Map the 224x224 crop box back onto the *original* input frame's
-   coordinates (inverting the resize scale factor); pixels outside the crop
-   get no heat.
-4. Colorize with a numpy jet-style colormap, alpha-blend (alpha 0.45) over
-   the original frame.
-5. Downscale (if needed) so the long side is <= 640px, aspect preserved.
-6. Encode as PNG bytes.
+- The default display requires `pA >= tA` and `pA*pB >= 0.5`. This is a fixed
+  presentation rule, not a new alert threshold or a calibrated water probability.
+- Weak evidence returns an uncolored frame with `heatmap_status = "no_strong_evidence"`.
+  This does **not** establish that there is no flooding.
+- A constant, invalid, or empty map has no spatial evidence: status `unlocalized`.
+- Otherwise, the positive CAM is scaled within the frame and its display strength
+  is multiplied by `pA*pB`. A transparent yellow/orange overlay preserves the image.
+- Crop mapping colors only pixels the classifier saw. Letterbox mapping removes
+  padding; squash mapping covers the frame. Output stays within a 640px long side.
+- `raw_heatmap=True` returns a separate ungated, per-image-scaled debug overlay.
+  It may be bright on dry frames. Use raw maps for explanation quality evaluation.
+- `to_dict(include_heatmap=True)` includes both requested images as base64.
+
+Classifier outputs, decision thresholds, and confidence are unchanged by rendering.
+
+## Optional water overlay (`src/inference/water.py`)
+
+`load_water_model(model_dir=None)` loads a separate local ONNX segmentation model,
+returning `None` if its artifacts are absent. `predict_water(image, model=...)`
+returns a dict with `water_overlay_png`, `water_mask_png`, `water_fraction`,
+`threshold`, `model_version`, and `note`. Both PNGs use the original image geometry.
+`water_overlay_png` is a transparent cyan RGBA layer; alpha-composite it onto the
+original image for display. `water_mask_png` is binary grayscale (0 or 255).
+`water_fraction` measures all image pixels, not road coverage or water depth.
+
+This is an experimental full-frame water prediction, **not flooded-road extent**.
+It does not distinguish a river beside a road from water covering the road, does
+not change classifier status, and is not used by temporal alert smoothing. The
+Gradio app offers it in a separate opt-in panel. Artifacts remain under ignored
+`models/water/`; see `docs/phase_reports/water_overlay.md` for measured limitations.
 
 ## `TemporalSmoother(n=3, blocklist=())`
 

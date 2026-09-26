@@ -274,3 +274,28 @@ and kept the deployed center-crop model.
 A worker is training a separate water segmentation baseline; another worker is
 measuring raw CAM mask overlap and occlusion behavior. Water masks are not road
 flooding extent, and their output will be separate from classifier explanations.
+
+## 2026-09-26: Review of outside (ChatGPT/Codex) changes
+
+The user had ChatGPT work in parallel and asked me to validate it. I reviewed every change.
+
+**What it did:**
+- **Commit `785fc38`: honest heatmap display.** The overlay shows only when `pA >= tA` and `pA*pB >= 0.5`; otherwise it returns the plain frame with a note. It uses a warm palette, and the raw attribution is opt-in (`raw_heatmap=True`). The classifier, thresholds, and status logic are unchanged, and the new `Prediction` fields are additive.
+- **Separate water-segmentation model** (`src/train/water_*`, `src/inference/water.py`, `models/water/`, gitignored):
+  - Trained on the FRED and Roadway Flooding train/val masks only. No Water Segmentation or Flood Master data went in, and there was no cross-split leakage.
+  - Threshold 0.3, chosen on val, with one test pass: pooled IoU 0.67 (Roadway 0.78, FRED 0.36), and false positives on all 7 empty FRED frames.
+  - It's opt-in in the demo and clearly labeled "not flooded-road extent".
+  - `water.py` imports only numpy, PIL, and onnxruntime, so it's CI-safe.
+- **Docs:** `README` and `INFERENCE_API.md` were updated to match. The `README` also fixed my wrong earlier claim that letterbox "ships".
+
+**Checks:**
+- 314 tests pass locally, and ruff is clean.
+- The CI simulation gives 167 passed and 5 skipped.
+- The smoke test runs `predict` and `predict_water` end to end.
+- The shipped classifier ONNX files and `config.json` are untouched.
+
+**My changes:**
+- Restored the concrete numbers in the demo's limits text (0.64 recall, 0.29 on the elevated video, wet 0/9), which had been softened to "misses some floods".
+- Deleted a stray tool session file, `flood-ml/:memory:.ses`.
+
+**Team note:** `main` now has the backend (PR #4). Its `model_run()` is still a stub. The real `predict()` matches its `model_version` keys exactly. Its adapter will need to map `stage_a_probs` → `stage_a_probabilities`, `stage_b_probs` → `stage_b_probabilities`, and `heatmap_png` → `heatmap_bytes`.
