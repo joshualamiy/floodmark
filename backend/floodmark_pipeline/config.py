@@ -115,6 +115,6 @@ class Settings:
             alert_rain_window_hours=int(number("ALERT_RAIN_WINDOW_HOURS", "6")),
             alert_storm_streak_frames=int(number("ALERT_STORM_STREAK_FRAMES", "2")),
             alert_fast_poll_seconds=int(number("ALERT_FAST_POLL_SECONDS", "60")),
-            alert_fast_poll_max=count("ALERT_FAST_POLL_MAX", "4"),
+            alert_fast_poll_max=count("ALERT_FAST_POLL_MAX", "0"),
             weather_timeout_seconds=float(number("WEATHER_TIMEOUT_SECONDS", "5", float)),
         )
