@@ -1,23 +1,159 @@
 <script lang="ts">
 	import { onMount } from "svelte";
+	import { createQuery } from "@tanstack/svelte-query";
 	import {
 		Map as MapLibreMap,
-		Marker,
-		Popup,
 		setWorkerUrl,
+		GeoJSONSource,
 		type StyleSpecification,
 	} from "maplibre-gl";
 	import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 	import "maplibre-gl/dist/maplibre-gl.css";
-	import cameras from "$lib/assets/cameras_25.json";
+	import { api } from "$lib/api";
+	import { useMapState } from "$lib/state/map.svelte";
+	import type { Camera } from "$lib/types/camera";
+	import Button from "./ui/button/button.svelte";
+	import MapFilter, {
+		type MapAvailabilityFilter,
+		type MapFilterOption as MapFilterValue,
+		type MapFreshnessFilter,
+	} from "./map-filter.svelte";
+	import Plus from "@lucide/svelte/icons/plus";
+	import Minus from "@lucide/svelte/icons/minus";
 
 	setWorkerUrl(maplibreWorkerUrl);
 
-	let mapContainer: HTMLDivElement;
+	const mapState = useMapState();
 	let map: MapLibreMap | undefined;
-	let markers: Marker[] = [];
-	let loading = $state(true);
-	let errorMessage = $state("");
+	let filter = $state<MapFilterValue>("all");
+	let freshness = $state<MapFreshnessFilter>("all");
+	let availability = $state<MapAvailabilityFilter>("all");
+	const camerasQuery = createQuery(() => ({
+		queryKey: ["cameras"],
+		queryFn: () => api().cameras.list(),
+	}));
+	let cameras = $derived(camerasQuery.data ?? []);
+	const cameraSourceId = "cameras";
+	const cameraLayerId = "camera-points";
+	const clusterLayerId = "camera-clusters";
+	const clusterCountLayerId = "camera-cluster-count";
+	type CameraFeatureCollection = {
+		type: "FeatureCollection";
+		features: Array<{
+			type: "Feature";
+			geometry: { type: "Point"; coordinates: [number, number] };
+			properties: {
+				id: string;
+				name: string;
+				location: string;
+				predictionStatus: string | null;
+			};
+		}>;
+	};
+
+	function cameraData(): CameraFeatureCollection {
+		return {
+			type: "FeatureCollection",
+			features: cameras.flatMap((camera) => {
+				if (!matchesFilters(camera)) return [];
+
+				const latitude = Number(camera.latitude);
+				const longitude = Number(camera.longitude);
+				if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return [];
+
+				return [
+					{
+						type: "Feature",
+						geometry: { type: "Point", coordinates: [longitude, latitude] },
+						properties: {
+							id: camera.id,
+							name: camera.name,
+							predictionStatus: camera.latestImage?.predictionStatus ?? null,
+							location: [camera.locationDescription, camera.roadway, camera.direction]
+								.filter(Boolean)
+								.join(" | "),
+						},
+					},
+				];
+			}),
+		};
+	}
+
+	function matchesFilter(predictionStatus: string | null): boolean {
+		if (filter === "all") return true;
+		if (filter === "flooded") return predictionStatus === "flooded";
+		if (filter === "wet") return predictionStatus === "wet";
+		return predictionStatus === "dry" || predictionStatus === null;
+	}
+
+	function matchesFilters(camera: Camera): boolean {
+		if (!matchesFilter(camera.latestImage?.predictionStatus ?? null)) return false;
+
+		const processingStatus = camera.latestImage?.processingStatus;
+		const hasProcessingError = processingStatus === "error";
+		const isUnavailable =
+			camera.latestImage === null ||
+			processingStatus === "skipped" ||
+			processingStatus === "unprocessed";
+
+		const capturedAt = camera.latestImage?.capturedAt;
+		const minutesSinceCapture = capturedAt
+			? (Date.now() - new Date(capturedAt).getTime()) / 60000
+			: null;
+		const hasUsableImage = camera.latestImage !== null && !isUnavailable && !hasProcessingError;
+		if (freshness !== "all" && !hasUsableImage) return false;
+		if (freshness === "recent" && (minutesSinceCapture === null || minutesSinceCapture >= 20))
+			return false;
+		if (freshness === "stale" && (minutesSinceCapture === null || minutesSinceCapture < 20))
+			return false;
+		if (freshness === "no-capture" && minutesSinceCapture !== null) return false;
+
+		if (availability === "error" && !hasProcessingError) return false;
+		if (availability === "unavailable" && !isUnavailable) return false;
+		if (availability === "available" && (isUnavailable || hasProcessingError)) return false;
+
+		return true;
+	}
+
+	function updateCameraSource() {
+		const currentMap = map;
+		if (!currentMap) return;
+
+		const source = currentMap.getSource(cameraSourceId);
+		if (source instanceof GeoJSONSource) void source.setData(cameraData());
+	}
+
+	function zoomIn() {
+		map?.zoomIn({ duration: 200 });
+	}
+
+	function zoomOut() {
+		map?.zoomOut({ duration: 200 });
+	}
+
+	function focusCamera(currentMap: MapLibreMap, camera: Camera) {
+		const latitude = Number(camera.latitude);
+		const longitude = Number(camera.longitude);
+		if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+
+		currentMap.easeTo({
+			center: [longitude, latitude],
+			zoom: Math.max(currentMap.getZoom(), 13),
+			duration: 400,
+		});
+	}
+
+	$effect(() => {
+		if (!mapState.loading) updateCameraSource();
+	});
+
+	$effect(() => {
+		const currentMap = map;
+		const camera = mapState.activeCamera;
+		if (!currentMap || !camera || mapState.loading) return;
+
+		focusCamera(currentMap, camera);
+	});
 
 	onMount(() => {
 		let cancelled = false;
@@ -39,9 +175,23 @@
 
 				source.url = "https://tiles.openfreemap.org/planet";
 				style.glyphs = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf";
+				for (const layer of style.layers) {
+					const layerId = layer.id;
+					const isRoadLayer =
+						layerId.startsWith("highway-") ||
+						layerId.startsWith("bridge-") ||
+						layerId.startsWith("tunnel-") ||
+						layerId.startsWith("road_");
+					if (!isRoadLayer || layer.type !== "line" || !("paint" in layer) || !layer.paint)
+						continue;
 
-				map = new MapLibreMap({
-					container: mapContainer,
+					const paint = layer.paint as { "line-color"?: unknown };
+					if (!("line-color" in paint)) continue;
+					paint["line-color"] = layerId.includes("casing") ? "#6f8797" : "#c3d2db";
+				}
+
+				const currentMap = new MapLibreMap({
+					container: mapState.container!,
 					style,
 					maxBounds: [
 						[-85.2, 33.1],
@@ -49,46 +199,138 @@
 					],
 					renderWorldCopies: false,
 					attributionControl: {
-						customAttribution:
-							'<a href="https://openfreemap.org/">OpenFreeMap</a> | ' +
-							'<a href="https://openmaptiles.org/">OpenMapTiles</a> | ' +
-							'<a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
+						customAttribution: '<a href="https://511ga.org//">511ga.org</a>',
 					},
-					center: [-84.388, 33.749],
-					zoom: 10,
+					center: mapState.position,
+					zoom: mapState.zoom,
 				});
+				map = currentMap;
 
-				map.on("load", () => {
-					markers = cameras
-						.filter(
-							({ Latitude, Longitude }) => Number.isFinite(Latitude) && Number.isFinite(Longitude),
-						)
-						.map((camera) => {
-							const marker = new Marker({ color: "#2563eb" })
-								.setLngLat([camera.Longitude, camera.Latitude])
-								.setPopup(new Popup({ offset: 24 }).setText(`${camera.Name}\n${camera.Location}`))
-								.addTo(map!);
+				currentMap.on("load", () => {
+					currentMap.addSource(cameraSourceId, {
+						type: "geojson",
+						data: cameraData(),
+						cluster: true,
+						clusterMaxZoom: 14,
+						clusterRadius: 50,
+						clusterProperties: {
+							hasFlooded: ["max", ["case", ["==", ["get", "predictionStatus"], "flooded"], 1, 0]],
+							hasWet: ["max", ["case", ["==", ["get", "predictionStatus"], "wet"], 1, 0]],
+						},
+					});
+					currentMap.addLayer({
+						id: clusterLayerId,
+						type: "circle",
+						source: cameraSourceId,
+						filter: ["has", "point_count"],
+						paint: {
+							"circle-color": [
+								"case",
+								[">", ["coalesce", ["get", "hasFlooded"], 0], 0],
+								"#dc2626",
+								[">", ["coalesce", ["get", "hasWet"], 0], 0],
+								"#facc15",
+								"#00A6AD",
+							],
+							"circle-radius": ["step", ["get", "point_count"], 16, 100, 20, 750, 24],
+							"circle-stroke-color": "#ffffff",
+							"circle-stroke-width": 2,
+						},
+					});
+					currentMap.addLayer({
+						id: clusterCountLayerId,
+						type: "symbol",
+						source: cameraSourceId,
+						filter: ["has", "point_count"],
+						layout: {
+							"text-field": ["get", "point_count_abbreviated"],
+							"text-size": 12,
+						},
+						paint: { "text-color": "#ffffff" },
+					});
+					currentMap.addLayer({
+						id: cameraLayerId,
+						type: "circle",
+						source: cameraSourceId,
+						filter: ["!", ["has", "point_count"]],
+						paint: {
+							"circle-color": [
+								"case",
+								["==", ["get", "predictionStatus"], "flooded"],
+								"#dc2626",
+								["==", ["get", "predictionStatus"], "wet"],
+								"#facc15",
+								"#00A6AD",
+							],
+							"circle-radius": 10,
+							"circle-stroke-color": "#ffffff",
+							"circle-stroke-width": 2,
+						},
+					});
 
-							return marker;
-						});
-
-					loading = false;
+					currentMap.on("click", clusterLayerId, (event) => {
+						const feature = event.features?.[0];
+						if (!feature) return;
+						const coordinates = feature.geometry.coordinates as [number, number];
+						const clusterId = feature.properties?.cluster_id;
+						if (clusterId === undefined) return;
+						const source = currentMap.getSource(cameraSourceId);
+						if (source instanceof GeoJSONSource) {
+							void source.getClusterExpansionZoom(clusterId).then((zoom) => {
+								currentMap.easeTo({ center: coordinates, zoom });
+							});
+						}
+					});
+					currentMap.on("click", cameraLayerId, (event) => {
+						const feature = event.features?.[0];
+						if (!feature) return;
+						const properties = feature.properties as {
+							id: string;
+						};
+						mapState.setActiveCameraId(properties.id);
+					});
+					currentMap.on(
+						"mouseenter",
+						clusterLayerId,
+						() => (currentMap.getCanvas().style.cursor = "pointer"),
+					);
+					currentMap.on(
+						"mouseleave",
+						clusterLayerId,
+						() => (currentMap.getCanvas().style.cursor = ""),
+					);
+					currentMap.on(
+						"mouseenter",
+						cameraLayerId,
+						() => (currentMap.getCanvas().style.cursor = "pointer"),
+					);
+					currentMap.on(
+						"mouseleave",
+						cameraLayerId,
+						() => (currentMap.getCanvas().style.cursor = ""),
+					);
+					mapState.setLoading(false);
 				});
-				map.on("error", (event) => {
+				currentMap.on("moveend", () => {
+					const center = currentMap.getCenter();
+					mapState.setPosition([center.lng, center.lat]);
+					mapState.setZoom(currentMap.getZoom());
+				});
+				currentMap.on("error", (event) => {
 					const message = event.error?.message ?? "MapLibre could not render the map";
 					console.error("MapLibre error", event.error);
-					if (loading) errorMessage = message;
+					if (mapState.loading) mapState.setError(new Error(message));
 				});
 			})
 			.catch((error: unknown) => {
 				console.error("Map style failed to load", error);
-				loading = false;
-				errorMessage = error instanceof Error ? error.message : "Unable to load the map";
+				mapState.setLoading(false);
+				mapState.setError(error);
 			});
 
 		return () => {
 			cancelled = true;
-			markers.forEach((marker) => marker.remove());
+			mapState.setLoading(true);
 			map?.remove();
 		};
 	});
@@ -96,22 +338,19 @@
 
 <div class="relative h-full min-h-96 w-full">
 	<div
-		bind:this={mapContainer}
+		bind:this={mapState.container}
 		class="h-full w-full"
 		role="application"
 		aria-label="Interactive map of Atlanta"
 	></div>
 
-	{#if loading && !errorMessage}
-		<div class="absolute top-4 left-4 z-[1] rounded-lg bg-white/95 px-4 py-3 shadow-lg">
-			Loading map...
-		</div>
-	{:else if errorMessage}
-		<div
-			class="absolute top-4 left-4 z-[1] rounded-lg bg-white/95 px-4 py-3 text-red-700 shadow-lg"
-			role="alert"
-		>
-			{errorMessage}
-		</div>
-	{/if}
+	<div class="absolute bottom-6 left-6 flex flex-col gap-2">
+		<MapFilter bind:filter bind:freshness bind:availability />
+		<Button size="icon" class="rounded-full" aria-label="Zoom in" onclick={zoomIn}>
+			<Plus />
+		</Button>
+		<Button size="icon" class="rounded-full" aria-label="Zoom out" onclick={zoomOut}>
+			<Minus />
+		</Button>
+	</div>
 </div>

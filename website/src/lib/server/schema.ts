@@ -6,6 +6,7 @@ import {
 	numeric,
 	pgEnum,
 	pgTable,
+	primaryKey,
 	text,
 	timestamp,
 	uniqueIndex,
@@ -57,8 +58,8 @@ export const images = pgTable(
 			.references(() => cameras.id, { onDelete: "cascade" }),
 
 		sourceUrl: text("source_url"),
-		r2Bucket: text("r2_bucket").notNull(),
-		r2Key: text("r2_key").notNull(),
+		s3Bucket: text("s3_bucket").notNull(),
+		s3Key: text("s3_key").notNull(),
 		contentType: text("content_type"),
 		byteSize: integer("byte_size"),
 		sha256: text("sha256"),
@@ -73,7 +74,7 @@ export const images = pgTable(
 		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
-		uniqueIndex("images_r2_object_unique").on(table.r2Bucket, table.r2Key),
+		uniqueIndex("images_r2_object_unique").on(table.s3Bucket, table.s3Key),
 		index("images_camera_captured_idx").on(table.cameraId, table.capturedAt),
 		index("images_processing_queue_idx").on(table.processingStatus, table.createdAt),
 		index("images_sha256_idx").on(table.sha256),
@@ -108,7 +109,7 @@ export const predictions = pgTable(
 			.notNull(),
 		thresholds: jsonb("thresholds").$type<{ tA: number; tB: number }>().notNull(),
 		note: text("note"),
-		heatmapR2Key: text("heatmap_r2_key"),
+		heatmapS3Key: text("heatmap_r2_key"),
 
 		inferenceStartedAt: timestamp("inference_started_at", { withTimezone: true }),
 		inferenceCompletedAt: timestamp("inference_completed_at", { withTimezone: true }),
@@ -117,5 +118,37 @@ export const predictions = pgTable(
 	(table) => [
 		uniqueIndex("predictions_image_model_unique").on(table.imageId, table.modelVersion),
 		index("predictions_status_idx").on(table.status),
+	],
+);
+
+export const notificationEmails = pgTable(
+	"notification_emails",
+	{
+		id: uuid("id").defaultRandom().primaryKey(),
+		email: text("email").notNull(),
+		verifiedAt: timestamp("verified_at", { withTimezone: true }),
+		confirmed: boolean("confirmed").notNull().default(false),
+		verificationTokenHash: text("verification_token_hash"),
+		verificationTokenExpiresAt: timestamp("verification_token_expires_at", { withTimezone: true }),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+	},
+	(table) => [uniqueIndex("notification_emails_email_unique").on(table.email)],
+);
+
+export const cameraNotificationEmails = pgTable(
+	"camera_notification_emails",
+	{
+		cameraId: uuid("camera_id")
+			.notNull()
+			.references(() => cameras.id, { onDelete: "cascade" }),
+		emailId: uuid("email_id")
+			.notNull()
+			.references(() => notificationEmails.id, { onDelete: "cascade" }),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+	},
+	(table) => [
+		primaryKey({ columns: [table.cameraId, table.emailId], name: "camera_notification_emails_pk" }),
+		index("camera_notification_emails_email_idx").on(table.emailId),
 	],
 );

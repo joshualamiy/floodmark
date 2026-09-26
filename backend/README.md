@@ -1,10 +1,10 @@
 # Floodmark Pipeline
 
-The pipeline schedules active cameras every five minutes, queues complete captures in Redis/ARQ, stores normalized JPEGs in Cloudflare R2, and writes image and prediction records directly to PostgreSQL.
+The pipeline schedules active cameras every five minutes, queues complete captures in Redis/ARQ, stores normalized JPEGs in S3-compatible object storage, and writes image and prediction records directly to PostgreSQL.
 
 ## Run
 
-1. Copy `.env.example` to `.env` and provide the PostgreSQL and R2 credentials.
+1. Copy `.env.example` to `.env` and provide the PostgreSQL and S3-compatible storage credentials.
 2. Start the scheduler, worker, and Redis with `docker compose up --build` from this directory.
 3. Scale workers with `docker compose up --scale worker=2` after benchmarking the configured downstream limits.
 
@@ -23,7 +23,7 @@ Set `DEBUG=true` to log capture start/completion timing. Failures are always log
 - The MVP `model_run()` is deterministic from normalized image bytes. Replace it with ONNX session inference without changing the prediction persistence contract.
 - A job runs at most three times. ARQ retains its final result for `ARQ_RESULT_TTL_SECONDS` (15 minutes by default), and a database image row is marked `error` with its final message when one exists.
 
-No image bytes are written to a local volume. An R2 object can exist without an image row if PostgreSQL fails after upload; reconciliation is intentionally deferred beyond this MVP.
+No image bytes are written to a local volume. An S3 object can exist without an image row if PostgreSQL fails after upload; reconciliation is intentionally deferred beyond this MVP.
 
 ## Recovering From An Older Queue Layout
 
