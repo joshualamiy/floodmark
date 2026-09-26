@@ -37,5 +37,17 @@ services:
       timeout: 3s
       retries: 3
 
+  # Replays scripted frames for DEMO cameras. Start with: docker compose --profile demo up -d
+  demo:
+    profiles: ["demo"]
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    command: python -m floodmark_pipeline.demo_replay
+    environment:
+      DEMO_FRAMES_DIR: /frames
+    volumes:
+      - ./demo_frames:/frames:ro
+
 volumes:
   redis-data:

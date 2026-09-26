@@ -34,6 +34,29 @@ Set `DEBUG=true` to log capture start/completion timing. Failures are always log
 
 No image bytes are written to a local volume. An S3 object can exist without an image row if PostgreSQL fails after upload; reconciliation is intentionally deferred beyond this MVP.
 
+## Demo: a simulated storm
+
+A camera with `source = 'DEMO'` runs a scripted sequence through the real pipeline: the real model, the baseline and streak rules, the map, and the email alert. Only two things are simulated, and both are labeled: its frames come from the replay service instead of 511GA, and its rain check is answered with `DEMO_RAIN_MM` (a storm), so it confirms in `ALERT_STORM_STREAK_FRAMES` frames. Every alert note on it ends with `demo replay with simulated storm`.
+
+1. Put frames in `demo_frames/demo-1/` (see `demo_frames/README.md`): a few dry frames, then flood photos.
+2. Insert the camera. Pick a real flood-prone spot for the pin and say it is simulated in the name:
+   ```sql
+   INSERT INTO cameras (source, source_camera_id, name, roadway, location_description,
+                        latitude, longitude, source_view_id, source_url, is_active)
+   VALUES ('DEMO', 'demo-1', 'Peachtree Creek at Northside Dr (SIMULATED)', 'Northside Dr',
+           'Scripted storm replay for the demo', 33.8110, -84.4090, 'demo-1',
+           'http://demo:8080/demo-1', true);
+   ```
+3. Start the replay service next to the worker: `docker compose --profile demo up -d --build`.
+4. Fire captures faster than the schedule, one every 20 seconds:
+   ```sh
+   docker compose run --rm worker python -m floodmark_pipeline.demo fire --every 20 --count 8
+   ```
+   Watch the camera on the map: dry, then `wet` ("water frame 1/2"), then `flooded` with the heatmap, and the email to anyone subscribed to it. Clicking the camera shows the frame it was judged on; the heatmap toggle shows what the model looked at.
+5. To run it again: `curl http://localhost:8080/reset/demo-1` from inside the compose network (`docker compose exec demo python -c "import urllib.request;print(urllib.request.urlopen('http://localhost:8080/reset/demo-1').read())"`), or restart the demo service.
+
+Say "simulation" once on camera and keep the SIMULATED label visible. The model output is real; only the storm and the camera feed are scripted.
+
 ## Recovering From An Older Queue Layout
 
 If a prior deployment put `cron:schedule_captures` jobs on the capture queue, remove the stale job before restarting. Substitute the job ID from the worker error:

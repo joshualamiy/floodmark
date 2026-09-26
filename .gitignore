@@ -23,3 +23,7 @@ frontend/build/
 .DS_Store
 .claude/settings.local.json
 .claude/agents/
+
+# demo replay frames are local media, not source
+backend/demo_frames/*
+!backend/demo_frames/README.md
