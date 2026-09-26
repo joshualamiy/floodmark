@@ -1,5 +1,6 @@
 import type { ApiResponse } from "$lib/types/api";
 import type { Camera } from "$lib/types/camera";
+import type { HistoryPage } from "$lib/types/history";
 
 export type ApiFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
@@ -25,11 +26,26 @@ export function api(fetcher: ApiFetch = globalThis.fetch.bind(globalThis)) {
 		camera(id: string) {
 			return {
 				get: () => request<Camera | null>(fetcher, `/api/cameras/${encodeURIComponent(id)}/get`),
-				snapshot: (heatmap = false) =>
+				snapshot: (heatmap = false, imageId?: string) =>
 					request<{ url: string; expiresAt: string }>(
 						fetcher,
-						`/api/cameras/${encodeURIComponent(id)}/snapshot?heatmap=${heatmap}`,
+						`/api/cameras/${encodeURIComponent(id)}/snapshot?heatmap=${heatmap}${imageId ? `&imageId=${encodeURIComponent(imageId)}` : ""}`,
 					),
+				history: (
+					options: { limit?: number; cursor?: string | null; from?: string; to?: string } = {},
+				) => {
+					const search = new URLSearchParams();
+					if (options.limit !== undefined) search.set("limit", String(options.limit));
+					if (options.cursor) search.set("cursor", options.cursor);
+					if (options.from) search.set("from", options.from);
+					if (options.to) search.set("to", options.to);
+
+					const query = search.toString();
+					return request<HistoryPage>(
+						fetcher,
+						`/api/cameras/${encodeURIComponent(id)}/history${query ? `?${query}` : ""}`,
+					);
+				},
 			};
 		},
 		cameras: {

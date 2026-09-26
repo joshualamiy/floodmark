@@ -3,6 +3,7 @@
 	import type { Camera } from "$lib/types/camera";
 	import { createQuery } from "@tanstack/svelte-query";
 	import { Button } from "$components/ui/button";
+	import CameraHistory from "$components/camera-history.svelte";
 	import SquareArrowOutUpRight from "@lucide/svelte/icons/square-arrow-out-up-right";
 	import ArrowLeft from "@lucide/svelte/icons/arrow-left";
 	import MapPin from "@lucide/svelte/icons/map-pin";
@@ -78,7 +79,7 @@
 				</Toggle>
 			{/snippet}
 		</Tooltip.Trigger>
-		<Tooltip.Content side="bottom">Switch to heatmap view.</Tooltip.Content>
+		<Tooltip.Content side="bottom">Switch to heat map view.</Tooltip.Content>
 	</Tooltip.Root>
 {/snippet}
 
@@ -95,7 +96,7 @@
 			<Tooltip.Trigger>
 				<Badge variant="warning">{age} ago</Badge>
 			</Tooltip.Trigger>
-			<Tooltip.Content>Last time this camera was processed was {age} ago.</Tooltip.Content>
+			<Tooltip.Content>Last processed {age} ago.</Tooltip.Content>
 		</Tooltip.Root>
 	{/if}
 {/snippet}
@@ -163,6 +164,7 @@
 				</div>
 				{@render predictionStatus()}
 			</div>
+			<CameraHistory cameraId={camera.id} cameraName={camera.name} />
 		</div>
 	</div>
 

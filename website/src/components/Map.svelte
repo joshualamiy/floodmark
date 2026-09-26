@@ -11,7 +11,13 @@
 	import "maplibre-gl/dist/maplibre-gl.css";
 	import { api } from "$lib/api";
 	import { useMapState } from "$lib/state/map.svelte";
+	import type { Camera } from "$lib/types/camera";
 	import Button from "./ui/button/button.svelte";
+	import MapFilter, {
+		type MapAvailabilityFilter,
+		type MapFilterOption as MapFilterValue,
+		type MapFreshnessFilter,
+	} from "./map-filter.svelte";
 	import Plus from "@lucide/svelte/icons/plus";
 	import Minus from "@lucide/svelte/icons/minus";
 
@@ -19,6 +25,9 @@
 
 	const mapState = useMapState();
 	let map: MapLibreMap | undefined;
+	let filter = $state<MapFilterValue>("all");
+	let freshness = $state<MapFreshnessFilter>("all");
+	let availability = $state<MapAvailabilityFilter>("all");
 	const camerasQuery = createQuery(() => ({
 		queryKey: ["cameras"],
 		queryFn: () => api().cameras.list(),
@@ -46,6 +55,8 @@
 		return {
 			type: "FeatureCollection",
 			features: cameras.flatMap((camera) => {
+				if (!matchesFilters(camera)) return [];
+
 				const latitude = Number(camera.latitude);
 				const longitude = Number(camera.longitude);
 				if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return [];
@@ -68,6 +79,42 @@
 		};
 	}
 
+	function matchesFilter(predictionStatus: string | null): boolean {
+		if (filter === "all") return true;
+		if (filter === "flooded") return predictionStatus === "flooded";
+		if (filter === "wet") return predictionStatus === "wet";
+		return predictionStatus === "dry" || predictionStatus === null;
+	}
+
+	function matchesFilters(camera: Camera): boolean {
+		if (!matchesFilter(camera.latestImage?.predictionStatus ?? null)) return false;
+
+		const processingStatus = camera.latestImage?.processingStatus;
+		const hasProcessingError = processingStatus === "error";
+		const isUnavailable =
+			camera.latestImage === null ||
+			processingStatus === "skipped" ||
+			processingStatus === "unprocessed";
+
+		const capturedAt = camera.latestImage?.capturedAt;
+		const minutesSinceCapture = capturedAt
+			? (Date.now() - new Date(capturedAt).getTime()) / 60000
+			: null;
+		const hasUsableImage = camera.latestImage !== null && !isUnavailable && !hasProcessingError;
+		if (freshness !== "all" && !hasUsableImage) return false;
+		if (freshness === "recent" && (minutesSinceCapture === null || minutesSinceCapture >= 20))
+			return false;
+		if (freshness === "stale" && (minutesSinceCapture === null || minutesSinceCapture < 20))
+			return false;
+		if (freshness === "no-capture" && minutesSinceCapture !== null) return false;
+
+		if (availability === "error" && !hasProcessingError) return false;
+		if (availability === "unavailable" && !isUnavailable) return false;
+		if (availability === "available" && (isUnavailable || hasProcessingError)) return false;
+
+		return true;
+	}
+
 	function updateCameraSource() {
 		const currentMap = map;
 		if (!currentMap) return;
@@ -84,8 +131,28 @@
 		map?.zoomOut({ duration: 200 });
 	}
 
+	function focusCamera(currentMap: MapLibreMap, camera: Camera) {
+		const latitude = Number(camera.latitude);
+		const longitude = Number(camera.longitude);
+		if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
+
+		currentMap.easeTo({
+			center: [longitude, latitude],
+			zoom: Math.max(currentMap.getZoom(), 13),
+			duration: 400,
+		});
+	}
+
 	$effect(() => {
 		if (!mapState.loading) updateCameraSource();
+	});
+
+	$effect(() => {
+		const currentMap = map;
+		const camera = mapState.activeCamera;
+		if (!currentMap || !camera || mapState.loading) return;
+
+		focusCamera(currentMap, camera);
 	});
 
 	onMount(() => {
@@ -148,6 +215,7 @@
 						clusterRadius: 50,
 						clusterProperties: {
 							hasFlooded: ["max", ["case", ["==", ["get", "predictionStatus"], "flooded"], 1, 0]],
+							hasWet: ["max", ["case", ["==", ["get", "predictionStatus"], "wet"], 1, 0]],
 						},
 					});
 					currentMap.addLayer({
@@ -160,6 +228,8 @@
 								"case",
 								[">", ["coalesce", ["get", "hasFlooded"], 0], 0],
 								"#dc2626",
+								[">", ["coalesce", ["get", "hasWet"], 0], 0],
+								"#facc15",
 								"#00A6AD",
 							],
 							"circle-radius": ["step", ["get", "point_count"], 16, 100, 20, 750, 24],
@@ -188,6 +258,8 @@
 								"case",
 								["==", ["get", "predictionStatus"], "flooded"],
 								"#dc2626",
+								["==", ["get", "predictionStatus"], "wet"],
+								"#facc15",
 								"#00A6AD",
 							],
 							"circle-radius": 10,
@@ -212,15 +284,9 @@
 					currentMap.on("click", cameraLayerId, (event) => {
 						const feature = event.features?.[0];
 						if (!feature) return;
-						const coordinates = feature.geometry.coordinates as [number, number];
 						const properties = feature.properties as {
 							id: string;
 						};
-						const targetZoom = Math.max(currentMap.getZoom(), 14);
-						currentMap.once("moveend", () => {
-							currentMap.zoomTo(targetZoom, { duration: 300 });
-						});
-						currentMap.panTo(coordinates, { duration: 400 });
 						mapState.setActiveCameraId(properties.id);
 					});
 					currentMap.on(
@@ -279,6 +345,7 @@
 	></div>
 
 	<div class="absolute bottom-6 left-6 flex flex-col gap-2">
+		<MapFilter bind:filter bind:freshness bind:availability />
 		<Button size="icon" class="rounded-full" aria-label="Zoom in" onclick={zoomIn}>
 			<Plus />
 		</Button>

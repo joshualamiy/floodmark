@@ -1,7 +1,7 @@
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { error } from "@sveltejs/kit";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { api } from "$lib/server/api";
 import { getDB } from "$lib/server/database";
@@ -17,6 +17,7 @@ export const GET = api({
 	schema: {
 		params: z.object({ id: z.uuid() }),
 		query: z.object({
+			imageId: z.uuid().optional(),
 			heatmap: z
 				.enum(["true", "false"])
 				.default("false")
@@ -37,7 +38,11 @@ export const GET = api({
 				capturedAt: images.capturedAt,
 			})
 			.from(images)
-			.where(eq(images.cameraId, params.id))
+			.where(
+				query.imageId
+					? and(eq(images.cameraId, params.id), eq(images.id, query.imageId))
+					: eq(images.cameraId, params.id),
+			)
 			.orderBy(desc(images.capturedAt), desc(images.fetchedAt))
 			.limit(1);
 
