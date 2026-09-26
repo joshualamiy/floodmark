@@ -14,9 +14,9 @@ Atlanta: is the road surface flooded?
 The demo separates **flood-score attribution** from the optional **experimental
 predicted-water overlay**. Weak classifier evidence leaves the frame uncolored;
 raw attribution is opt-in for debugging. Heatmap colors are not pixel probabilities,
-water depth, or a road-safety assessment. The shipped classifier (v3) sees the whole
-frame (letterbox to 320 px); the older center-crop model is kept in `models/v1/`
-(see `docs/phase_reports/v3_retrain.md`).
+water depth, or a road-safety assessment. The shipped classifier (v4) sees the whole
+frame (letterbox to 320 px) and adds daytime Atlanta frames; v3 is kept in `models/v3/`
+and the older center-crop model in `models/v1/`.
 
 `docs/` (plan, progress log, dataset notes, inference API, backend handoff,
 phase reports) is kept local and not in the repo; ask the ML side for it. Honest
@@ -196,14 +196,15 @@ public repo (see "Where the models live" below).
 
 ## Known limits
 
-Full detail: `reports/EVALUATION.md` (v3 re-evaluation on top, v1 below). In short, for v3 on held-out test data:
+Full detail: `reports/EVALUATION.md` (v4 on top, then v3, then v1). In short, for v4 on held-out test data:
 
-- Flood recall 0.89 (483/542), precision 0.89. On the original test set (same rows as v1's evaluation): recall 0.75, up from 0.64, and precision 0.99.
-- Elevated fixed-camera flood video: 0.55 recall (34/62, one video). It depends on the low Stage B threshold and breaks when a 511GA-style title bar is overlaid or the frame is darkened.
-- **Wet pavement is not detected** (1/31 true wet frames get status "wet"). Rain-wet streets can read as **flooded**: 41% of test "not flooded" street photos were called flooded, and 6 of 30 real wet traffic-camera frames. Expect false alerts in the first real rain.
-- Live Atlanta cameras (dry weather): 0/325 labeled dry frames called flooded, but about 1.4% of daytime live frames were (hazy lens at sunrise, glare, a gated booth, a bridge pier). Use `TemporalSmoother` (3 in a row) and the blocklist (11372, 17397, 13750).
+- Flood recall 0.85 (463/542), precision 0.91 (463/507). v3 caught more floods (483/542) but also more false ones. On the original test set: recall 0.68 (115/168, v3 0.75), precision 1.00.
+- Elevated fixed-camera flood video: 0.34 recall (21/62, one video; v3 0.55). A real 511GA title bar pasted on flood photos hides many floods.
+- **Wet pavement is not detected** (6/31 true wet frames get status "wet"). Rain-wet streets can read as **flooded**: 38% of test "not flooded" street photos (43/112). Expect false alerts in the first real rain.
+- Live Atlanta cameras, held-out, one dry day: 0/1,099 daytime and 2/779 night frames called flooded (v3: 21/1,099 daytime). Not yet tested on a real Atlanta flood or a rainy day.
+- Night infrared views with no road (cameras 13539, 14188) can be called flooded. Use `TemporalSmoother` (3 in a row) and the blocklist (11372, 17397, 13750).
+- `CameraMoveDetector` builds its reference from each camera's first frames (night here), so it flags ~27% of daytime frames as moved.
 - `status == "wet"` means water detected below the flood alert threshold (possible flooding), not wet pavement.
-- Never tested on a real flooded or rain-wet Atlanta frame (none exist yet), and no afternoon/evening light yet.
 
 ## Where the models live
 
@@ -211,7 +212,7 @@ Full detail: `reports/EVALUATION.md` (v3 re-evaluation on top, v1 below). In sho
 **not committed** (`models/` is gitignored) -- both stages are fine-tuned in
 part on FRED (CC BY-NC-SA 4.0) and the Flood Master Database (non-commercial,
 no-redistribution), so the weights can't be published in this public repo.
-Get them from the team's private share (`models/handoff/floodmark_models_v3.zip`; see
+Get them from the team's private share (`models/handoff/floodmark_models_v4.zip`; see
 `docs/BACKEND_HANDOFF.md`). Some training images are CC BY-SA, which is another reason
 the weights stay private.
 
