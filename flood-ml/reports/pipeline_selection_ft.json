@@ -1,0 +1,94 @@
+{
+  "stage_a_run": "20260926-031525_a_mobilenetv3small",
+  "variants": {
+    "spec": {
+      "run_id": "20260926-031202_bspec_mobilenetv3small",
+      "report": {
+        "tA": 0.8161483407020569,
+        "tB": 0.2464289516210556,
+        "tB_note": "lowest tB reaching pipeline precision>=0.9",
+        "n_val": 665,
+        "stage_a_auc_roc": 0.9906126366551958,
+        "stage_a_auc_pr": 0.984771048657264,
+        "stage_a_accuracy": 0.9639097744360903,
+        "pipeline_precision_flooded": 0.9027027027027027,
+        "pipeline_recall_flooded": 0.9940476190476191,
+        "pipeline_precision_num": 167,
+        "pipeline_precision_den": 185,
+        "pipeline_recall_num": 167,
+        "pipeline_recall_den": 168,
+        "false_alarm_dry_rate": 0.03665987780040733,
+        "false_alarm_dry_num": 18,
+        "false_alarm_dry_den": 491,
+        "false_alarm_wet_rate": 0.0,
+        "false_alarm_wet_num": 0,
+        "false_alarm_wet_den": 6,
+        "small_sample_flags": [
+          "false_alarm_wet_rate rests on only 6 val examples (<30)"
+        ],
+        "confusion": {
+          "dry": {
+            "dry": 472,
+            "wet": 1,
+            "flooded": 18
+          },
+          "wet": {
+            "dry": 5,
+            "wet": 1,
+            "flooded": 0
+          },
+          "flooded": {
+            "dry": 0,
+            "wet": 1,
+            "flooded": 167
+          }
+        }
+      }
+    },
+    "mixed": {
+      "run_id": "20260926-031638_bmixed_mobilenetv3small",
+      "report": {
+        "tA": 0.8161483407020569,
+        "tB": 0.8972112536430359,
+        "tB_note": "lowest tB reaching pipeline precision>=0.9",
+        "n_val": 665,
+        "stage_a_auc_roc": 0.9906126366551958,
+        "stage_a_auc_pr": 0.984771048657264,
+        "stage_a_accuracy": 0.9639097744360903,
+        "pipeline_precision_flooded": 0.9016393442622951,
+        "pipeline_recall_flooded": 0.9821428571428571,
+        "pipeline_precision_num": 165,
+        "pipeline_precision_den": 183,
+        "pipeline_recall_num": 165,
+        "pipeline_recall_den": 168,
+        "false_alarm_dry_rate": 0.03665987780040733,
+        "false_alarm_dry_num": 18,
+        "false_alarm_dry_den": 491,
+        "false_alarm_wet_rate": 0.0,
+        "false_alarm_wet_num": 0,
+        "false_alarm_wet_den": 6,
+        "small_sample_flags": [
+          "false_alarm_wet_rate rests on only 6 val examples (<30)"
+        ],
+        "confusion": {
+          "dry": {
+            "dry": 472,
+            "wet": 1,
+            "flooded": 18
+          },
+          "wet": {
+            "dry": 5,
+            "wet": 1,
+            "flooded": 0
+          },
+          "flooded": {
+            "dry": 0,
+            "wet": 3,
+            "flooded": 165
+          }
+        }
+      }
+    }
+  },
+  "chosen_variant": "spec"
+}

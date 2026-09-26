@@ -18,6 +18,7 @@ logs/
 /reports/*
 !/reports/*.md
 !/reports/*.csv
+!/reports/*.json
 !/reports/figures/
 
 __pycache__/

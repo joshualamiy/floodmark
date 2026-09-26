@@ -114,3 +114,49 @@ The worker was stopped by accident once; a fresh worker resumed from its code. D
 - Wet is effectively a single-source class, which is a shortcut risk for Phase 4 to test.
 
 More wet data will come from 511GA frames captured during real rain, which the collector keeps sampling, and from any labels the user adds.
+
+## 2026-09-25: User labels (during Phase 3)
+
+The user labeled 429 511GA frames in the labeling tool: 350 dry, 78 unusable, 1 wet. 396 of them are on held-out test cameras, so the 511GA test set is now human-labeled.
+
+- **The 45 disputed frames** (AI "wet" vs. weather "dry"): the user marked 42 dry and 3 unusable. This confirms they were night headlight glare, and it validates the conflict rule in `prep/sources.py`.
+- **AI "dry" calls:** the user agreed on 171 of 205 and marked 33 as unusable.
+- **The forecast is dry through 2026-10-01.** Real wet or flooded Atlanta frames are unlikely this week, so the 511GA test set measures false alarms on dry roads, and wet/flooded performance comes from the external test sets.
+- **Rebuild deferred:** the manifest will be rebuilt after Phase 3 finishes and before Phase 4. Training runs on `v1-c7dea35e`, and the user labels mostly touch test cameras.
+
+## Final step requested by the user (do only when everything is done)
+
+1. Strip all comments and docstrings in `flood-ml/` code, and replace them with very short, hackathon-style comments. Ruff and the tests must still pass afterwards.
+2. Remove the unnecessary intermediate files used for data prep: spot-check sheets, temporary grids, job logs, and caches. List the files and confirm with the user before deleting anything; don't touch the datasets needed to retrain.
+
+## 2026-09-26: Phase 3 (modeling) done
+
+Details in `docs/phase_reports/phase3_modeling.md`, `reports/runs.csv`, and `reports/onnx_parity.md`.
+
+**Runs:** 6, all on `data_version v1-c7dea35e`.
+- **Shipped Stage A:** MobileNetV3Small, fine-tuned (top 30 layers). Val AUC-ROC 0.991, AUC-PR 0.985.
+- **Shipped Stage B:** the "mixed" variant (flooded vs. wet+dry, with wet ×8), fine-tuned. Val AUC-PR 0.995.
+- EfficientNetB0 (head only) was worse than MobileNetV3Small (AUC-PR 0.975) at twice the cost, so it wasn't pursued.
+
+**Stage B variant.** The as-specified "spec" variant (wet vs. flooded only) has never seen a dry image. With the baseline Stage A, its pipeline flood recall collapsed to 0.125. With the final Stage A, spec and mixed are about equal. I agree with shipping "mixed" for robustness, since swapping needs only a re-export.
+
+**Thresholds:**
+- tA = 0.816 (Youden's J).
+- tB = 0.897: the lowest value that reaches pipeline precision ≥ 0.90 for "flooded" on all val rows.
+
+**Pipeline val (n = 665):**
+
+| Metric | Value |
+|---|---|
+| Flooded precision | 0.902 (165/183) |
+| Flooded recall | 0.982 (165/168) |
+| False flood alarms on dry | 3.7% (18/491) |
+| False flood alarms on wet | 0/6 (too small to mean anything) |
+
+**ONNX:** the two outputs `cam` (N,7,7) and `prob` (N,1) are **in that order, so fetch them by name**. I re-checked independently: max |Δprob| vs. Keras is 2.8e-6, and CPU latency is about 1.2 ms per stage (batch 1).
+
+**Grad-CAM:** on flooded frames the heat sits on the water. On dry frames it's often on context (bridges, trees, barriers), which Phase 4 will check.
+
+**Bugs the worker found and fixed** (both regression-tested):
+- The EfficientNetB0 `name=` argument broke the weights URL.
+- Threshold search accepted "zero predicted positives" as meeting any precision target.
