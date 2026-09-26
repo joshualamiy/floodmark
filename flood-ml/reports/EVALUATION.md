@@ -1,3 +1,322 @@
+# v4 re-evaluation (2026-09-26)
+
+This is the one test run for v4. I didn't build either model.
+
+**Models**
+- **v4** (shipped, `models/`): tA 0.7578, tB 0.5056, letterbox 320, data `v1-fe91cffe`.
+- **v3** (`models/v3/`): tA 0.8911, tB 0.2982, same preprocessing, data `v1-7251bbd2`.
+
+Both are scored through the deployed preprocessing at their own `config.json` thresholds. Nothing was tuned on test.
+
+**Outputs**
+- JSON in `reports/eval/v4/`:
+  - `eval_v4_metrics.json` (same schema as `eval_v3_metrics.json`, version keys `v3`/`v4`)
+  - `eval_v4_perturb.json`
+  - `eval_v4_leakage.json`
+  - `eval_v4_gradcam_energy.json`
+- Per-row files:
+  - v4: `reports/eval/v4/{test,live}_preds*.csv`
+  - v3 re-run: `reports/eval/v4/v3_rerun/`
+- Review sheets: `reports/eval/v4/sheets/`
+- Error gallery: `reports/errors.html` is now v4. The v3 gallery is kept at `reports/eval/errors_v3.html`.
+- Driver: `src/eval/v4_run.py`. It is the only src change.
+
+**Notation**
+- `k/n`; `[lo, hi]` is a 95% cluster-bootstrap CI.
+- **F** marks fewer than 30 rows or fewer than 5 clusters.
+- Δ is v4 − v3 on the same rows, using a paired cluster bootstrap.
+
+## Checks before trusting the numbers
+
+**The test set is unchanged.**
+- All 1,642 test rows match `manifest_v1-7251bbd2.csv` on `orig_path`, label, split, source, group_id, camera_id, phash and mask.
+- 0 test rows moved to train/val, and 0 new rows entered test.
+- Two columns differ, and both are ga511 bookkeeping:
+  - The rebuild **renumbered and overwrote the ga511 processed images**. 321 test rows have a new `path`, and their old paths now hold other frames (214 train, 51 val, 56 other test).
+  - `dup_cluster` IDs were renumbered.
+- **Hazard:** `reports/eval/v3/test_preds.csv` still has the old `path` values. Anything that loads images from it gets the wrong picture for those 321 rows, so key on `orig_path` instead.
+
+**`models/v3` is the v3 the previous review evaluated.** On today's files it reproduces the previous v3 test run exactly: ΔpA = ΔpB = ΔCAM = 0.0, with 0 status flips over 1,642 rows. That also proves the renumbered processed files contain the same pixels. On the previous review's 1,602 live test-camera frames it reproduces 7 day and 2 night false floods, again with 0 flips.
+
+**The eval pipeline matches deployed inference.** Deployed `predict_batch()` vs my pipeline:
+- v3: 56 test rows plus 53 live frames, max |ΔpA| 3e-8, 0 flips.
+- v4: 56 test rows plus 32 live frames, max |ΔpA| 3e-8, 0 flips.
+- `model_version` reports the right run IDs.
+
+**Alternative input paths flip very few statuses.**
+
+| Input | v3 flips | v4 flips |
+|---|---|---|
+| Raw originals | 4 of 1,642 | 3 of 1,642 |
+| Training TF pipeline | 7 of 1,642 | 8 of 1,642 |
+
+**The live window was dry. I verified this rather than assuming it.**
+- Open-Meteo gives 0.0 mm on all 10,726 frames that have a value.
+- The collector's NWS cache has 1,499 observations at 8 Atlanta stations with no present-weather codes.
+- **Independently, IEM ASOS** (5-minute plus hourly, ATL/PDK/FTY/RYY) has 1,691 observations from 08:00 EDT 9/25 to 16:30 EDT 9/26. Every reported p01i is 0.00 and no METAR has RA, DZ or TS. At 16:30 all four stations report 10SM CLR.
+- The frame window is 21:01 EDT 9/25 to 16:32 EDT 9/26 (`frames.csv` frozen at ts 1790454779).
+- **So every live "flooded" below is a false alarm, and so is every "wet".**
+
+**No test signal went into v4.**
+- 0 daytime manual labels are on test cameras.
+- The 400-frame hard-negative queue is 319 train-camera and 81 val-camera frames.
+- `select_v4.py` never touches test.
+- Caveat: that queue was **ranked by v3's own flood score**, so the val "daytime manual" subset is enriched in v3 errors. The val comparison in `v4_daytime.md` is tilted toward v4.
+
+**Code hazard, not fixed per the rules.** `src/eval/common.py` has `MODEL_DIRS["v3"] = models/`, and `models/` is now v4.
+- `eval.predict test --tag v3`, `eval.error_gallery --tag v3`, `eval.stress` and `gradcam_eval --tag v3` would silently evaluate v4.
+- They would also overwrite `reports/eval/v3/`, which the slides read.
+- Point `"v3"` at `models/v3` before anyone reruns them. My driver registers explicit dirs and writes only under `reports/eval/v4/`.
+- `eval_v3_metrics.json`, `reports/eval/{v1,v3}/` and `errors_v3.html` are byte-identical to before (sha256 checked).
+
+## Manifest test set (1,642 rows)
+
+Cells are v3 → v4.
+
+| Set | n (grp) | Flood recall | Flood precision | False floods | Δ recall [CI] |
+|---|---|---|---|---|---|
+| **All test** | 1,642 (500) | 483/542 (0.891) → **463/542 (0.854)** | 483/541 (0.893) → **463/507 (0.913)** | dry 6/957 → **0/957**; wet 6/31 → **1/31**; not_flooded 46/112 → 43/112 (Δ −0.027 [−0.060, 0.012]) | **−0.037 [−0.080, 0.000]** |
+| Legacy (first-run rows) | 1,108 (314) | 126/168 (0.750) → **115/168 (0.685)** | 126/127 → **115/115** | dry 0/930 → 0/930 | −0.065 [−0.139, 0.045] |
+| New sources | 534 (186) | 357/374 → 348/374 | 0.862 → 0.888 | not_flooded 46/112 → 43/112 | −0.024 [−0.045, −0.008] (CI too narrow; see v3 report) |
+| (a) 511GA held-out cams, night | 326 (219) | – | – | dry 0/325 → 0/325; the 1 wet frame → dry under both | – |
+| (b) Roadway Flooding | 89 | 87/89 → 87/89 | 1.0 → 1.0 | – | 0 |
+| (b) **Greek elevated video** | 62 (**1**) | **34/62 → 21/62** | 1.0 → 1.0 | – | −0.21 **F** |
+| (b) FRED | 615 (4 seq) | 5/17 → 7/17 **F** | 1.0 → 1.0 | dry 0/598 → 0/598 | +0.12 **F** |
+| (b) NYSDOT | 16 (1) | – | – | wet 1/9 → 0/9 **F** | – |
+| (c) Iowa RWIS | 48 (6 cams) | – | – | dry 6/27 → **0/27**; wet 5/21 → 1/21 **F** | – |
+| (c) EU flood 2013 | 319 (19) | 275/283 → 267/283 | 0.908 → 0.911 | not_flooded 28/36 → 26/36 | −0.028 [−0.055, −0.012] |
+| (c) AlleyFloodNet | 167 (161) | 82/91 → 81/91 | 0.820 → 0.827 | not_flooded 18/76 → 17/76 | −0.011 [−0.053, 0.022] |
+
+**Wet**
+- Stage A wet recall: 7/31 → 6/31.
+- Status "wet" on true wet: 1/31 → 5/31. All of the gain is the Iowa frames that v3 called flooded, which are now wet.
+- All wet sets are **F**.
+
+**Ranking** (AUC of pA·pB, flooded vs the rest)
+- All test: 0.985 → 0.984.
+- EU: 0.861 → 0.856.
+- AlleyFloodNet: 0.932 → 0.917.
+- So v4 did not learn to rank floods better. It moved the operating point.
+
+**Row flips v3 → v4** (69 rows changed)
+- 24 floods lost, 4 gained.
+  - Greek video: 30 of the 62 frames changed status. 13 went flooded → wet and 17 went dry → wet.
+  - EU: 8 went flooded → wet.
+- 15 false floods removed, 1 added.
+  - Iowa: 6 dry and 4 wet frames went flooded → wet.
+
+## Greek elevated video (62 frames, one cluster, F)
+
+**v4 gets 21/62, down from v3's 34/62.**
+
+| | v3 | v4 |
+|---|---|---|
+| Flooded / wet / dry | 34 / 7 / 21 | 21 / 37 / 4 |
+| Median pA | 0.92 | 0.94 |
+| Median pB | 0.385 | 0.356 |
+| tB | 0.298 | 0.506 |
+
+- Stage A now passes almost every frame (only 4 dry). The loss comes from **tB rising from 0.298 to 0.506**, while Stage B's scores barely moved.
+- At matched live false alarms, v4 ranks the clip better. At 9 test-camera false floods, v4 gets 42/62 against v3's 11/62. That is mostly because v4 pushed Atlanta daytime scores down. Only the shipped operating point matters for the demo.
+
+## Fresh live 511GA test cameras
+
+**Frame set:** every good frame from the 314 test cameras that is not in the manifest, 1,878 frames in all. It includes 16 cameras first assigned to test in the v4 rebuild; they were "unmapped" before, and none of their frames is in train/val. Cameras were sampled about every 2 h (median gap 119 min).
+
+| Slice | Frames (cams) | v3 flooded | v4 flooded | v3 wet | v4 wet |
+|---|---|---|---|---|---|
+| **Day, 07:30–19:30** | 1,099 (308) | 21 (0.019 [0.008, 0.033]) | **0** (one-sided 95% upper bound ≈ 0.3%) | 4 | 1 |
+| Night | 779 (290) | 2 | 2 (the same two frames) | 0 | 4 |
+| Day, 07:30–11:54 (seen in the previous review) | 528 (284) | 7 | 0 | 1 | 0 |
+| **Day after 11:54, fully fresh** | 571 (289) | 14 (0.025 [0.010, 0.044]) | **0** | 3 | 1 |
+| Night after 11:54 | 0 | – | – | – | – |
+| Day, excluding 3 same-feed cameras | 1,089 (305) | 21 | 0 | 4 | 1 |
+
+The window ends at 16:32, so there's no fresh night and no dusk.
+
+**v4's flagged frames, all checked by eye with Grad-CAM** (`sheets/v4_live_test_*.jpg`). None shows water.
+- **2 flooded, both night IR frames the user labeled unusable, and both also flagged by v3:**
+  - 13539: an "EXPRESS LANES CLOSED" sign and bushes. The CAM sits on the sign post and foliage.
+  - 14188: an IR highway under tree canopy. The CAM sits on headlight glare and the tree line.
+- **5 wet:**
+  - 17662 ×3: a construction site with a crane. The CAM is on the crane and dirt. This camera is persistent.
+  - 13135: headlight glare.
+  - 15436: a sodium-lit intersection.
+
+**v3's 23 flagged frames, all checked.** None shows water. The CAM lands on:
+- a smeared lens (11226 ×4);
+- the white gate-booth pillar in sun (13750 ×3);
+- the camera housing (17774 ×3);
+- signal heads and poles (15205, 15638, 15436 ×3);
+- dark cars on sunlit asphalt (15663, 15052, 11817);
+- low sun (15124);
+- haze (16893);
+- the crane (17662).
+
+**The daytime margin is thin.** Five v4 daytime frames have pA ≥ 0.6. The closest is 11226 at 16:06: pA 0.726 against tA 0.758, with pB 0.71. The same troublesome cameras recur under both models: 11226, 13750, 17662, 17774.
+
+**Temporal smoothing, N = 3**
+
+| Replay | v3 alerts | v4 alerts |
+|---|---|---|
+| As in the previous report (no blocklist, no move detector) | **2**: 11226 at 14:38, 13750 at 14:45 | **0** |
+| Blocklist {11372, 17397, 13750} plus deployed `CameraMoveDetector` | 0 | 0 |
+
+- The previous report did **not** use `CameraMoveDetector` in its replay; `evaluate.smoothed_alerts` never calls it. So the first row is the comparable one.
+- **Cameras with 3 or more flooded frames:** v3 4, v4 0. v4's zero doesn't depend on smoothing.
+- **`CameraMoveDetector` at this cadence is not trustworthy.** It flags 1,553 of 10,998 frames as moved: 293 of 1,099 daytime test-camera frames against 7 of 1,105 night frames. The reference is built from each camera's first three frames, which were at night, so daylight looks like a move. Skipped frames don't count toward the streak.
+  - This alone removes v3's alerts.
+  - **In deployment it would also skip real daytime frames when a camera's reference was built at night.**
+
+**All cameras, frames not in the manifest (2,791):** daytime flooded 34 → 2. v4's 2 are on train cameras, whose views it has seen.
+
+## Shortcuts: 511GA overlay and darkening (`eval_v4_perturb.json`)
+
+This adds a **real 511GA overlay**: the title bar and logo box cut from 8 real train-camera frames and pasted onto test images (`sheets/real_overlay_peek.jpg`). It sits alongside the previous reviewer's replica.
+
+| Edit, on 542 true floods | v3 still flooded | v4 still flooded |
+|---|---|---|
+| none | 483 | 463 |
+| replica overlay | 457 (−26) | 426 (−37) |
+| **real 511GA overlay** | **428 (−55)** | **391 (−72)** |
+| real overlay + dark | 381 | 355 |
+| darken | 433 | 437 |
+
+| Edit | Set | v3 | v4 |
+|---|---|---|---|
+| none | Greek video | 34 | 21 |
+| replica overlay | Greek video | 6 | 0 |
+| **real overlay** | Greek video | **1** | **0** |
+| real overlay | AlleyFloodNet (91 floods) | −8 | **−19** |
+| real overlay | EU (283 floods) | −9 | **−19** |
+| real overlay | not_flooded false floods (46 v3 / 43 v4) | → 37 | → **24** |
+| darken | dry non-511GA false floods | 5 | **12** (all FRED) |
+
+- **A real 511GA title bar removes the one elevated-camera flood clip for both models** (1/62 and 0/62). The replica understated this.
+- **v4 is about twice as overlay-sensitive as v3 on ordinary flood photos.** This is the "looks like 511GA → not flooded" cue getting stronger.
+  - Every 511GA training frame is dry or not_flooded, and v4 added about 4,900 more of them.
+  - It is the main unmeasured risk for a real Atlanta flood.
+- **v4's Stage A has nearly switched off on daytime 511GA frames.**
+  - On live test cameras by day, median pA is 0.0015 for v4 against 0.053 for v3.
+  - The share of frames with pA > 0.5 is 0.6% for v4 against 12.7% for v3.
+- There's no flooded 511GA frame to show whether v4 would still fire on real Atlanta water.
+
+## Grad-CAM (`eval_v4_gradcam_energy.json`)
+
+This is Stage B, the CAM the demo shows. Cells are energy on water / energy with other frames' CAMs on the same mask (shuffled) / how often the peak lands in water.
+
+| Source | v3 | v4 |
+|---|---|---|
+| Roadway (water 0.42 of content) | 0.69 / 0.54 / 0.82 | 0.65 / 0.51 / 0.83 |
+| FRED (water 0.05) | 0.20 / 0.13 / 0.82 | 0.19 / 0.14 / 0.88 |
+| **Greek video** (water 0.66) | 0.65 / 0.65 / 0.47 | **0.64 / 0.65 / 0.48**, still at chance |
+
+Padding gets 1–6% of the energy. On live false alarms, the CAM lands on signs, poles, foliage, cranes, housings and glare, never on pavement water.
+
+## Leakage (`eval_v4_leakage.json`)
+
+**What was added.** 4,922 new train/val rows, all ga511: 3,930 train and 992 val. 3,666 are daytime. 404 are manual labels and 4,518 are weather-derived.
+
+**Camera overlap: 0.**
+- No train/val manifest camera is a test camera.
+- 0 new rows are on test cameras, and 0 view_ids are shared.
+- 0 camera_ids span splits.
+- `ga511_camera_splits.json`: none of the 1,471 previously assigned cameras changed split. 81 formerly unmapped cameras were newly assigned: 58 train, 16 test, 7 val.
+
+**pHash ≤ 6** (one implementation, imagehash on originals):
+- New train/val vs manifest test: **1 pair**, 17408 ~ 13479. That's the known same-feed pair; the train frame is at night and the test row is dry → dry.
+- New train/val vs fresh test-camera frames: 46 pairs covering 25 test frames on 19 cameras.
+- At ≤ 10 the matches explode to 1,235 pairs, mostly low-texture night and dawn frames.
+
+**Same feed under two IDs, checked by eye** (`sheets/same_feed_matched_frames.jpg`):
+
+| Test camera | Train camera | Feed |
+|---|---|---|
+| 17408 | 13479 | GDOT-0331 (known) |
+| 14075 | 14259 | GDOT-0074 (new) |
+| 13547 | 17556 | GDOT-0735 at night; 17556 later shows another feed (new) |
+
+- v4 trained on daytime frames of these views. They hold 10 of the 1,099 test daytime frames, and excluding them changes nothing (0/1,089 vs 21/1,089).
+- The other automatic candidates were dawn look-alikes (15327, 16067, 16439) and a shared "Camera error" screen (13351).
+
+**`dup_cluster`.** Three clusters span test and train/val: the 17408/13479 feed, a 50-camera chain of near-black night frames, and Iowa IDOT-072 ~ ga511 17666 (a coincidence). The 10 test rows in them are dry or wet and predicted dry by both models, so no metric moves. But `splits_report.json`'s "no dup_cluster spans two splits" assertion is not true of the final manifest.
+
+**Camera-error screens pass the quality filter.** 8 frames on 3 cameras show "Camera error": 2 on test cameras, and 6 in train/val labeled dry by weather. Both models call all 8 dry. This is minor label noise.
+
+**Leakage does not explain the daytime gain.**
+
+The real limitation is a confound. v4's new training frames come from **the same clear, dry day (9/26), the same sun angle, and the same camera network** as the fresh test frames. So the 0/1,099 shows generalization to new cameras on the same day. It says nothing about new days: overcast, rain, dusk, glare or seasons.
+
+## Slide numbers (from `eval_v4_metrics.json`)
+
+| Slide says | Verdict |
+|---|---|
+| test recall 463/542 | Correct. It's a **drop** from v3's 483/542 (Δ −0.037 [−0.080, 0.000]). |
+| precision 463/507 | Correct. v3 was 483/541. |
+| **legacy 115/115** | **Misleading.** That is legacy *precision*. Legacy *recall* is **115/168**, down from v3's 126/168. Don't show 115/115 alone or call it recall. |
+| elevated video 21/62 | Correct, but it's a **regression** from 34/62 (one cluster, **F**). |
+| test-camera day 0/1099 (v3 21/1099) | Correct: non-manifest frames, 21:01 9/25 to 16:32 9/26. The fully fresh after-11:54 subset is 0/571 vs 14/571. |
+| smoothed alerts v3 2 / v4 0 | Correct for the previous-report replay (N=3, no blocklist). With the recommended blocklist plus move detector both are 0, and one of v3's two alerts (13750) is on that blocklist. |
+
+## Remaining failure modes
+
+1. **A real 511GA overlay suppresses flood detection, and v4 is worse at this than v3.**
+   - Real title bar on true floods: 391/542 flooded for v4 against 428/542 for v3.
+   - The Greek video goes to 0/62.
+   - Flood recall on real Atlanta cameras is still unmeasured.
+2. **Elevated fixed-camera floods.** The Greek video fell to 21/62, and the CAM on water is at chance.
+3. **Wet roads still don't work.**
+   - Stage A wet recall is 6/31.
+   - EU and AlleyFloodNet street photos that aren't flooded still get called flooded 43/112 of the time.
+   - There's still no wet 511GA frame to measure.
+4. **Night IR views with no road** (13539, 14188) get called flooded by both models.
+5. **Persistent cameras.** 11226, 13750, 17662 and 17774 sit near v4's thresholds by day.
+6. **Pipeline:** `CameraMoveDetector`, using a night-built reference, flags about 27% of daytime frames as moved.
+
+## Unverified
+
+- Flood recall on real 511GA cameras: no flooded 511GA frame exists.
+- Wet 511GA frames.
+- Other days and weather, dusk (after 16:32), and a real polling interval.
+- The Greek video (1 cluster), FRED (1 flood sequence), NYSDOT (1 camera) and Iowa (6 cameras) are all **F**.
+- The real overlay is real pixels pasted onto non-511GA floods, not a real 511GA flood.
+
+## Reproduce (from `flood-ml/`, `PYTHONPATH=src ../my_env/bin/python -m eval.v4_run ...`)
+
+```
+test raw live          # preds for v3 (models/v3) and v4 (models/), frames frozen at ts 1790454779
+leakage metrics        # eval_v4_leakage.json, eval_v4_metrics.json
+stress energy          # eval_v4_perturb.json, eval_v4_gradcam_energy.json
+sheets gallery         # reports/eval/v4/sheets/, reports/errors.html (v4)
+```
+
+## Verdict
+
+**Is v4 better?** Yes on its target, and no on flood detection.
+- **Better on daytime false alarms**, the thing it was built for. Fresh test cameras: 21/1,099 → **0/1,099** by day, 14/571 → 0/571 after 11:54. Night is unchanged at 2/779.
+- **Better on test false floods overall:** dry 6/957 → 0/957, wet 6/31 → 1/31, flood precision 0.893 → 0.913.
+- **Not better at finding floods:**
+  - Test recall is 0.891 → 0.854 (Δ −0.037 [−0.080, 0.000]).
+  - Ranking is unchanged (AUC 0.985 → 0.984).
+  - It trades flood recall for fewer false alarms.
+
+**Regressions**
+- Greek elevated video: 34/62 → 21/62 (**F**).
+- Legacy recall: 126/168 → 115/168 (Δ −0.065 [−0.139, 0.045]).
+- EU recall: 275/283 → 267/283.
+- Floods called flooded under a real 511GA overlay: 428 → 391 of 542.
+- Darkened FRED dry frames called flooded: 5 → 12.
+
+**What to tell the demo audience**
+- On held-out Atlanta cameras on a clear day, v4 raised no daytime flood alarms (0 of 1,099 frames, against 21 for v3).
+- It hasn't been tested on a real Atlanta flood or on a rainy day.
+- It detects flooding reliably in street-level photos (89–98% recall by source on the external test sets), but it is weaker on elevated traffic-camera views, and a 511GA-style title bar can hide a flood from it.
+- Don't claim wet-road detection.
+- Keep N=3 smoothing and the blocklist on, and don't rely on `CameraMoveDetector` by day until its reference is rebuilt in daylight.
+- Present the Grad-CAM overlay as a hint, not a water map.
+
+---
+
 # v3 re-evaluation (2026-09-26)
 
 I didn't build either model. This section compares the new shipped model **v3** (`models/`: MobileNetV3Small, letterbox 320, tA = 0.891, tB = 0.298, data `v1-7251bbd2`) with the old model **v1** (`models/v1/`: crop 224, tA = 0.816, tB = 0.897). This is the one and only test run for v3; it was selected on val alone. Both models are scored on `split == "test"` of the current manifest (1,642 rows), plus live 511GA frames. My original v1 evaluation follows below, unchanged. Where that section says `models/…`, read `models/v1/`. Its JSON files (`eval_metrics.json`, `eval_perturb.json`, …) are the first run's and I didn't overwrite them. This section's outputs are `eval_v3_*.json` and `figures/v3_vs_v1_pr_flooded.png`.
