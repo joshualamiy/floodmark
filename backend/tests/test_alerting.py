@@ -124,3 +124,22 @@ def test_rain_gate_fails_open_when_rain_is_unknown():
 def test_rain_gate_leaves_unconfirmed_decisions_alone():
     pending = AlertDecision("wet", "potential flooding; water frame 1/3; awaiting confirmation")
     assert apply_rain_gate(pending, 0.0, min_rain_mm=1.0, window_hours=6, streak_frames=3) == pending
+
+
+def test_pending_marks_confirmation_in_progress_but_not_final_states():
+    assert decide(history=[frame("dry", 0.0, "a")]).pending is True
+    assert decide(history=[frame("flooded", 0.5, "b"), frame("flooded", 0.5, "a")]).pending is False
+    assert decide(status="dry", score=0.0).pending is False
+    assert decide(camera="11372", score=0.9).pending is False
+    assert decide(score=0.55, history=[frame("flooded", 0.55, "a")], baseline=0.50).pending is False
+
+
+def test_frozen_frame_is_pending_unless_already_flooded():
+    assert decide(sha="same", history=[frame("flooded", 0.5, "same", alert="wet")]).pending is True
+    assert decide(sha="same", history=[frame("flooded", 0.5, "same", alert="flooded")]).pending is False
+
+
+def test_storm_mode_confirms_with_fewer_frames():
+    history = [frame("flooded", 0.5, "a")]
+    assert decide(history=history, n=3).note.endswith("water frame 2/3; awaiting confirmation")
+    assert decide(history=history, n=2).status == "flooded"

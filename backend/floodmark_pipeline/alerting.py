@@ -10,8 +10,12 @@ worker processes:
 3. A water frame only counts when its flood score is clearly above the camera's
    own recent median, so a scene that always looks a bit like water cannot
    confirm itself.
-4. ``n`` counted water frames in a row are needed before ``flooded``.
+4. ``n`` counted water frames in a row are needed before ``flooded``; fewer
+   when it is raining nearby (storm mode).
 5. A confirmed flood is only alerted when it has actually rained nearby.
+
+A pending decision tells the worker to re-poll the camera within a minute
+instead of waiting for the next five-minute cycle.
 """
 from __future__ import annotations
 
@@ -36,6 +40,8 @@ class AlertDecision:
     note: str | None = None
     # True when the streak is complete and only the rain check remains.
     confirmed_flood: bool = False
+    # True while confirmation is in progress, so the camera is worth re-polling soon.
+    pending: bool = False
 
 
 def is_frozen(sha256: str | None, previous_sha256: str | None) -> bool:
@@ -84,7 +90,11 @@ def decide_alert(
     previous = history[0] if history else None
     if previous is not None and is_frozen(sha256, previous.sha256):
         carried = previous.alert_status or "wet"
-        return AlertDecision(carried, "frame identical to the previous capture; not counted toward confirmation")
+        return AlertDecision(
+            carried,
+            "frame identical to the previous capture; not counted toward confirmation",
+            pending=carried != "flooded",
+        )
 
     threshold = water_threshold(baseline, baseline_margin)
     if not counts_as_water(status, flood_score, threshold):
@@ -96,7 +106,9 @@ def decide_alert(
 
     streak = water_streak(history, threshold) + 1
     if streak < streak_frames:
-        return AlertDecision("wet", f"potential flooding; water frame {streak}/{streak_frames}; awaiting confirmation")
+        return AlertDecision(
+            "wet", f"potential flooding; water frame {streak}/{streak_frames}; awaiting confirmation", pending=True
+        )
     if status == "wet":
         return AlertDecision("wet")
     return AlertDecision("flooded", confirmed_flood=True)

@@ -45,6 +45,9 @@ class Settings:
     alert_require_rain: bool
     alert_min_rain_mm: float
     alert_rain_window_hours: int
+    alert_storm_streak_frames: int
+    alert_fast_poll_seconds: int
+    alert_fast_poll_max: int
     weather_timeout_seconds: float
 
     @classmethod
@@ -60,6 +63,12 @@ class Settings:
             value = cast(os.getenv(name, default))
             if value <= 0:
                 raise RuntimeError(f"{name} must be greater than zero")
+            return value
+
+        def count(name: str, default: str) -> int:
+            value = int(os.getenv(name, default))
+            if value < 0:
+                raise RuntimeError(f"{name} must not be negative")
             return value
 
         def boolean(name: str, default: bool = False) -> bool:
@@ -104,5 +113,8 @@ class Settings:
             alert_require_rain=boolean("ALERT_REQUIRE_RAIN", True),
             alert_min_rain_mm=float(number("ALERT_MIN_RAIN_MM", "1.0", float)),
             alert_rain_window_hours=int(number("ALERT_RAIN_WINDOW_HOURS", "6")),
+            alert_storm_streak_frames=int(number("ALERT_STORM_STREAK_FRAMES", "2")),
+            alert_fast_poll_seconds=int(number("ALERT_FAST_POLL_SECONDS", "60")),
+            alert_fast_poll_max=count("ALERT_FAST_POLL_MAX", "4"),
             weather_timeout_seconds=float(number("WEATHER_TIMEOUT_SECONDS", "5", float)),
         )

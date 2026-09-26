@@ -12,18 +12,26 @@ def capture_job_id(source: str, camera_id: str, scheduled_at: datetime) -> str:
     return f"capture:{source.lower()}:{camera_id}:{slot.strftime('%Y-%m-%dT%H:%MZ')}"
 
 
-def object_key(kind: str, view_id: str, captured_at: datetime) -> str:
+def fast_poll_job_id(source: str, camera_id: str, run_at: datetime) -> str:
+    # fast re-polls run between slots, so they get their own ID at second resolution
+    return f"{capture_job_id(source, camera_id, run_at)}:fast:{run_at.astimezone(timezone.utc):%H%M%S}"
+
+
+def _timestamp(captured_at: datetime, seconds: bool) -> str:
+    timestamp = captured_at.astimezone(timezone.utc)
+    return f"{timestamp:%Y%m%dT%H%M%SZ}" if seconds else f"{timestamp:%Y%m%dT%H%MZ}"
+
+
+def object_key(kind: str, view_id: str, captured_at: datetime, seconds: bool = False) -> str:
     if kind not in {"captures", "heatmaps"}:
         raise ValueError("kind must be captures or heatmaps")
     if not view_id or "/" in view_id:
         raise ValueError("view ID must be a non-empty path segment")
-    timestamp = captured_at.astimezone(timezone.utc)
     extension = "jpg" if kind == "captures" else "png"
-    return f"{kind}/{view_id}/{timestamp:%Y%m%dT%H%MZ}.{extension}"
+    return f"{kind}/{view_id}/{_timestamp(captured_at, seconds)}.{extension}"
 
 
-def skipped_key(view_id: str, captured_at: datetime) -> str:
+def skipped_key(view_id: str, captured_at: datetime, seconds: bool = False) -> str:
     if not view_id or "/" in view_id:
         raise ValueError("view ID must be a non-empty path segment")
-    timestamp = captured_at.astimezone(timezone.utc)
-    return f"skipped/{view_id}/{timestamp:%Y%m%dT%H%MZ}.jpg"
+    return f"skipped/{view_id}/{_timestamp(captured_at, seconds)}.jpg"

@@ -4,7 +4,7 @@ import asyncio
 import logging
 import time
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
 
 import aiohttp
@@ -18,7 +18,7 @@ from .contracts import CaptureJob, Prediction
 from .database import camera_flood_baseline, camera_frame_history, insert_image, mark_image_error, persist_prediction
 from .inference import model_run
 from .image_quality import InvalidImageError, ensure_usable_image
-from .keys import object_key, skipped_key
+from .keys import fast_poll_job_id, object_key, skipped_key
 from .queues import CAPTURE_QUEUE_NAME
 from .resources import ByteBudget, content_sha256, download_image, normalize_jpeg, s3_client, upload_object
 from .notifications import send_flood_alerts
@@ -47,9 +47,10 @@ async def shutdown(ctx: dict) -> None:
 
 
 async def resolve_alert(ctx: dict, job: CaptureJob, image_id: str, prediction: Prediction, checksum: str) -> AlertDecision:
-    """Decide the alert status from the camera's history; only a confirmed flood costs a rain lookup."""
+    """Decide the alert status from the camera's history; dry frames cost no lookups at all."""
     history = []
     baseline = None
+    rain_mm = None
     if prediction.status != "dry":
         async with ctx["database_limit"]:
             # enough rows to look past frozen repeats when counting the streak
@@ -57,6 +58,14 @@ async def resolve_alert(ctx: dict, job: CaptureJob, image_id: str, prediction: P
             baseline = await camera_flood_baseline(
                 ctx["pool"], image_id, settings.alert_baseline_days, settings.alert_baseline_min_frames
             )
+        if settings.alert_require_rain and job.latitude is not None and job.longitude is not None:
+            # cached per grid cell, so this is cheap enough to fetch before deciding
+            rain_mm = await ctx["rain"].rain_mm(
+                job.latitude, job.longitude, job.scheduled_at, settings.alert_rain_window_hours
+            )
+    # storm mode: when it has rained nearby, fewer frames are needed to confirm
+    storm = rain_mm is not None and rain_mm >= settings.alert_min_rain_mm
+    streak_frames = settings.alert_storm_streak_frames if storm else settings.alert_streak_frames
     decision = decide_alert(
         camera_id=job.source_camera_id,
         status=prediction.status,
@@ -64,22 +73,17 @@ async def resolve_alert(ctx: dict, job: CaptureJob, image_id: str, prediction: P
         sha256=checksum,
         history=history,
         baseline=baseline,
-        streak_frames=settings.alert_streak_frames,
+        streak_frames=streak_frames,
         baseline_margin=settings.alert_baseline_margin,
         blocklist=settings.alert_blocklist,
     )
     if decision.confirmed_flood and settings.alert_require_rain:
-        rain_mm = None
-        if job.latitude is not None and job.longitude is not None:
-            rain_mm = await ctx["rain"].rain_mm(
-                job.latitude, job.longitude, job.scheduled_at, settings.alert_rain_window_hours
-            )
         decision = apply_rain_gate(
             decision,
             rain_mm,
             min_rain_mm=settings.alert_min_rain_mm,
             window_hours=settings.alert_rain_window_hours,
-            streak_frames=settings.alert_streak_frames,
+            streak_frames=streak_frames,
         )
     if prediction.status == "flooded" and decision.status != "flooded":
         # these are the cameras to review for the blocklist
@@ -91,6 +95,28 @@ async def resolve_alert(ctx: dict, job: CaptureJob, image_id: str, prediction: P
             decision.note,
         )
     return decision
+
+
+async def schedule_fast_poll(ctx: dict, job: CaptureJob) -> None:
+    """Re-capture a camera whose confirmation is in progress, instead of waiting for the next slot."""
+    if job.fast_poll >= settings.alert_fast_poll_max:
+        return
+    run_at = datetime.now(timezone.utc) + timedelta(seconds=settings.alert_fast_poll_seconds)
+    follow_up = job.follow_up(run_at)
+    await ctx["redis"].enqueue_job(
+        "capture_camera",
+        follow_up.payload(),
+        _job_id=fast_poll_job_id(job.source, job.source_camera_id, run_at),
+        _defer_by=settings.alert_fast_poll_seconds,
+        _queue_name=CAPTURE_QUEUE_NAME,
+    )
+    if settings.debug:
+        logger.info(
+            "fast poll scheduled camera_id=%s attempt=%d run_at=%s",
+            job.source_camera_id,
+            follow_up.fast_poll,
+            run_at.isoformat(),
+        )
 
 
 async def capture_camera(ctx: dict, payload: dict[str, str]) -> None:
@@ -132,7 +158,7 @@ async def capture_camera(ctx: dict, payload: dict[str, str]) -> None:
                     ctx["pool"],
                     job,
                     settings.s3_bucket,
-                    skipped_key(job.source_view_id, job.scheduled_at),
+                    skipped_key(job.source_view_id, job.scheduled_at, seconds=job.fast_poll > 0),
                     len(raw),
                     content_sha256(raw),
                     fetched_at,
@@ -148,7 +174,8 @@ async def capture_camera(ctx: dict, payload: dict[str, str]) -> None:
             )
             return
 
-        frame_key = object_key("captures", job.source_view_id, job.scheduled_at)
+        # fast re-polls land between slots, so their keys carry seconds to avoid overwriting the slot capture
+        frame_key = object_key("captures", job.source_view_id, job.scheduled_at, seconds=job.fast_poll > 0)
         async with ctx["upload_limit"]:
             upload_started = time.perf_counter()
             await upload_object(ctx["s3"], settings.s3_bucket, frame_key, normalized, "image/jpeg")
@@ -168,7 +195,7 @@ async def capture_camera(ctx: dict, payload: dict[str, str]) -> None:
             processing_seconds += time.perf_counter() - processing_started
         heatmap_key = None
         if prediction.heatmap_bytes:
-            heatmap_key = object_key("heatmaps", job.source_view_id, job.scheduled_at)
+            heatmap_key = object_key("heatmaps", job.source_view_id, job.scheduled_at, seconds=job.fast_poll > 0)
             async with ctx["upload_limit"]:
                 upload_started = time.perf_counter()
                 await upload_object(ctx["s3"], settings.s3_bucket, heatmap_key, prediction.heatmap_bytes, "image/png")
@@ -191,6 +218,8 @@ async def capture_camera(ctx: dict, payload: dict[str, str]) -> None:
                 job.scheduled_at,
                 prediction.confidence,
             )
+        if alert.pending:
+            await schedule_fast_poll(ctx, job)
         if settings.debug:
             logger.info(
                 "capture completed capture_id=%s camera_id=%s download_seconds=%.3f s3_seconds=%.3f "
