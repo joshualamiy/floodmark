@@ -130,3 +130,16 @@ def test_post_label_rejects_invalid_label(server):
     except urllib.error.HTTPError as e:
         raised = e.code == 400
     assert raised
+
+
+def test_frames_api_disputed_filter(server, ga511_root):
+    # f1 is likely_dry by weather but ai_review called it wet -> disputed.
+    # f2 is likely_wet, so an ai wet on it is not a dispute.
+    with open(ga511_root / "ai_review_labels.csv", "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["frame_id", "label", "note"])
+        w.writerow(["f1", "wet", ""])
+        w.writerow(["f2", "wet", ""])
+    with urllib.request.urlopen(_url(server, "/api/frames?filter=disputed")) as resp:
+        frames = json.loads(resp.read())
+    assert [f["frame_id"] for f in frames] == ["f1"]

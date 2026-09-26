@@ -6,7 +6,7 @@ Launch (serves on 127.0.0.1:8765 by default):
     cd flood-ml && PYTHONPATH=src ../my_env/bin/python -m prep.label_tool
     cd flood-ml && PYTHONPATH=src ../my_env/bin/python -m prep.label_tool --port 8000 --ga511-root data/ga511
 
-Then open http://127.0.0.1:8765/ in a browser. Filters: unlabeled, likely_wet,
+Then open http://127.0.0.1:8765/ in a browser. Filters: unlabeled, disputed, likely_wet,
 by camera, by split (from `data/processed/ga511_camera_splits.json` if it
 exists). Keyboard: 1=dry, 2=wet, 3=flooded, 0=unusable, left/right arrows to
 navigate. Every keypress POSTs to `/api/label` and appends one row to
@@ -53,6 +53,7 @@ INDEX_HTML = """<!doctype html>
     <label>Filter:
       <select id="filter">
         <option value="unlabeled">unlabeled</option>
+        <option value="disputed">disputed (ai wet, weather dry)</option>
         <option value="likely_wet">likely_wet</option>
         <option value="all">all</option>
       </select>
@@ -234,6 +235,14 @@ class FrameStore:
             if filt == "unlabeled" and manual_label:
                 continue
             if filt == "likely_wet" and r.get("weak_label") != "likely_wet":
+                continue
+            # ai_review said wet/flooded but the weather said dry: these are
+            # held out of the manifest until a person checks them
+            if filt == "disputed" and not (
+                not manual_label
+                and ai_label in ("wet", "flooded")
+                and r.get("weak_label") == "likely_dry"
+            ):
                 continue
 
             out.append({
