@@ -1,0 +1,2174 @@
+{
+  "thresholds": {
+    "tA": 0.8161483407020569,
+    "tB": 0.8972112536430359
+  },
+  "preprocessing": "tf",
+  "sets": {
+    "a_ga511": {
+      "n": 326,
+      "n_groups": 219,
+      "labels": {
+        "dry": 325,
+        "wet": 1
+      },
+      "confusion_3class": {
+        "dry": {
+          "dry": 324,
+          "wet": 1,
+          "flooded": 0
+        },
+        "wet": {
+          "dry": 1,
+          "wet": 0,
+          "flooded": 0
+        },
+        "flooded": {
+          "dry": 0,
+          "wet": 0,
+          "flooded": 0
+        }
+      },
+      "per_class": {
+        "dry": {
+          "precision": {
+            "k": 324,
+            "n": 325,
+            "value": 0.9969230769230769,
+            "ci_group": [
+              0.9905652937325159,
+              1.0
+            ],
+            "ci_wilson_row": [
+              0.9827791693216585,
+              0.999456654856304
+            ],
+            "n_groups": 219,
+            "flags": []
+          },
+          "recall": {
+            "k": 324,
+            "n": 325,
+            "value": 0.9969230769230769,
+            "ci_group": [
+              0.9905956112852664,
+              1.0
+            ],
+            "ci_wilson_row": [
+              0.9827791693216585,
+              0.999456654856304
+            ],
+            "n_groups": 219,
+            "flags": []
+          }
+        },
+        "wet": {
+          "precision": {
+            "k": 0,
+            "n": 1,
+            "value": 0.0,
+            "ci_group": [
+              0.0,
+              0.0
+            ],
+            "ci_wilson_row": [
+              0.0,
+              0.7934567085261071
+            ],
+            "n_groups": 1,
+            "flags": [
+              "n<30",
+              "groups<5"
+            ]
+          },
+          "recall": {
+            "k": 0,
+            "n": 1,
+            "value": 0.0,
+            "ci_group": [
+              0.0,
+              0.0
+            ],
+            "ci_wilson_row": [
+              0.0,
+              0.7934567085261071
+            ],
+            "n_groups": 1,
+            "flags": [
+              "n<30",
+              "groups<5"
+            ]
+          }
+        },
+        "flooded": {
+          "precision": {
+            "k": 0,
+            "n": 0,
+            "value": NaN,
+            "ci_group": [
+              NaN,
+              NaN
+            ],
+            "ci_wilson_row": [
+              NaN,
+              NaN
+            ],
+            "n_groups": 0,
+            "flags": [
+              "n<30",
+              "groups<5"
+            ]
+          },
+          "recall": {
+            "k": 0,
+            "n": 0,
+            "value": NaN,
+            "ci_group": [
+              NaN,
+              NaN
+            ],
+            "ci_wilson_row": [
+              NaN,
+              NaN
+            ],
+            "n_groups": 0,
+            "flags": [
+              "n<30",
+              "groups<5"
+            ]
+          }
+        }
+      },
+      "false_alarm": {
+        "flooded|wet": {
+          "k": 0,
+          "n": 1,
+          "value": 0.0,
+          "ci_group": [
+            0.0,
+            0.0
+          ],
+          "ci_wilson_row": [
+            0.0,
+            0.7934567085261071
+          ],
+          "n_groups": 1,
+          "flags": [
+            "n<30",
+            "groups<5"
+          ]
+        },
+        "flooded|dry": {
+          "k": 0,
+          "n": 325,
+          "value": 0.0,
+          "ci_group": [
+            0.0,
+            0.0
+          ],
+          "ci_wilson_row": [
+            0.0,
+            0.011682220254371706
+          ],
+          "n_groups": 219,
+          "flags": []
+        },
+        "wet|dry": {
+          "k": 1,
+          "n": 325,
+          "value": 0.003076923076923077,
+          "ci_group": [
+            0.0,
+            0.009404388714733543
+          ],
+          "ci_wilson_row": [
+            0.0005433451436958493,
+            0.017220830678341265
+          ],
+          "n_groups": 219,
+          "flags": []
+        },
+        "notdry|dry": {
+          "k": 1,
+          "n": 325,
+          "value": 0.003076923076923077,
+          "ci_group": [
+            0.0,
+            0.009404388714733543
+          ],
+          "ci_wilson_row": [
+            0.0005433451436958493,
+            0.017220830678341265
+          ],
+          "n_groups": 219,
+          "flags": []
+        }
+      },
+      "missed_flood": {
+        "dry|flooded": {
+          "k": 0,
+          "n": 0,
+          "value": NaN,
+          "ci_group": [
+            NaN,
+            NaN
+          ],
+          "ci_wilson_row": [
+            NaN,
+            NaN
+          ],
+          "n_groups": 0,
+          "flags": [
+            "n<30",
+            "groups<5"
+          ]
+        },
+        "wet|flooded": {
+          "k": 0,
+          "n": 0,
+          "value": NaN,
+          "ci_group": [
+            NaN,
+            NaN
+          ],
+          "ci_wilson_row": [
+            NaN,
+            NaN
+          ],
+          "n_groups": 0,
+          "flags": [
+            "n<30",
+            "groups<5"
+          ]
+        }
+      },
+      "stage_a": {
+        "confusion": [
+          [
+            324,
+            1
+          ],
+          [
+            1,
+            0
+          ]
+        ],
+        "auc_roc": 0.09846153846153849,
+        "auc_pr": 0.003401360544217687,
+        "n_pos": 1,
+        "n": 326
+      },
+      "stage_b_all_rows": {
+        "confusion": [
+          [
+            325,
+            1
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "auc_roc": null,
+        "auc_pr": null,
+        "n_pos": 0,
+        "n": 326
+      },
+      "stage_b_true_wet_or_flooded": {
+        "confusion": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "auc_roc": null,
+        "auc_pr": null,
+        "n_pos": 0,
+        "n": 1
+      },
+      "stage_b_after_gate": {
+        "confusion": [
+          [
+            1,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "auc_roc": null,
+        "auc_pr": null,
+        "n_pos": 0,
+        "n": 1
+      },
+      "flooded_score_pApB": {
+        "auc_roc": null,
+        "auc_pr": null,
+        "n_pos": 0,
+        "n": 326
+      }
+    },
+    "b_flood_master_test": {
+      "n": 62,
+      "n_groups": 1,
+      "labels": {
+        "flooded": 62
+      },
+      "confusion_3class": {
+        "dry": {
+          "dry": 0,
+          "wet": 0,
+          "flooded": 19
+        },
+        "wet": {
+          "dry": 0,
+          "wet": 0,
+          "flooded": 24
+        },
+        "flooded": {
+          "dry": 0,
+          "wet": 0,
+          "flooded": 19
+        }
+      },
+      "per_class": {
+        "dry": {
+          "precision": {
+            "k": 0,
+            "n": 19,
+            "value": 0.0,
+            "ci_group": [
+              0.0,
+              0.0
+            ],
+            "ci_wilson_row": [
+              0.0,
+              0.16818436536845052
+            ],
+            "n_groups": 1,
+            "flags": [
+              "n<30",
+              "groups<5"
+            ]
+          },
+          "recall": {
+            "k": 0,
+            "n": 0,
+            "value": NaN,
+            "ci_group": [
+              NaN,
+              NaN
+            ],
+            "ci_wilson_row": [
+              NaN,
+              NaN
+            ],
+            "n_groups": 0,
+            "flags": [
+              "n<30",
+              "groups<5"
+            ]
+          }
+        },
+        "wet": {
+          "precision": {
+            "k": 0,
+            "n": 24,
+            "value": 0.0,
+            "ci_group": [
+              0.0,
+              0.0
+            ],
+            "ci_wilson_row": [
+              0.0,
+              0.13798057582897535
+            ],
+            "n_groups": 1,
+            "flags": [
+              "n<30",
+              "groups<5"
+            ]
+          },
+          "recall": {
+            "k": 0,
+            "n": 0,
+            "value": NaN,
+            "ci_group": [
+              NaN,
+              NaN
+            ],
+            "ci_wilson_row": [
+              NaN,
+              NaN
+            ],
+            "n_groups": 0,
+            "flags": [
+              "n<30",
+              "groups<5"
+            ]
+          }
+        },
+        "flooded": {
+          "precision": {
+            "k": 19,
+            "n": 19,
+            "value": 1.0,
+            "ci_group": [
+              1.0,
+              1.0
+            ],
+            "ci_wilson_row": [
+              0.8318156346315496,
+              1.0
+            ],
+            "n_groups": 1,
+            "flags": [
+              "n<30",
+              "groups<5"
+            ]
+          },
+          "recall": {
+            "k": 19,
+            "n": 62,
+            "value": 0.3064516129032258,
+            "ci_group": [
+              0.3064516129032258,
+              0.3064516129032258
+            ],
+            "ci_wilson_row": [
+              0.20581430019850633,
+              0.4296745093079456
+            ],
+            "n_groups": 1,
+            "flags": [
+              "groups<5"
+            ]
+          }
+        }
+      },
+      "false_alarm": {
+        "flooded|wet": {
+          "k": 0,
+          "n": 0,
+          "value": NaN,
+          "ci_group": [
+            NaN,
+            NaN
+          ],
+          "ci_wilson_row": [
+            NaN,
+            NaN
+          ],
+          "n_groups": 0,
+          "flags": [
+            "n<30",
+            "groups<5"
+          ]
+        },
+        "flooded|dry": {
+          "k": 0,
+          "n": 0,
+          "value": NaN,
+          "ci_group": [
+            NaN,
+            NaN
+          ],
+          "ci_wilson_row": [
+            NaN,
+            NaN
+          ],
+          "n_groups": 0,
+          "flags": [
+            "n<30",
+            "groups<5"
+          ]
+        },
+        "wet|dry": {
+          "k": 0,
+          "n": 0,
+          "value": NaN,
+          "ci_group": [
+            NaN,
+            NaN
+          ],
+          "ci_wilson_row": [
+            NaN,
+            NaN
+          ],
+          "n_groups": 0,
+          "flags": [
+            "n<30",
+            "groups<5"
+          ]
+        },
+        "notdry|dry": {
+          "k": 0,
+          "n": 0,
+          "value": NaN,
+          "ci_group": [
+            NaN,
+            NaN
+          ],
+          "ci_wilson_row": [
+            NaN,
+            NaN
+          ],
+          "n_groups": 0,
+          "flags": [
+            "n<30",
+            "groups<5"
+          ]
+        }
+      },
+      "missed_flood": {
+        "dry|flooded": {
+          "k": 19,
+          "n": 62,
+          "value": 0.3064516129032258,
+          "ci_group": [
+            0.3064516129032258,
+            0.3064516129032258
+          ],
+          "ci_wilson_row": [
+            0.20581430019850633,
+            0.4296745093079456
+          ],
+          "n_groups": 1,
+          "flags": [
+            "groups<5"
+          ]
+        },
+        "wet|flooded": {
+          "k": 24,
+          "n": 62,
+          "value": 0.3870967741935484,
+          "ci_group": [
+            0.3870967741935484,
+            0.3870967741935484
+          ],
+          "ci_wilson_row": [
+            0.2758446342699068,
+            0.5115238379421901
+          ],
+          "n_groups": 1,
+          "flags": [
+            "groups<5"
+          ]
+        }
+      },
+      "stage_a": {
+        "confusion": [
+          [
+            0,
+            0
+          ],
+          [
+            19,
+            43
+          ]
+        ],
+        "auc_roc": null,
+        "auc_pr": null,
+        "n_pos": 62,
+        "n": 62
+      },
+      "stage_b_all_rows": {
+        "confusion": [
+          [
+            0,
+            0
+          ],
+          [
+            43,
+            19
+          ]
+        ],
+        "auc_roc": null,
+        "auc_pr": null,
+        "n_pos": 62,
+        "n": 62
+      },
+      "stage_b_true_wet_or_flooded": {
+        "confusion": [
+          [
+            0,
+            0
+          ],
+          [
+            43,
+            19
+          ]
+        ],
+        "auc_roc": null,
+        "auc_pr": null,
+        "n_pos": 62,
+        "n": 62
+      },
+      "stage_b_after_gate": {
+        "confusion": [
+          [
+            0,
+            0
+          ],
+          [
+            24,
+            19
+          ]
+        ],
+        "auc_roc": null,
+        "auc_pr": null,
+        "n_pos": 43,
+        "n": 43
+      },
+      "flooded_score_pApB": {
+        "auc_roc": null,
+        "auc_pr": null,
+        "n_pos": 62,
+        "n": 62
+      }
+    },
+    "b_fred": {
+      "n": 615,
+      "n_groups": 4,
+      "labels": {
+        "dry": 598,
+        "flooded": 17
+      },
+      "confusion_3class": {
+        "dry": {
+          "dry": 591,
+          "wet": 0,
+          "flooded": 6
+        },
+        "wet": {
+          "dry": 3,
+          "wet": 0,
+          "flooded": 3
+        },
+        "flooded": {
+          "dry": 4,
+          "wet": 0,
+          "flooded": 8
+        }
+      },
+      "per_class": {
+        "dry": {
+          "precision": {
+            "k": 591,
+            "n": 597,
+            "value": 0.9899497487437185,
+            "ci_group": [
+              0.918918918918919,
+              1.0
+            ],
+            "ci_wilson_row": [
+              0.9782482844800814,
+              0.9953860311199035
+            ],
+            "n_groups": 4,
+            "flags": [
+              "groups<5"
+            ]
+          },
+          "recall": {
+            "k": 591,
+            "n": 598,
+            "value": 0.9882943143812709,
+            "ci_group": [
+              0.9066666666666666,
+              1.0
+            ],
+            "ci_wilson_row": [
+              0.9760364777014092,
+              0.9943185127146736
+            ],
+            "n_groups": 4,
+            "flags": [
+              "groups<5"
+            ]
+          }
+        },
+        "wet": {
+          "precision": {
+            "k": 0,
+            "n": 6,
+            "value": 0.0,
+            "ci_group": [
+              0.0,
+              0.0
+            ],
+            "ci_wilson_row": [
+              0.0,
+              0.3903430336530645
+            ],
+            "n_groups": 1,
+            "flags": [
+              "n<30",
+              "groups<5"
+            ]
+          },
+          "recall": {
+            "k": 0,
+            "n": 0,
+            "value": NaN,
+            "ci_group": [
+              NaN,
+              NaN
+            ],
+            "ci_wilson_row": [
+              NaN,
+              NaN
+            ],
+            "n_groups": 0,
+            "flags": [
+              "n<30",
+              "groups<5"
+            ]
+          }
+        },
+        "flooded": {
+          "precision": {
+            "k": 8,
+            "n": 12,
+            "value": 0.6666666666666666,
+            "ci_group": [
+              0.6666666666666666,
+              0.6666666666666666
+            ],
+            "ci_wilson_row": [
+              0.3906175873976139,
+              0.8618821601026385
+            ],
+            "n_groups": 1,
+            "flags": [
+              "n<30",
+              "groups<5"
+            ]
+          },
+          "recall": {
+            "k": 8,
+            "n": 17,
+            "value": 0.47058823529411764,
+            "ci_group": [
+              0.47058823529411764,
+              0.47058823529411764
+            ],
+            "ci_wilson_row": [
+              0.26164801196088106,
+              0.6903710268845051
+            ],
+            "n_groups": 1,
+            "flags": [
+              "n<30",
+              "groups<5"
+            ]
+          }
+        }
+      },
+      "false_alarm": {
+        "flooded|wet": {
+          "k": 0,
+          "n": 0,
+          "value": NaN,
+          "ci_group": [
+            NaN,
+            NaN
+          ],
+          "ci_wilson_row": [
+            NaN,
+            NaN
+          ],
+          "n_groups": 0,
+          "flags": [
+            "n<30",
+            "groups<5"
+          ]
+        },
+        "flooded|dry": {
+          "k": 4,
+          "n": 598,
+          "value": 0.006688963210702341,
+          "ci_group": [
+            0.0,
+            0.05333333333333334
+          ],
+          "ci_wilson_row": [
+            0.0026041497158335175,
+            0.017071459281616973
+          ],
+          "n_groups": 4,
+          "flags": [
+            "groups<5"
+          ]
+        },
+        "wet|dry": {
+          "k": 3,
+          "n": 598,
+          "value": 0.005016722408026756,
+          "ci_group": [
+            0.0,
+            0.04
+          ],
+          "ci_wilson_row": [
+            0.0017075434433724678,
+            0.014644932025255823
+          ],
+          "n_groups": 4,
+          "flags": [
+            "groups<5"
+          ]
+        },
+        "notdry|dry": {
+          "k": 7,
+          "n": 598,
+          "value": 0.011705685618729096,
+          "ci_group": [
+            0.0,
+            0.09333333333333334
+          ],
+          "ci_wilson_row": [
+            0.005681487285326298,
+            0.0239635222985908
+          ],
+          "n_groups": 4,
+          "flags": [
+            "groups<5"
+          ]
+        }
+      },
+      "missed_flood": {
+        "dry|flooded": {
+          "k": 6,
+          "n": 17,
+          "value": 0.35294117647058826,
+          "ci_group": [
+            0.35294117647058826,
+            0.35294117647058826
+          ],
+          "ci_wilson_row": [
+            0.17309486143904904,
+            0.5870003327878818
+          ],
+          "n_groups": 1,
+          "flags": [
+            "n<30",
+            "groups<5"
+          ]
+        },
+        "wet|flooded": {
+          "k": 3,
+          "n": 17,
+          "value": 0.17647058823529413,
+          "ci_group": [
+            0.17647058823529413,
+            0.17647058823529413
+          ],
+          "ci_wilson_row": [
+            0.0619101371254899,
+            0.41029929017375777
+          ],
+          "n_groups": 1,
+          "flags": [
+            "n<30",
+            "groups<5"
+          ]
+        }
+      },
+      "stage_a": {
+        "confusion": [
+          [
+            591,
+            7
+          ],
+          [
+            6,
+            11
+          ]
+        ],
+        "auc_roc": 0.9876057446389928,
+        "auc_pr": 0.6943856171637163,
+        "n_pos": 17,
+        "n": 615
+      },
+      "stage_b_all_rows": {
+        "confusion": [
+          [
+            594,
+            4
+          ],
+          [
+            9,
+            8
+          ]
+        ],
+        "auc_roc": 0.9835726932913633,
+        "auc_pr": 0.6721993569607847,
+        "n_pos": 17,
+        "n": 615
+      },
+      "stage_b_true_wet_or_flooded": {
+        "confusion": [
+          [
+            0,
+            0
+          ],
+          [
+            9,
+            8
+          ]
+        ],
+        "auc_roc": null,
+        "auc_pr": null,
+        "n_pos": 17,
+        "n": 17
+      },
+      "stage_b_after_gate": {
+        "confusion": [
+          [
+            3,
+            4
+          ],
+          [
+            3,
+            8
+          ]
+        ],
+        "auc_roc": 0.6233766233766234,
+        "auc_pr": 0.7848959418478136,
+        "n_pos": 11,
+        "n": 18
+      },
+      "flooded_score_pApB": {
+        "auc_roc": 0.9857367696242377,
+        "auc_pr": 0.6817114339081873,
+        "n_pos": 17,
+        "n": 615
+      }
+    },
+    "b_nysdot_road_surface": {
+      "n": 16,
+      "n_groups": 1,
+      "labels": {
+        "wet": 9,
+        "dry": 7
+      },
+      "confusion_3class": {
+        "dry": {
+          "dry": 7,
+          "wet": 9,
+          "flooded": 0
+        },
+        "wet": {
+          "dry": 0,
+          "wet": 0,
+          "flooded": 0
+        },
+        "flooded": {
+          "dry": 0,
+          "wet": 0,
+          "flooded": 0
+        }
+      },
+      "per_class": {
+        "dry": {
+          "precision": {
+            "k": 7,
+            "n": 16,
+            "value": 0.4375,
+            "ci_group": [
+              0.4375,
+              0.4375
+            ],
+            "ci_wilson_row": [
+              0.2309836333518552,
+              0.6682180439322347
+            ],
+            "n_groups": 1,
+            "flags": [
+              "n<30",
+              "groups<5"
+            ]
+          },
+          "recall": {
+            "k": 7,
+            "n": 7,
+            "value": 1.0,
+            "ci_group": [
+              1.0,
+              1.0
+            ],
+            "ci_wilson_row": [
+              0.6456611570247934,
+              1.0
+            ],
+            "n_groups": 1,
+            "flags": [
+              "n<30",
+              "groups<5"
+            ]
+          }
+        },
+        "wet": {
+          "precision": {
+            "k": 0,
+            "n": 0,
+            "value": NaN,
+            "ci_group": [
+              NaN,
+              NaN
+            ],
+            "ci_wilson_row": [
+              NaN,
+              NaN
+            ],
+            "n_groups": 0,
+            "flags": [
+              "n<30",
+              "groups<5"
+            ]
+          },
+          "recall": {
+            "k": 0,
+            "n": 9,
+            "value": 0.0,
+            "ci_group": [
+              0.0,
+              0.0
+            ],
+            "ci_wilson_row": [
+              0.0,
+              0.2991527535509594
+            ],
+            "n_groups": 1,
+            "flags": [
+              "n<30",
+              "groups<5"
+            ]
+          }
+        },
+        "flooded": {
+          "precision": {
+            "k": 0,
+            "n": 0,
+            "value": NaN,
+            "ci_group": [
+              NaN,
+              NaN
+            ],
+            "ci_wilson_row": [
+              NaN,
+              NaN
+            ],
+            "n_groups": 0,
+            "flags": [
+              "n<30",
+              "groups<5"
+            ]
+          },
+          "recall": {
+            "k": 0,
+            "n": 0,
+            "value": NaN,
+            "ci_group": [
+              NaN,
+              NaN
+            ],
+            "ci_wilson_row": [
+              NaN,
+              NaN
+            ],
+            "n_groups": 0,
+            "flags": [
+              "n<30",
+              "groups<5"
+            ]
+          }
+        }
+      },
+      "false_alarm": {
+        "flooded|wet": {
+          "k": 0,
+          "n": 9,
+          "value": 0.0,
+          "ci_group": [
+            0.0,
+            0.0
+          ],
+          "ci_wilson_row": [
+            0.0,
+            0.2991527535509594
+          ],
+          "n_groups": 1,
+          "flags": [
+            "n<30",
+            "groups<5"
+          ]
+        },
+        "flooded|dry": {
+          "k": 0,
+          "n": 7,
+          "value": 0.0,
+          "ci_group": [
+            0.0,
+            0.0
+          ],
+          "ci_wilson_row": [
+            0.0,
+            0.35433884297520657
+          ],
+          "n_groups": 1,
+          "flags": [
+            "n<30",
+            "groups<5"
+          ]
+        },
+        "wet|dry": {
+          "k": 0,
+          "n": 7,
+          "value": 0.0,
+          "ci_group": [
+            0.0,
+            0.0
+          ],
+          "ci_wilson_row": [
+            0.0,
+            0.35433884297520657
+          ],
+          "n_groups": 1,
+          "flags": [
+            "n<30",
+            "groups<5"
+          ]
+        },
+        "notdry|dry": {
+          "k": 0,
+          "n": 7,
+          "value": 0.0,
+          "ci_group": [
+            0.0,
+            0.0
+          ],
+          "ci_wilson_row": [
+            0.0,
+            0.35433884297520657
+          ],
+          "n_groups": 1,
+          "flags": [
+            "n<30",
+            "groups<5"
+          ]
+        }
+      },
+      "missed_flood": {
+        "dry|flooded": {
+          "k": 0,
+          "n": 0,
+          "value": NaN,
+          "ci_group": [
+            NaN,
+            NaN
+          ],
+          "ci_wilson_row": [
+            NaN,
+            NaN
+          ],
+          "n_groups": 0,
+          "flags": [
+            "n<30",
+            "groups<5"
+          ]
+        },
+        "wet|flooded": {
+          "k": 0,
+          "n": 0,
+          "value": NaN,
+          "ci_group": [
+            NaN,
+            NaN
+          ],
+          "ci_wilson_row": [
+            NaN,
+            NaN
+          ],
+          "n_groups": 0,
+          "flags": [
+            "n<30",
+            "groups<5"
+          ]
+        }
+      },
+      "stage_a": {
+        "confusion": [
+          [
+            7,
+            0
+          ],
+          [
+            9,
+            0
+          ]
+        ],
+        "auc_roc": 0.6984126984126984,
+        "auc_pr": 0.7315406815406815,
+        "n_pos": 9,
+        "n": 16
+      },
+      "stage_b_all_rows": {
+        "confusion": [
+          [
+            16,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "auc_roc": null,
+        "auc_pr": null,
+        "n_pos": 0,
+        "n": 16
+      },
+      "stage_b_true_wet_or_flooded": {
+        "confusion": [
+          [
+            9,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "auc_roc": null,
+        "auc_pr": null,
+        "n_pos": 0,
+        "n": 9
+      },
+      "stage_b_after_gate": {
+        "confusion": [
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ],
+        "auc_roc": null,
+        "auc_pr": null,
+        "n_pos": 0,
+        "n": 0
+      },
+      "flooded_score_pApB": {
+        "auc_roc": null,
+        "auc_pr": null,
+        "n_pos": 0,
+        "n": 16
+      }
+    },
+    "b_roadway_flooding": {
+      "n": 89,
+      "n_groups": 89,
+      "labels": {
+        "flooded": 89
+      },
+      "confusion_3class": {
+        "dry": {
+          "dry": 0,
+          "wet": 0,
+          "flooded": 2
+        },
+        "wet": {
+          "dry": 0,
+          "wet": 0,
+          "flooded": 5
+        },
+        "flooded": {
+          "dry": 0,
+          "wet": 0,
+          "flooded": 82
+        }
+      },
+      "per_class": {
+        "dry": {
+          "precision": {
+            "k": 0,
+            "n": 2,
+            "value": 0.0,
+            "ci_group": [
+              0.0,
+              0.0
+            ],
+            "ci_wilson_row": [
+              0.0,
+              0.6576280471103807
+            ],
+            "n_groups": 2,
+            "flags": [
+              "n<30",
+              "groups<5"
+            ]
+          },
+          "recall": {
+            "k": 0,
+            "n": 0,
+            "value": NaN,
+            "ci_group": [
+              NaN,
+              NaN
+            ],
+            "ci_wilson_row": [
+              NaN,
+              NaN
+            ],
+            "n_groups": 0,
+            "flags": [
+              "n<30",
+              "groups<5"
+            ]
+          }
+        },
+        "wet": {
+          "precision": {
+            "k": 0,
+            "n": 5,
+            "value": 0.0,
+            "ci_group": [
+              0.0,
+              0.0
+            ],
+            "ci_wilson_row": [
+              0.0,
+              0.43449149475208104
+            ],
+            "n_groups": 5,
+            "flags": [
+              "n<30"
+            ]
+          },
+          "recall": {
+            "k": 0,
+            "n": 0,
+            "value": NaN,
+            "ci_group": [
+              NaN,
+              NaN
+            ],
+            "ci_wilson_row": [
+              NaN,
+              NaN
+            ],
+            "n_groups": 0,
+            "flags": [
+              "n<30",
+              "groups<5"
+            ]
+          }
+        },
+        "flooded": {
+          "precision": {
+            "k": 82,
+            "n": 82,
+            "value": 1.0,
+            "ci_group": [
+              1.0,
+              1.0
+            ],
+            "ci_wilson_row": [
+              0.9552478052599207,
+              1.0
+            ],
+            "n_groups": 82,
+            "flags": []
+          },
+          "recall": {
+            "k": 82,
+            "n": 89,
+            "value": 0.9213483146067416,
+            "ci_group": [
+              0.8651685393258427,
+              0.9662921348314607
+            ],
+            "ci_wilson_row": [
+              0.846446856523734,
+              0.961380669068242
+            ],
+            "n_groups": 89,
+            "flags": []
+          }
+        }
+      },
+      "false_alarm": {
+        "flooded|wet": {
+          "k": 0,
+          "n": 0,
+          "value": NaN,
+          "ci_group": [
+            NaN,
+            NaN
+          ],
+          "ci_wilson_row": [
+            NaN,
+            NaN
+          ],
+          "n_groups": 0,
+          "flags": [
+            "n<30",
+            "groups<5"
+          ]
+        },
+        "flooded|dry": {
+          "k": 0,
+          "n": 0,
+          "value": NaN,
+          "ci_group": [
+            NaN,
+            NaN
+          ],
+          "ci_wilson_row": [
+            NaN,
+            NaN
+          ],
+          "n_groups": 0,
+          "flags": [
+            "n<30",
+            "groups<5"
+          ]
+        },
+        "wet|dry": {
+          "k": 0,
+          "n": 0,
+          "value": NaN,
+          "ci_group": [
+            NaN,
+            NaN
+          ],
+          "ci_wilson_row": [
+            NaN,
+            NaN
+          ],
+          "n_groups": 0,
+          "flags": [
+            "n<30",
+            "groups<5"
+          ]
+        },
+        "notdry|dry": {
+          "k": 0,
+          "n": 0,
+          "value": NaN,
+          "ci_group": [
+            NaN,
+            NaN
+          ],
+          "ci_wilson_row": [
+            NaN,
+            NaN
+          ],
+          "n_groups": 0,
+          "flags": [
+            "n<30",
+            "groups<5"
+          ]
+        }
+      },
+      "missed_flood": {
+        "dry|flooded": {
+          "k": 2,
+          "n": 89,
+          "value": 0.02247191011235955,
+          "ci_group": [
+            0.0,
+            0.056179775280898875
+          ],
+          "ci_wilson_row": [
+            0.006184269063094168,
+            0.07827786859933303
+          ],
+          "n_groups": 89,
+          "flags": []
+        },
+        "wet|flooded": {
+          "k": 5,
+          "n": 89,
+          "value": 0.056179775280898875,
+          "ci_group": [
+            0.011235955056179775,
+            0.11235955056179775
+          ],
+          "ci_wilson_row": [
+            0.024232521079919085,
+            0.1248558186298662
+          ],
+          "n_groups": 89,
+          "flags": []
+        }
+      },
+      "stage_a": {
+        "confusion": [
+          [
+            0,
+            0
+          ],
+          [
+            2,
+            87
+          ]
+        ],
+        "auc_roc": null,
+        "auc_pr": null,
+        "n_pos": 89,
+        "n": 89
+      },
+      "stage_b_all_rows": {
+        "confusion": [
+          [
+            0,
+            0
+          ],
+          [
+            7,
+            82
+          ]
+        ],
+        "auc_roc": null,
+        "auc_pr": null,
+        "n_pos": 89,
+        "n": 89
+      },
+      "stage_b_true_wet_or_flooded": {
+        "confusion": [
+          [
+            0,
+            0
+          ],
+          [
+            7,
+            82
+          ]
+        ],
+        "auc_roc": null,
+        "auc_pr": null,
+        "n_pos": 89,
+        "n": 89
+      },
+      "stage_b_after_gate": {
+        "confusion": [
+          [
+            0,
+            0
+          ],
+          [
+            5,
+            82
+          ]
+        ],
+        "auc_roc": null,
+        "auc_pr": null,
+        "n_pos": 87,
+        "n": 87
+      },
+      "flooded_score_pApB": {
+        "auc_roc": null,
+        "auc_pr": null,
+        "n_pos": 89,
+        "n": 89
+      }
+    },
+    "b_external_pooled": {
+      "n": 782,
+      "n_groups": 95,
+      "labels": {
+        "dry": 605,
+        "flooded": 168,
+        "wet": 9
+      },
+      "confusion_3class": {
+        "dry": {
+          "dry": 598,
+          "wet": 9,
+          "flooded": 27
+        },
+        "wet": {
+          "dry": 3,
+          "wet": 0,
+          "flooded": 32
+        },
+        "flooded": {
+          "dry": 4,
+          "wet": 0,
+          "flooded": 109
+        }
+      },
+      "per_class": {
+        "dry": {
+          "precision": {
+            "k": 598,
+            "n": 634,
+            "value": 0.943217665615142,
+            "ci_group": [
+              0.690713394724291,
+              0.9922190277641888
+            ],
+            "ci_wilson_row": [
+              0.9223907118467537,
+              0.9587057860925466
+            ],
+            "n_groups": 8,
+            "flags": []
+          },
+          "recall": {
+            "k": 598,
+            "n": 605,
+            "value": 0.9884297520661157,
+            "ci_group": [
+              0.8990384615384616,
+              1.0
+            ],
+            "ci_wilson_row": [
+              0.9763114484896037,
+              0.9943843778139866
+            ],
+            "n_groups": 5,
+            "flags": []
+          }
+        },
+        "wet": {
+          "precision": {
+            "k": 0,
+            "n": 35,
+            "value": 0.0,
+            "ci_group": [
+              0.0,
+              0.0
+            ],
+            "ci_wilson_row": [
+              0.0,
+              0.09890426758938868
+            ],
+            "n_groups": 7,
+            "flags": []
+          },
+          "recall": {
+            "k": 0,
+            "n": 9,
+            "value": 0.0,
+            "ci_group": [
+              0.0,
+              0.0
+            ],
+            "ci_wilson_row": [
+              0.0,
+              0.2991527535509594
+            ],
+            "n_groups": 1,
+            "flags": [
+              "n<30",
+              "groups<5"
+            ]
+          }
+        },
+        "flooded": {
+          "precision": {
+            "k": 109,
+            "n": 113,
+            "value": 0.9646017699115044,
+            "ci_group": [
+              0.8974358974358975,
+              1.0
+            ],
+            "ci_wilson_row": [
+              0.9125024891789997,
+              0.9861500455346639
+            ],
+            "n_groups": 84,
+            "flags": []
+          },
+          "recall": {
+            "k": 109,
+            "n": 168,
+            "value": 0.6488095238095238,
+            "ci_group": [
+              0.4906710510291073,
+              0.945054945054945
+            ],
+            "ci_wilson_row": [
+              0.5740343095988593,
+              0.7169313238682408
+            ],
+            "n_groups": 91,
+            "flags": []
+          }
+        }
+      },
+      "false_alarm": {
+        "flooded|wet": {
+          "k": 0,
+          "n": 9,
+          "value": 0.0,
+          "ci_group": [
+            0.0,
+            0.0
+          ],
+          "ci_wilson_row": [
+            0.0,
+            0.2991527535509594
+          ],
+          "n_groups": 1,
+          "flags": [
+            "n<30",
+            "groups<5"
+          ]
+        },
+        "flooded|dry": {
+          "k": 4,
+          "n": 605,
+          "value": 0.006611570247933884,
+          "ci_group": [
+            0.0,
+            0.057692307692307696
+          ],
+          "ci_wilson_row": [
+            0.002573984840332371,
+            0.016875408893604334
+          ],
+          "n_groups": 5,
+          "flags": []
+        },
+        "wet|dry": {
+          "k": 3,
+          "n": 605,
+          "value": 0.0049586776859504135,
+          "ci_group": [
+            0.0,
+            0.04326923076923077
+          ],
+          "ci_wilson_row": [
+            0.00168777029084492,
+            0.014476696788934124
+          ],
+          "n_groups": 5,
+          "flags": []
+        },
+        "notdry|dry": {
+          "k": 7,
+          "n": 605,
+          "value": 0.011570247933884297,
+          "ci_group": [
+            0.0,
+            0.10096153846153846
+          ],
+          "ci_wilson_row": [
+            0.005615622186013365,
+            0.023688551510396335
+          ],
+          "n_groups": 5,
+          "flags": []
+        }
+      },
+      "missed_flood": {
+        "dry|flooded": {
+          "k": 27,
+          "n": 168,
+          "value": 0.16071428571428573,
+          "ci_group": [
+            0.01098901098901099,
+            0.23529411764705882
+          ],
+          "ci_wilson_row": [
+            0.11286495618697515,
+            0.22373339950803703
+          ],
+          "n_groups": 91,
+          "flags": []
+        },
+        "wet|flooded": {
+          "k": 32,
+          "n": 168,
+          "value": 0.19047619047619047,
+          "ci_group": [
+            0.03296703296703297,
+            0.28620689655172415
+          ],
+          "ci_wilson_row": [
+            0.13827736527488882,
+            0.2565141171135433
+          ],
+          "n_groups": 91,
+          "flags": []
+        }
+      },
+      "stage_a": {
+        "confusion": [
+          [
+            598,
+            7
+          ],
+          [
+            36,
+            141
+          ]
+        ],
+        "auc_roc": 0.9671849465377971,
+        "auc_pr": 0.9517326524909255,
+        "n_pos": 177,
+        "n": 782
+      },
+      "stage_b_all_rows": {
+        "confusion": [
+          [
+            610,
+            4
+          ],
+          [
+            59,
+            109
+          ]
+        ],
+        "auc_roc": 0.9931848146424693,
+        "auc_pr": 0.9719497709259092,
+        "n_pos": 168,
+        "n": 782
+      },
+      "stage_b_true_wet_or_flooded": {
+        "confusion": [
+          [
+            9,
+            0
+          ],
+          [
+            59,
+            109
+          ]
+        ],
+        "auc_roc": 1.0,
+        "auc_pr": 1.0,
+        "n_pos": 168,
+        "n": 177
+      },
+      "stage_b_after_gate": {
+        "confusion": [
+          [
+            3,
+            4
+          ],
+          [
+            32,
+            109
+          ]
+        ],
+        "auc_roc": 0.7102330293819656,
+        "auc_pr": 0.9827434806871229,
+        "n_pos": 141,
+        "n": 148
+      },
+      "flooded_score_pApB": {
+        "auc_roc": 0.9940573134791375,
+        "auc_pr": 0.9744162186745132,
+        "n_pos": 168,
+        "n": 782
+      }
+    },
+    "all_test": {
+      "n": 1108,
+      "n_groups": 314,
+      "labels": {
+        "dry": 930,
+        "flooded": 168,
+        "wet": 10
+      },
+      "confusion_3class": {
+        "dry": {
+          "dry": 922,
+          "wet": 10,
+          "flooded": 27
+        },
+        "wet": {
+          "dry": 4,
+          "wet": 0,
+          "flooded": 32
+        },
+        "flooded": {
+          "dry": 4,
+          "wet": 0,
+          "flooded": 109
+        }
+      },
+      "per_class": {
+        "dry": {
+          "precision": {
+            "k": 922,
+            "n": 959,
+            "value": 0.9614181438998958,
+            "ci_group": [
+              0.8798463138023052,
+              0.9957451316263974
+            ],
+            "ci_wilson_row": [
+              0.9472732421028858,
+              0.9718810611594577
+            ],
+            "n_groups": 227,
+            "flags": []
+          },
+          "recall": {
+            "k": 922,
+            "n": 930,
+            "value": 0.9913978494623656,
+            "ci_group": [
+              0.9608617131062951,
+              1.0
+            ],
+            "ci_wilson_row": [
+              0.9831178259710687,
+              0.9956348875512249
+            ],
+            "n_groups": 224,
+            "flags": []
+          }
+        },
+        "wet": {
+          "precision": {
+            "k": 0,
+            "n": 36,
+            "value": 0.0,
+            "ci_group": [
+              0.0,
+              0.0
+            ],
+            "ci_wilson_row": [
+              0.0,
+              0.09642183044857634
+            ],
+            "n_groups": 8,
+            "flags": []
+          },
+          "recall": {
+            "k": 0,
+            "n": 10,
+            "value": 0.0,
+            "ci_group": [
+              0.0,
+              0.0
+            ],
+            "ci_wilson_row": [
+              0.0,
+              0.2775401687666166
+            ],
+            "n_groups": 2,
+            "flags": [
+              "n<30",
+              "groups<5"
+            ]
+          }
+        },
+        "flooded": {
+          "precision": {
+            "k": 109,
+            "n": 113,
+            "value": 0.9646017699115044,
+            "ci_group": [
+              0.8974358974358975,
+              1.0
+            ],
+            "ci_wilson_row": [
+              0.9125024891789997,
+              0.9861500455346639
+            ],
+            "n_groups": 84,
+            "flags": []
+          },
+          "recall": {
+            "k": 109,
+            "n": 168,
+            "value": 0.6488095238095238,
+            "ci_group": [
+              0.4906710510291073,
+              0.945054945054945
+            ],
+            "ci_wilson_row": [
+              0.5740343095988593,
+              0.7169313238682408
+            ],
+            "n_groups": 91,
+            "flags": []
+          }
+        }
+      },
+      "false_alarm": {
+        "flooded|wet": {
+          "k": 0,
+          "n": 10,
+          "value": 0.0,
+          "ci_group": [
+            0.0,
+            0.0
+          ],
+          "ci_wilson_row": [
+            0.0,
+            0.2775401687666166
+          ],
+          "n_groups": 2,
+          "flags": [
+            "n<30",
+            "groups<5"
+          ]
+        },
+        "flooded|dry": {
+          "k": 4,
+          "n": 930,
+          "value": 0.004301075268817204,
+          "ci_group": [
+            0.0,
+            0.021700801949838817
+          ],
+          "ci_wilson_row": [
+            0.0016738100552057935,
+            0.011006713065631831
+          ],
+          "n_groups": 224,
+          "flags": []
+        },
+        "wet|dry": {
+          "k": 4,
+          "n": 930,
+          "value": 0.004301075268817204,
+          "ci_group": [
+            0.0,
+            0.01754774103400091
+          ],
+          "ci_wilson_row": [
+            0.0016738100552057935,
+            0.011006713065631831
+          ],
+          "n_groups": 224,
+          "flags": []
+        },
+        "notdry|dry": {
+          "k": 8,
+          "n": 930,
+          "value": 0.008602150537634409,
+          "ci_group": [
+            0.0,
+            0.03913828689370484
+          ],
+          "ci_wilson_row": [
+            0.004365112448775189,
+            0.016882174028931524
+          ],
+          "n_groups": 224,
+          "flags": []
+        }
+      },
+      "missed_flood": {
+        "dry|flooded": {
+          "k": 27,
+          "n": 168,
+          "value": 0.16071428571428573,
+          "ci_group": [
+            0.01098901098901099,
+            0.23529411764705882
+          ],
+          "ci_wilson_row": [
+            0.11286495618697515,
+            0.22373339950803703
+          ],
+          "n_groups": 91,
+          "flags": []
+        },
+        "wet|flooded": {
+          "k": 32,
+          "n": 168,
+          "value": 0.19047619047619047,
+          "ci_group": [
+            0.03296703296703297,
+            0.28620689655172415
+          ],
+          "ci_wilson_row": [
+            0.13827736527488882,
+            0.2565141171135433
+          ],
+          "n_groups": 91,
+          "flags": []
+        }
+      },
+      "stage_a": {
+        "confusion": [
+          [
+            922,
+            8
+          ],
+          [
+            37,
+            141
+          ]
+        ],
+        "auc_roc": 0.9683581007611454,
+        "auc_pr": 0.9410702791770923,
+        "n_pos": 178,
+        "n": 1108
+      },
+      "stage_b_all_rows": {
+        "confusion": [
+          [
+            935,
+            5
+          ],
+          [
+            59,
+            109
+          ]
+        ],
+        "auc_roc": 0.9940286220871327,
+        "auc_pr": 0.9641700635605608,
+        "n_pos": 168,
+        "n": 1108
+      },
+      "stage_b_true_wet_or_flooded": {
+        "confusion": [
+          [
+            10,
+            0
+          ],
+          [
+            59,
+            109
+          ]
+        ],
+        "auc_roc": 1.0,
+        "auc_pr": 0.9999999999999999,
+        "n_pos": 168,
+        "n": 178
+      },
+      "stage_b_after_gate": {
+        "confusion": [
+          [
+            4,
+            4
+          ],
+          [
+            32,
+            109
+          ]
+        ],
+        "auc_roc": 0.7349290780141844,
+        "auc_pr": 0.9821266060565258,
+        "n_pos": 141,
+        "n": 149
+      },
+      "flooded_score_pApB": {
+        "auc_roc": 0.9949658054711246,
+        "auc_pr": 0.9686031316602677,
+        "n_pos": 168,
+        "n": 1108
+      }
+    }
+  }
+}

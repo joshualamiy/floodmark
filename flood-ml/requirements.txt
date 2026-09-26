@@ -1,0 +1,6 @@
+# runtime for src/inference (what the backend needs). CPU only, no tensorflow.
+# CI installs this file on Python 3.11, so every pin here must support 3.11.
+numpy==2.4.6
+pillow==12.3.0
+onnxruntime==1.30.0
+onnx==1.23.0

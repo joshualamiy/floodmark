@@ -1,0 +1,423 @@
+{
+  "n_rows": 4297,
+  "cv": "StratifiedGroupKFold(5) on cv_group (fred sequence, nysdot camera, fmd 13-frame blocks, 511 camera, roadway dup cluster)",
+  "source_probe_stageA_gap": {
+    "balanced_accuracy": 0.8888866195887782,
+    "per_source_recall": {
+      "flood_master_test": 1.0,
+      "fred": 0.7849350649350649,
+      "ga511": 0.9956164383561644,
+      "nysdot_road_surface": 0.6779661016949152,
+      "roadway_flooding": 0.9859154929577465
+    },
+    "labels": [
+      "flood_master_test",
+      "fred",
+      "ga511",
+      "nysdot_road_surface",
+      "roadway_flooding"
+    ],
+    "confusion": [
+      [
+        62,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        1511,
+        3,
+        0,
+        411
+      ],
+      [
+        0,
+        0,
+        1817,
+        8,
+        0
+      ],
+      [
+        0,
+        0,
+        17,
+        40,
+        2
+      ],
+      [
+        1,
+        5,
+        0,
+        0,
+        420
+      ]
+    ],
+    "n": 4297
+  },
+  "source_probe_clip_vitb32": {
+    "balanced_accuracy": 0.9889993396434076,
+    "per_source_recall": {
+      "flood_master_test": 1.0,
+      "fred": 0.9958441558441559,
+      "ga511": 1.0,
+      "nysdot_road_surface": 0.9491525423728814,
+      "roadway_flooding": 1.0
+    },
+    "labels": [
+      "flood_master_test",
+      "fred",
+      "ga511",
+      "nysdot_road_surface",
+      "roadway_flooding"
+    ],
+    "confusion": [
+      [
+        62,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        1917,
+        4,
+        0,
+        4
+      ],
+      [
+        0,
+        0,
+        1825,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        3,
+        56,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        426
+      ]
+    ],
+    "n": 4297
+  },
+  "source_probe_simple_cues": {
+    "balanced_accuracy": 0.9177164705663678,
+    "per_source_recall": {
+      "flood_master_test": 1.0,
+      "fred": 0.9994805194805195,
+      "ga511": 0.9747945205479452,
+      "nysdot_road_surface": 0.7457627118644068,
+      "roadway_flooding": 0.8685446009389671
+    },
+    "labels": [
+      "flood_master_test",
+      "fred",
+      "ga511",
+      "nysdot_road_surface",
+      "roadway_flooding"
+    ],
+    "confusion": [
+      [
+        62,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        1924,
+        0,
+        1,
+        0
+      ],
+      [
+        12,
+        0,
+        1779,
+        34,
+        0
+      ],
+      [
+        0,
+        0,
+        3,
+        44,
+        12
+      ],
+      [
+        0,
+        0,
+        0,
+        56,
+        370
+      ]
+    ],
+    "n": 4297
+  },
+  "cue_tables": {
+    "median_by_source": {
+      "flood_master_test": {
+        "brightness": 101.086,
+        "dark_frac": 0.078,
+        "clip_frac": 0.0,
+        "lap_var": 647.661,
+        "saturation": 91.433,
+        "green_frac": 0.002,
+        "text_score": 0.0,
+        "letterbox": 0.0,
+        "jpeg_q_orig": 95.0,
+        "is_png_orig": 0.0,
+        "aspect": 1.777,
+        "short_side": 256.0,
+        "letterbox_frac": 0.0,
+        "png_frac": 0.0
+      },
+      "fred": {
+        "brightness": 103.0,
+        "dark_frac": 0.095,
+        "clip_frac": 0.041,
+        "lap_var": 2218.666,
+        "saturation": 38.315,
+        "green_frac": 0.095,
+        "text_score": 0.0,
+        "letterbox": 0.0,
+        "jpeg_q_orig": NaN,
+        "is_png_orig": 1.0,
+        "aspect": 1.602,
+        "short_side": 256.0,
+        "letterbox_frac": 0.012,
+        "png_frac": 1.0
+      },
+      "ga511": {
+        "brightness": 85.783,
+        "dark_frac": 0.09,
+        "clip_frac": 0.008,
+        "lap_var": 310.02,
+        "saturation": 40.879,
+        "green_frac": 0.026,
+        "text_score": 0.0,
+        "letterbox": 0.0,
+        "jpeg_q_orig": 90.0,
+        "is_png_orig": 0.0,
+        "aspect": 1.779,
+        "short_side": 253.0,
+        "letterbox_frac": 0.026,
+        "png_frac": 0.0
+      },
+      "nysdot_road_surface": {
+        "brightness": 101.618,
+        "dark_frac": 0.081,
+        "clip_frac": 0.002,
+        "lap_var": 688.588,
+        "saturation": 39.56,
+        "green_frac": 0.012,
+        "text_score": 0.0,
+        "letterbox": 0.0,
+        "jpeg_q_orig": 75.0,
+        "is_png_orig": 0.0,
+        "aspect": 1.332,
+        "short_side": 256.0,
+        "letterbox_frac": 0.034,
+        "png_frac": 0.0
+      },
+      "roadway_flooding": {
+        "brightness": 121.958,
+        "dark_frac": 0.065,
+        "clip_frac": 0.001,
+        "lap_var": 1431.068,
+        "saturation": 42.962,
+        "green_frac": 0.03,
+        "text_score": 0.0,
+        "letterbox": 0.0,
+        "jpeg_q_orig": 75.0,
+        "is_png_orig": 0.0,
+        "aspect": 1.332,
+        "short_side": 256.0,
+        "letterbox_frac": 0.0,
+        "png_frac": 0.0
+      }
+    },
+    "train_single_cue_auc": {
+      "brightness": {
+        "auc_flooded": 0.7063265583015524,
+        "auc_not_dry": 0.7120545977640665
+      },
+      "dark_frac": {
+        "auc_flooded": 0.34405333899639867,
+        "auc_not_dry": 0.3428175856064156
+      },
+      "clip_frac": {
+        "auc_flooded": 0.4828010199416587,
+        "auc_not_dry": 0.47817819154759356
+      },
+      "lap_var": {
+        "auc_flooded": 0.7243672556844492,
+        "auc_not_dry": 0.7188545037608581
+      },
+      "saturation": {
+        "auc_flooded": 0.35037340836894865,
+        "auc_not_dry": 0.3489157518140138
+      },
+      "green_frac": {
+        "auc_flooded": 0.694489055831335,
+        "auc_not_dry": 0.6857198324874505
+      },
+      "text_score": {
+        "auc_flooded": 0.4694544727892661,
+        "auc_not_dry": 0.468395800216908
+      },
+      "letterbox": {
+        "auc_flooded": 0.48562702225997595,
+        "auc_not_dry": 0.4854838756763779
+      },
+      "is_png_orig": {
+        "auc_flooded": 0.7376452266553405,
+        "auc_not_dry": 0.7291722316857957
+      },
+      "aspect": {
+        "auc_flooded": 0.1908132250272093,
+        "auc_not_dry": 0.18552095147595252
+      },
+      "short_side": {
+        "auc_flooded": 0.8467090069284064,
+        "auc_not_dry": 0.8497379149679675
+      }
+    }
+  },
+  "source_lookup_baseline": {
+    "majority_label_by_train_source": {
+      "fred": "flooded",
+      "ga511": "dry",
+      "nysdot_road_surface": "wet",
+      "roadway_flooding": "flooded"
+    },
+    "test_accuracy_known_sources": 0.42065009560229444,
+    "test_rows_from_sources_absent_in_train": 62
+  },
+  "tracks_source": {
+    "pA_by_source_label": [
+      {
+        "source": "flood_master_test",
+        "label": "flooded",
+        "count": 62,
+        "median": 0.8575,
+        "mean": 0.8255
+      },
+      {
+        "source": "fred",
+        "label": "dry",
+        "count": 598,
+        "median": 0.0496,
+        "mean": 0.0873
+      },
+      {
+        "source": "fred",
+        "label": "flooded",
+        "count": 17,
+        "median": 0.8872,
+        "mean": 0.7954
+      },
+      {
+        "source": "ga511",
+        "label": "dry",
+        "count": 325,
+        "median": 0.0051,
+        "mean": 0.0428
+      },
+      {
+        "source": "ga511",
+        "label": "wet",
+        "count": 1,
+        "median": 0.0008,
+        "mean": 0.0008
+      },
+      {
+        "source": "nysdot_road_surface",
+        "label": "dry",
+        "count": 7,
+        "median": 0.0062,
+        "mean": 0.1029
+      },
+      {
+        "source": "nysdot_road_surface",
+        "label": "wet",
+        "count": 9,
+        "median": 0.0336,
+        "mean": 0.1664
+      },
+      {
+        "source": "roadway_flooding",
+        "label": "flooded",
+        "count": 89,
+        "median": 0.9991,
+        "mean": 0.9849
+      }
+    ],
+    "within_source": {
+      "fred_all_test_auc_pA_flooded_vs_dry": 0.9874090104269133,
+      "fred_flood_day_sequence_only": {
+        "auc_pA": 0.40336134453781514,
+        "n_dry": 7,
+        "n_flooded": 17,
+        "dry_called_flooded": 4,
+        "dry_called_not_dry": 6
+      },
+      "fred_dry_day_sequences_not_dry": 0,
+      "nysdot_one_camera_auc_pA_wet_vs_dry": 0.6825396825396826,
+      "nysdot_wet_called_not_dry": 0
+    },
+    "spearman_cue_vs_pA_within_source_label": {
+      "flood_master_test|flooded": {
+        "brightness": -0.515,
+        "clip_frac": -0.456,
+        "lap_var": 0.021,
+        "saturation": 0.112,
+        "green_frac": 0.265
+      },
+      "fred|dry": {
+        "brightness": 0.246,
+        "clip_frac": 0.069,
+        "lap_var": 0.08,
+        "saturation": -0.101,
+        "green_frac": 0.152,
+        "text_score": 0.0
+      },
+      "fred|flooded": {
+        "brightness": -0.02,
+        "clip_frac": -0.25,
+        "lap_var": 0.566,
+        "saturation": 0.975,
+        "green_frac": -0.066,
+        "text_score": 0.049
+      },
+      "ga511|dry": {
+        "brightness": 0.081,
+        "clip_frac": -0.192,
+        "lap_var": 0.024,
+        "saturation": -0.105,
+        "green_frac": -0.124,
+        "text_score": 0.025
+      },
+      "roadway_flooding|flooded": {
+        "brightness": -0.001,
+        "clip_frac": 0.031,
+        "lap_var": -0.017,
+        "saturation": -0.17,
+        "green_frac": -0.063,
+        "text_score": 0.136
+      }
+    }
+  }
+}

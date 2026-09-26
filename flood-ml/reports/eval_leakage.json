@@ -1,0 +1,334 @@
+{
+  "current_manifest": {
+    "train~val": {
+      "group_id": {
+        "count": 0,
+        "examples": []
+      },
+      "camera_id": {
+        "count": 0,
+        "examples": []
+      },
+      "dup_cluster": {
+        "count": 4,
+        "examples": [
+          "dc0002066",
+          "dc0002223",
+          "dc0002231",
+          "dc0002775"
+        ]
+      },
+      "orig_path": {
+        "count": 0,
+        "examples": []
+      },
+      "phash_le6": {
+        "count": 5,
+        "examples": [
+          {
+            "a": "data/processed/images/ga511/ga511_000209.jpg",
+            "b": "data/processed/images/ga511/ga511_001358.jpg",
+            "a_src": "ga511",
+            "b_src": "ga511",
+            "ham": 6
+          },
+          {
+            "a": "data/processed/images/ga511/ga511_000221.jpg",
+            "b": "data/processed/images/ga511/ga511_000201.jpg",
+            "a_src": "ga511",
+            "b_src": "ga511",
+            "ham": 0
+          },
+          {
+            "a": "data/processed/images/ga511/ga511_000754.jpg",
+            "b": "data/processed/images/ga511/ga511_001739.jpg",
+            "a_src": "ga511",
+            "b_src": "ga511",
+            "ham": 6
+          },
+          {
+            "a": "data/processed/images/ga511/ga511_001018.jpg",
+            "b": "data/processed/images/ga511/ga511_001739.jpg",
+            "a_src": "ga511",
+            "b_src": "ga511",
+            "ham": 6
+          },
+          {
+            "a": "data/processed/images/ga511/ga511_001072.jpg",
+            "b": "data/processed/images/ga511/ga511_000084.jpg",
+            "a_src": "ga511",
+            "b_src": "ga511",
+            "ham": 6
+          }
+        ]
+      }
+    },
+    "train~test": {
+      "group_id": {
+        "count": 0,
+        "examples": []
+      },
+      "camera_id": {
+        "count": 0,
+        "examples": []
+      },
+      "dup_cluster": {
+        "count": 0,
+        "examples": []
+      },
+      "orig_path": {
+        "count": 0,
+        "examples": []
+      },
+      "phash_le6": {
+        "count": 0,
+        "examples": []
+      }
+    },
+    "val~test": {
+      "group_id": {
+        "count": 0,
+        "examples": []
+      },
+      "camera_id": {
+        "count": 0,
+        "examples": []
+      },
+      "dup_cluster": {
+        "count": 0,
+        "examples": []
+      },
+      "orig_path": {
+        "count": 0,
+        "examples": []
+      },
+      "phash_le6": {
+        "count": 0,
+        "examples": []
+      }
+    }
+  },
+  "training_manifest": {
+    "train~val": {
+      "group_id": {
+        "count": 0,
+        "examples": []
+      },
+      "camera_id": {
+        "count": 0,
+        "examples": []
+      },
+      "dup_cluster": {
+        "count": 4,
+        "examples": [
+          "dc0002071",
+          "dc0002228",
+          "dc0002237",
+          "dc0002775"
+        ]
+      },
+      "orig_path": {
+        "count": 0,
+        "examples": []
+      },
+      "phash_le6": {
+        "count": 5,
+        "examples": [
+          {
+            "a": "data/processed/images/ga511/ga511_000215.jpg",
+            "b": "data/processed/images/ga511/ga511_001356.jpg",
+            "a_src": "ga511",
+            "b_src": "ga511",
+            "ham": 6
+          },
+          {
+            "a": "data/processed/images/ga511/ga511_000228.jpg",
+            "b": "data/processed/images/ga511/ga511_000206.jpg",
+            "a_src": "ga511",
+            "b_src": "ga511",
+            "ham": 0
+          },
+          {
+            "a": "data/processed/images/ga511/ga511_000754.jpg",
+            "b": "data/processed/images/ga511/ga511_001733.jpg",
+            "a_src": "ga511",
+            "b_src": "ga511",
+            "ham": 6
+          },
+          {
+            "a": "data/processed/images/ga511/ga511_001000.jpg",
+            "b": "data/processed/images/ga511/ga511_001733.jpg",
+            "a_src": "ga511",
+            "b_src": "ga511",
+            "ham": 6
+          },
+          {
+            "a": "data/processed/images/ga511/ga511_001054.jpg",
+            "b": "data/processed/images/ga511/ga511_000089.jpg",
+            "a_src": "ga511",
+            "b_src": "ga511",
+            "ham": 6
+          }
+        ]
+      }
+    },
+    "train~test": {
+      "group_id": {
+        "count": 0,
+        "examples": []
+      },
+      "camera_id": {
+        "count": 0,
+        "examples": []
+      },
+      "dup_cluster": {
+        "count": 0,
+        "examples": []
+      },
+      "orig_path": {
+        "count": 0,
+        "examples": []
+      },
+      "phash_le6": {
+        "count": 0,
+        "examples": []
+      }
+    },
+    "val~test": {
+      "group_id": {
+        "count": 0,
+        "examples": []
+      },
+      "camera_id": {
+        "count": 0,
+        "examples": []
+      },
+      "dup_cluster": {
+        "count": 0,
+        "examples": []
+      },
+      "orig_path": {
+        "count": 0,
+        "examples": []
+      },
+      "phash_le6": {
+        "count": 0,
+        "examples": []
+      }
+    }
+  },
+  "test_vs_training_trainval": {
+    "group_id": {
+      "count": 0,
+      "examples": []
+    },
+    "camera_id": {
+      "count": 0,
+      "examples": []
+    },
+    "orig_path": {
+      "count": 0,
+      "examples": []
+    },
+    "phash_le6": {
+      "count": 0,
+      "by_source_pair": {},
+      "examples": []
+    }
+  },
+  "fmd_vs_public": {
+    "manifest_phash_le6": 0,
+    "examples": [],
+    "fmd_index_columns": [
+      "fmd_split",
+      "source",
+      "fmd_image_path",
+      "local_image_path",
+      "fmd_mask_path",
+      "public_mask_path",
+      "match_method",
+      "phash",
+      "group_id",
+      "restricted"
+    ],
+    "fmd_trainval_images_resolving_to_manifest_rows": 237,
+    "of_which_in_test": 100
+  },
+  "live_511_test_cams_vs_other_cams": {
+    "frames_phash_le6_diff_camera": 3,
+    "distinct_test_frames_matched": 3,
+    "examples": [
+      {
+        "test_frame": "21485_1790388384",
+        "other_frame": "21476_1790388378",
+        "other_split": "val",
+        "ham": 0
+      },
+      {
+        "test_frame": "20742_1790393480",
+        "other_frame": "24962_1790389303",
+        "other_split": "val",
+        "ham": 6
+      },
+      {
+        "test_frame": "24814_1790394508",
+        "other_frame": "21655_1790386327",
+        "other_split": "train",
+        "ham": 6
+      }
+    ],
+    "camera_pairs_within_30m": 11,
+    "near_examples": [
+      {
+        "test_cam": 12946,
+        "other_cam": 14089,
+        "other_split": "train"
+      },
+      {
+        "test_cam": 13031,
+        "other_cam": 17798,
+        "other_split": "train"
+      },
+      {
+        "test_cam": 14206,
+        "other_cam": 13496,
+        "other_split": "train"
+      },
+      {
+        "test_cam": 14207,
+        "other_cam": 15076,
+        "other_split": "val"
+      },
+      {
+        "test_cam": 15115,
+        "other_cam": 15106,
+        "other_split": "train"
+      },
+      {
+        "test_cam": 15115,
+        "other_cam": 15111,
+        "other_split": "train"
+      },
+      {
+        "test_cam": 15123,
+        "other_cam": 15110,
+        "other_split": "train"
+      },
+      {
+        "test_cam": 15124,
+        "other_cam": 15106,
+        "other_split": "train"
+      },
+      {
+        "test_cam": 15124,
+        "other_cam": 15111,
+        "other_split": "train"
+      },
+      {
+        "test_cam": 15174,
+        "other_cam": 15178,
+        "other_split": "train"
+      }
+    ]
+  }
+}

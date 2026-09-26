@@ -1,0 +1,38 @@
+# everything for data collection, prep, training, evaluation and the demo app.
+# install with: my_env/bin/python -m pip install -r flood-ml/requirements-train.txt
+-r requirements.txt
+
+# training and export
+tensorflow==2.21.0
+keras==3.15.1
+tensorboard==2.21.0
+tf2onnx==1.17.0
+protobuf==7.36.2
+
+# data
+pandas==3.0.6
+scikit-learn==1.9.1
+matplotlib==3.11.2
+ImageHash==4.3.2
+opencv-python-headless==5.0.0.93
+folium==0.20.0
+requests==2.34.2
+python-dotenv==1.2.3
+openpyxl==3.1.5
+
+# clip road-scene filter (phase 2)
+torch==2.14.0
+torchvision==0.29.0
+open-clip-torch==3.3.0
+
+# dataset downloads
+gdown==6.4.0
+kaggle==2.2.4
+huggingface_hub==1.32.0
+
+# dev
+pytest==9.1.1
+ruff==0.16.9
+
+# demo app (phase 5)
+gradio==6.28.0

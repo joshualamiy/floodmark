@@ -1,0 +1,22 @@
+{
+  "run_id": "20260926-031638_bmixed_mobilenetv3small",
+  "stage": "b",
+  "onnx_path": "models/stage_b.onnx",
+  "verification": {
+    "n_images": 150,
+    "max_prob_diff": 2.7418136596679688e-06,
+    "cam_pearson_r": 0.9999999999408106
+  },
+  "latency_default_threads": {
+    "median_ms": 1.0960204963339493,
+    "p95_ms": 1.239908360003028,
+    "threads": "default",
+    "n_runs": 100
+  },
+  "latency_1_thread": {
+    "median_ms": 2.857270505046472,
+    "p95_ms": 2.9527045087888837,
+    "threads": 1,
+    "n_runs": 100
+  }
+}

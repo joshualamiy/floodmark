@@ -1,0 +1,94 @@
+{
+  "flooded|dark": {
+    "n": 168,
+    "base_flooded": 107,
+    "pert_flooded": 87,
+    "base_dry": 28,
+    "pert_dry": 75,
+    "by_source_pert_flooded": {
+      "flood_master_test": 1,
+      "fred": 5,
+      "roadway_flooding": 81
+    }
+  },
+  "flooded|gray": {
+    "n": 168,
+    "base_flooded": 107,
+    "pert_flooded": 107,
+    "base_dry": 28,
+    "pert_dry": 37,
+    "by_source_pert_flooded": {
+      "flood_master_test": 16,
+      "fred": 7,
+      "roadway_flooding": 84
+    }
+  },
+  "flooded|label_box": {
+    "n": 168,
+    "base_flooded": 107,
+    "pert_flooded": 96,
+    "base_dry": 28,
+    "pert_dry": 49,
+    "by_source_pert_flooded": {
+      "flood_master_test": 6,
+      "fred": 6,
+      "roadway_flooding": 84
+    }
+  },
+  "flooded|ga511_jpeg": {
+    "n": 168,
+    "base_flooded": 107,
+    "pert_flooded": 109,
+    "base_dry": 28,
+    "pert_dry": 39,
+    "by_source_pert_flooded": {
+      "flood_master_test": 25,
+      "fred": 5,
+      "roadway_flooding": 79
+    }
+  },
+  "dry|dark": {
+    "n": 605,
+    "base_flooded": 4,
+    "pert_flooded": 3,
+    "base_dry": 599,
+    "pert_dry": 602,
+    "by_source_pert_flooded": {
+      "fred": 3,
+      "nysdot_road_surface": 0
+    }
+  },
+  "dry|gray": {
+    "n": 605,
+    "base_flooded": 4,
+    "pert_flooded": 6,
+    "base_dry": 599,
+    "pert_dry": 597,
+    "by_source_pert_flooded": {
+      "fred": 6,
+      "nysdot_road_surface": 0
+    }
+  },
+  "dry|label_box": {
+    "n": 605,
+    "base_flooded": 4,
+    "pert_flooded": 3,
+    "base_dry": 599,
+    "pert_dry": 601,
+    "by_source_pert_flooded": {
+      "fred": 3,
+      "nysdot_road_surface": 0
+    }
+  },
+  "dry|ga511_jpeg": {
+    "n": 605,
+    "base_flooded": 4,
+    "pert_flooded": 3,
+    "base_dry": 599,
+    "pert_dry": 602,
+    "by_source_pert_flooded": {
+      "fred": 3,
+      "nysdot_road_surface": 0
+    }
+  }
+}

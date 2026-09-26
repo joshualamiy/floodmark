@@ -1,0 +1,20 @@
+{
+  "n": 176,
+  "stage_a": {
+    "run_id": "20260926-031525_a_mobilenetv3small",
+    "max_abs_dprob": 2.5331974029541016e-06,
+    "max_abs_dcam_rel": 2.0338793547125533e-06
+  },
+  "stage_b": {
+    "run_id": "20260926-031638_bmixed_mobilenetv3small",
+    "max_abs_dprob": 2.9206275939941406e-06,
+    "max_abs_dcam_rel": 2.3344202872976894e-06
+  },
+  "preproc_skew": {
+    "max_abs_dpA": 0.06900858879089355,
+    "max_abs_dpB": 0.07552635669708252,
+    "mean_abs_dpA": 0.006298298016190529,
+    "status_flips": 2,
+    "max_abs_pixel": 19.0
+  }
+}
