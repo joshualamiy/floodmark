@@ -2508,3 +2508,7 @@ VALUES
 	('SKYLINE', '18144', '21470', 'SMYR-CCTV-0123', 'Atlanta Rd', 'Northbound', 'SMYR-0123: Atlanta Rd at Powder Springs St (Smyrna)', 33.887027740479, -84.515357971191, 0, '25554', 'https://511ga.org/map/Cctv/25554', 'Enabled', 'SMYR-0123: Atlanta Rd at Powder Springs St (Smyrna)', 0, TRUE),
 	('SKYLINE', '18145', '21471', 'SMYR-CCTV-0016', 'Atlanta Rd', 'Northbound', 'SMYR-0016: Atlanta Rd at West Spring St (Smyrna)', 33.88398361206, -84.514442443848, 0, '25555', 'https://511ga.org/map/Cctv/25555', 'Enabled', 'SMYR-0016: Atlanta Rd at West Spring St (Smyrna)', 0, TRUE),
 	('SKYLINE', '18147', '22052', 'ATL-CCTV-1008', 'Roxboro Rd', 'Eastbound', 'ATL-1008: Roxboro Rd at Prichard Way / Wieuca Rd (Atlanta)', 33.8519, -84.3579, 0, '25557', 'https://511ga.org/map/Cctv/25557', 'Enabled', 'ATL-1008: Roxboro Rd at Prichard Way / Wieuca Rd (Atlanta)', 0, TRUE);
+
+
+INSERT INTO cameras (source, source_camera_id, name, roadway, location_description, latitude, longitude, source_view_id, source_url, is_active) VALUES
+	('DEMO', 'demo-1', 'Peachtree Creek at Northside Dr (SIMULATED)', 'Northside Dr', 'Scripted storm replay for the demo', 33.8110, -84.4090, 'demo-1', 'http://demo:8080/demo-1', true);
