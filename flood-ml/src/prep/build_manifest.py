@@ -58,7 +58,10 @@ from prep.splits import assert_disjoint, ga511_camera_splits, greedy_group_strat
 log = setup_job_logger("build_manifest")
 
 LEGACY_SOURCES = ("roadway_flooding", "fred", "nysdot_road_surface", "flood_master_test")
+# separate camera networks never share photos, skip cross-source dedup between them
+CAMERA_NETWORK_SOURCES = frozenset({"ga511", "iowa_rwis", "nysdot_road_surface"})
 MANIFEST_BACKUP_PATH = PROCESSED_ROOT / "manifest_v1-703f0040.csv"
+MANIFEST_BACKUP_PATH_V4 = PROCESSED_ROOT / "manifest_v1-7251bbd2.csv"
 IOWA_RWIS_SPLIT_SALT = "iowa-rwis-mixed-split-v1"
 
 FRED_FORCED_LOCATION_SPLITS = {
@@ -100,7 +103,10 @@ def gather_rows(smoke: int | None = None, include_alleyfloodnet: bool = INCLUDE_
 
     user_labels = load_labels_csv(GA511_ROOT / "labels.csv")
     ai_review_labels = load_labels_csv(GA511_ROOT / "ai_review_labels.csv")
-    ga_rows = iter_ga511(GA511_ROOT / "frames.csv", user_labels, ai_review_labels)
+    existing_camera_splits: dict[str, str] = {}
+    if CAMERA_SPLITS_PATH.exists():
+        existing_camera_splits = json.loads(CAMERA_SPLITS_PATH.read_text())
+    ga_rows = iter_ga511(GA511_ROOT / "frames.csv", user_labels, ai_review_labels, existing_camera_splits)
     if smoke:
         ga_rows = ga_rows[:smoke]
     log.info("gathered %d raw rows from ga511", len(ga_rows))
@@ -265,6 +271,8 @@ def thin_and_dedup(rows: list[dict]) -> dict:
     for idxs in clusters.values():
         sources_in_cluster = {alive[i]["source"] for i in idxs}
         if len(sources_in_cluster) <= 1:
+            continue
+        if sources_in_cluster <= CAMERA_NETWORK_SOURCES:
             continue
         def score(i):
             r = alive[i]
@@ -495,6 +503,109 @@ def assert_legacy_test_rows_unchanged(old_manifest_path: Path, new_rows: list[di
     return result
 
 
+def assert_v4_rebuild_invariants(reference_manifest_path: Path, new_rows: list[dict]) -> dict:
+    # every non-ga511 row + ga511 test rows must match the pre-v4 manifest
+    if not reference_manifest_path.exists():
+        return {"skipped": f"no {reference_manifest_path} to compare against"}
+    old = pd.read_csv(reference_manifest_path)
+
+    new_by_orig: dict[str, list[dict]] = defaultdict(list)
+    for r in new_rows:
+        new_by_orig[r.get("orig_path")].append(r)
+
+    mismatches: list[str] = []
+    missing: list[str] = []
+
+    non_ga = old[old["source"] != "ga511"]
+    for _, old_r in non_ga.iterrows():
+        cands = new_by_orig.get(old_r["orig_path"])
+        if not cands:
+            missing.append(f"non-ga511 row missing from rebuild: orig_path={old_r['orig_path']!r}")
+            continue
+        new_r = cands[0]
+        if new_r.get("label") != old_r["label"] or new_r.get("split") != old_r["split"]:
+            mismatches.append(
+                f"non-ga511 changed: orig_path={old_r['orig_path']!r} "
+                f"old(label={old_r['label']!r}, split={old_r['split']!r}) -> "
+                f"new(label={new_r.get('label')!r}, split={new_r.get('split')!r})"
+            )
+
+    ga_test_old = old[(old["source"] == "ga511") & (old["split"] == "test")]
+    for _, old_r in ga_test_old.iterrows():
+        cands = new_by_orig.get(old_r["orig_path"])
+        if not cands:
+            missing.append(f"ga511 test row missing from rebuild: orig_path={old_r['orig_path']!r}")
+            continue
+        new_r = cands[0]
+        if new_r.get("label") != old_r["label"] or new_r.get("split") != "test":
+            mismatches.append(
+                f"ga511 test row changed: orig_path={old_r['orig_path']!r} "
+                f"old(label={old_r['label']!r}) -> new(label={new_r.get('label')!r}, split={new_r.get('split')!r})"
+            )
+
+    n_non_ga_old, n_non_ga_new = len(non_ga), sum(1 for r in new_rows if r["source"] != "ga511")
+    if n_non_ga_new != n_non_ga_old:
+        mismatches.append(f"non-ga511 row count changed: old={n_non_ga_old} new={n_non_ga_new}")
+
+    n_ga_test_old = len(ga_test_old)
+    n_ga_test_new = sum(1 for r in new_rows if r["source"] == "ga511" and r.get("split") == "test")
+    if n_ga_test_new != n_ga_test_old:
+        mismatches.append(f"ga511 test row count changed (nothing new may enter test): "
+                           f"old={n_ga_test_old} new={n_ga_test_new}")
+
+    result = {
+        "n_non_ga511_rows_checked": int(n_non_ga_old),
+        "n_ga511_test_rows_checked": int(n_ga_test_old),
+        "n_mismatches": len(mismatches),
+        "mismatches": mismatches[:50],
+        "n_missing": len(missing),
+        "missing": missing[:50],
+    }
+    log.info("assert_v4_rebuild_invariants: %s", json.dumps(result, indent=2, default=str))
+    if mismatches or missing:
+        raise AssertionError(
+            f"{len(mismatches)} mismatch(es), {len(missing)} missing row(s) vs {reference_manifest_path}; "
+            f"first few: {(mismatches + missing)[:5]}"
+        )
+    return result
+
+
+def report_ga511_daytime(pre_dedup_rows: list[dict], final_rows: list[dict], date_str: str = "2026-09-26") -> dict:
+    from datetime import date as _date
+
+    from prep.common import ga511_is_daytime, ga511_local_time
+
+    target_date = _date.fromisoformat(date_str)
+
+    def _is_target(r: dict) -> bool:
+        if r.get("source") != "ga511":
+            return False
+        dt = ga511_local_time(r.get("orig_path"))
+        if dt is None or dt.date() != target_date:
+            return False
+        return bool(ga511_is_daytime(r.get("orig_path")))
+
+    pre_labeled = {r["orig_path"] for r in pre_dedup_rows if _is_target(r) and r.get("label")}
+    final_by_path = {r["orig_path"]: r for r in final_rows if _is_target(r)}
+    final_paths = set(final_by_path.keys())
+
+    by_split: Counter = Counter()
+    by_split_label_source: dict[str, Counter] = defaultdict(Counter)
+    for r in final_by_path.values():
+        split = r.get("split") or "unknown"
+        by_split[split] += 1
+        by_split_label_source[split][r.get("label_source") or "none"] += 1
+
+    return {
+        "date": date_str, "window": "08:00-19:00 America/New_York",
+        "n_labeled_pre_dedup": len(pre_labeled),
+        "n_final": len(final_paths),
+        "n_thinned_or_deduped": len(pre_labeled - final_paths),
+        "by_split": dict(by_split),
+        "by_split_label_source": {k: dict(v) for k, v in by_split_label_source.items()},
+    }
+
+
 def backup_old_manifest(old_manifest_path: Path = MANIFEST_PATH, backup_path: Path = MANIFEST_BACKUP_PATH) -> str:
     if not old_manifest_path.exists():
         return "skipped: no manifest.csv to back up"
@@ -527,6 +638,7 @@ def run(smoke: int | None = None, skip_clip: bool = False, include_alleyfloodnet
     t0 = time.time()
     rows = gather_rows(smoke=smoke, include_alleyfloodnet=include_alleyfloodnet)
     compute_labels(rows)
+    pre_dedup_snapshot = [dict(r) for r in rows]  # for the daytime thinned/deduped count, below
     clip_stats = apply_clip_filter(rows, skip=skip_clip)
     resize_copy_and_hash(rows)
     dedup_stats, alive = thin_and_dedup(rows)
@@ -534,6 +646,10 @@ def run(smoke: int | None = None, skip_clip: bool = False, include_alleyfloodnet
 
     reference_manifest = MANIFEST_BACKUP_PATH if MANIFEST_BACKUP_PATH.exists() else MANIFEST_PATH
     legacy_check = assert_legacy_test_rows_unchanged(reference_manifest, alive)
+    # back up pre-v4 manifest, then check the rebuild against it
+    v4_backup_note = backup_old_manifest(MANIFEST_PATH, MANIFEST_BACKUP_PATH_V4)
+    v4_check = assert_v4_rebuild_invariants(MANIFEST_BACKUP_PATH_V4, alive)
+    daytime_report = report_ga511_daytime(pre_dedup_snapshot, alive)
     backup_note = backup_old_manifest()
     write_manifest(alive)
 
@@ -549,7 +665,10 @@ def run(smoke: int | None = None, skip_clip: bool = False, include_alleyfloodnet
         "dedup": dedup_stats,
         "splits": {k: (dict(v) if isinstance(v, Counter) else v) for k, v in split_stats.items()},
         "legacy_test_rows_check": legacy_check,
+        "v4_rebuild_invariants_check": v4_check,
+        "ga511_daytime_2026_09_26": daytime_report,
         "manifest_backup": backup_note,
+        "manifest_backup_v4": v4_backup_note,
         "elapsed_s": round(time.time() - t0, 1),
     }
     (LOGS_JOBS / "build_manifest_summary.json").write_text(json.dumps(summary, indent=2, default=str))

@@ -54,6 +54,11 @@ def perturb_flip_rate(stage_a_model, stage_b_model, flooded_rows, img_size, mode
     return out
 
 
+# day = 07:30-19:30 ET, same as eval/predict.py
+DAY_START_MIN = 450
+DAY_END_MIN = 1170
+
+
 def live_false_alarms(
     stage_a_model, stage_b_model, img_size, mode, ta, tb,
     frames_csv="data/ga511/frames.csv",
@@ -70,12 +75,26 @@ def live_false_alarms(
     if max_frames and len(seen) > max_frames:
         seen = seen.sample(max_frames, random_state=seed).reset_index(drop=True)
 
+    if "timestamp_utc" in seen.columns:
+        ts = pd.to_datetime(seen["timestamp_utc"], unit="s", utc=True, errors="coerce").dt.tz_convert(
+            "America/New_York"
+        )
+        mins = ts.dt.hour * 60 + ts.dt.minute
+        known = ts.notna().to_numpy()
+        is_day = (known & (mins >= DAY_START_MIN).to_numpy() & (mins < DAY_END_MIN).to_numpy())
+        is_night = known & ~is_day
+    else:
+        known = np.zeros(len(seen), dtype=bool)
+        is_day = np.zeros(len(seen), dtype=bool)
+        is_night = np.zeros(len(seen), dtype=bool)
+
     rows = pd.DataFrame({"path": [f"{ga511_root}/{p}" for p in seen["path"]]})
     pA = predict_probs(stage_a_model, rows, img_size, mode=mode)
     pB = predict_probs(stage_b_model, rows, img_size, mode=mode)
     status = status_from_probs(pA, pB, ta, tb)
     n = len(rows)
-    return {
+
+    out = {
         "n": n,
         "n_train_cams": int((seen["cam_split"] == "train").sum()),
         "n_val_cams": int((seen["cam_split"] == "val").sum()),
@@ -83,6 +102,49 @@ def live_false_alarms(
         "wet": int(np.sum(status == "wet")),
         "flooded_rate": float(np.mean(status == "flooded")) if n else float("nan"),
         "wet_rate": float(np.mean(status == "wet")) if n else float("nan"),
+    }
+    for name, mask in (("day", is_day), ("night", is_night)):
+        nn = int(mask.sum())
+        out[name] = {
+            "n": nn,
+            "flooded": int(np.sum((status == "flooded") & mask)),
+            "wet": int(np.sum((status == "wet") & mask)),
+            "flooded_rate": float(np.mean(status[mask] == "flooded")) if nn else float("nan"),
+        }
+    out["n_unknown_time"] = int((~known).sum()) if len(known) else 0
+    return out
+
+
+def ga511_daytime_false_alarms(
+    val_rows: pd.DataFrame, pA: np.ndarray, pB: np.ndarray, ta: float, tb: float,
+) -> dict:
+    # false floods on val ga511 daytime dry frames (manual, weak, combined)
+    from prep.common import ga511_is_daytime
+
+    status = status_from_probs(pA, pB, ta, tb)
+    source = val_rows["source"].to_numpy()
+    label = val_rows["label"].to_numpy()
+    label_source = val_rows["label_source"].to_numpy()
+    orig_path = val_rows["orig_path"].to_numpy()
+
+    is_ga511 = source == "ga511"
+    is_daytime = np.array([
+        bool(ga511_is_daytime(p)) if is_ga511[i] else False for i, p in enumerate(orig_path)
+    ])
+    is_dry = label == "dry"
+    base = is_ga511 & is_dry & is_daytime
+
+    def _bucket(mask: np.ndarray) -> dict:
+        n = int(mask.sum())
+        fa = int(np.sum((status == "flooded") & mask))
+        return {"n": n, "false_alarms": fa, "rate": (fa / n) if n else float("nan")}
+
+    manual_mask = base & (label_source == "manual")
+    weak_mask = base & (label_source == "weak_precip")
+    return {
+        "manual": _bucket(manual_mask),
+        "weak_precip": _bucket(weak_mask),
+        "combined": _bucket(manual_mask | weak_mask),
     }
 
 
