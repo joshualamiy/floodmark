@@ -10,7 +10,7 @@ ENV PYTHONPATH=/app/floodml_src \
 COPY backend/pyproject.toml ./
 COPY backend/floodmark_pipeline ./floodmark_pipeline
 COPY flood-ml/src ./floodml_src
-COPY backend/onnx/floodmark_models_v3 /models
+COPY backend/onnx/floodmark_models_v4 /models
 RUN pip install .
 
 CMD ["arq", "floodmark_pipeline.worker.WorkerSettings"]
