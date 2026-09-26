@@ -1,0 +1,13 @@
+# tool config for the flood-ml workstream. code lives under src/ and is run
+# with PYTHONPATH=src from this folder, e.g. `PYTHONPATH=src python -m ga511.collect`.
+
+[tool.ruff]
+# CI runs Python 3.11, local training runs 3.12
+target-version = "py310"
+line-length = 100
+extend-exclude = ["data", "models", "logs"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+norecursedirs = ["data", "models", "logs", "notebooks"]
