@@ -226,3 +226,29 @@ Details in `README.md`, `docs/INFERENCE_API.md`, and `docs/phase_reports/phase5_
 - **CLI on camera 11372** (the repeat false alarm): with N=3 smoothing it never reaches "flooded", and the blocklist suppresses it entirely.
 
 **CI fix (my miss).** PR #1 CI had been failing since the first code push, and I hadn't checked it. CI installs only `requirements.txt`, so 11 test files that need the training stack (requests, imagehash, cv2, pandas, keras) crashed at collection. Fix: `tests/conftest.py` skips those files when their deps are missing and prints which ones were skipped. With CI's package set simulated locally: 121 passed, 3 skipped. The full local run: 226 passed.
+
+## 2026-09-26: Accuracy experiments (improve_v2): current model kept
+
+Details in `docs/phase_reports/improve_v2.md`; runs in `reports/runs.csv` rows 17–26.
+
+**What was built:**
+- Input modes `crop` / `squash` / `letterbox` wired through training, export, and inference. Old configs default to `crop`.
+- Night augmentation (`augment._night_style`, P=0.35) and a label-aware overlay rate.
+- Multi-crop TTA (`train/tta.py`), a per-candidate evaluator, and a detached training driver.
+- 38 new tests.
+
+**Results on val** (tA/tB re-tuned per candidate):
+
+| Candidate | Precision | Recall | Dry FAR | Live false floods (seen cams) |
+|---|---|---|---|---|
+| Shipped (crop, current) | 0.90 | 0.98 | 3.8% | 3/2073 |
+| letterbox224 | 0.97 | 0.96 | 0.8% | 22/2242 |
+| letterbox320 | 0.94 | 0.98 | 1.8% | 19/2242 |
+| crop + night aug | 0.90 | 0.95 | 3.4% | 3/2236 (plus 33 "wet") |
+| Multi-crop TTA, no retrain | 1.00 | 0.96 | 0% | 0/2081 |
+
+TTA made the model *less* robust to darkening on val (23/168 floods flipped to dry vs. 1/168).
+
+**Decision: keep the shipped model.** No candidate beat its val recall, and letterbox raised live night false alarms about 20×. Because the model is unchanged, the Phase 4 test results stand, and no test re-run was spent.
+
+**The honest bottleneck is data.** Val has no elevated-camera floods, so the whole-frame fix can't be judged, and letterbox still sees too few off-center floods in training. Next: more wet data (the Iowa RWIS collection, running) and elevated or street-level flood photos. Then one letterbox retrain, then one test run.

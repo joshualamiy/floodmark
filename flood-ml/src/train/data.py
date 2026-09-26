@@ -15,11 +15,18 @@ we train and compare two Stage B variants rather than one):
 
 Images on disk already have short side ~256 (a few sources are a little
 under that, e.g. cropped NYSDOT frames), so the pipeline re-resizes the
-short side to `RESIZE_SHORT_SIDE` before cropping, rather than assuming it.
+short side before cropping, rather than assuming it (mode="crop" only).
 
-Training augmentation: `prep.augment.tf_camera_style` (domain randomization)
-then a random 224 crop and a horizontal flip (no vertical flip, since roads
-never appear upside down). Validation: resize + center crop only.
+Input geometry (`mode`, improve_v2 problem 1): "crop" is the original
+behavior (resize short side, then crop -- loses the sides of a wide frame).
+"squash" resizes the whole frame to size x size, aspect ignored. "letterbox"
+resizes the long side to size and pads to size x size with mid-gray, so nothing
+is cropped out. Inference (`inference/preprocess.py`) mirrors all three.
+
+Training augmentation: `prep.augment.tf_camera_style` (domain randomization,
+label-aware overlay rate) then a horizontal flip (no vertical flip, since
+roads never appear upside down), plus a random crop for mode="crop" only.
+Validation: the same deterministic resize, no crop jitter.
 """
 from __future__ import annotations
 
@@ -44,6 +51,18 @@ STAGES = (STAGE_A, STAGE_B)
 VARIANT_SPEC = "spec"
 VARIANT_MIXED = "mixed"
 VARIANTS = (VARIANT_SPEC, VARIANT_MIXED)
+
+# input geometry (improve_v2, problem 1: crop only sees the middle ~49% of a
+# wide frame). crop = current behavior (pre-resize short side, then a crop).
+# squash = whole frame -> SxS, aspect ignored. letterbox = long side -> S,
+# pad to SxS with mid-gray. Inference mirrors these in inference/preprocess.py.
+MODE_CROP = "crop"
+MODE_SQUASH = "squash"
+MODE_LETTERBOX = "letterbox"
+MODES = (MODE_CROP, MODE_SQUASH, MODE_LETTERBOX)
+
+CROP_PRECROP_RATIO = 256 / 224  # matches the original RESIZE_SHORT_SIDE/IMG_SIZE margin
+LETTERBOX_PAD_VALUE = 128.0
 
 WET_UPWEIGHT_DEFAULT = 8.0
 
@@ -135,7 +154,37 @@ def _resize_short_side(image, short_side: int = RESIZE_SHORT_SIDE):
     return tf.image.resize(image, [new_h, new_w], method="bilinear")
 
 
-def _load_and_prep(path, label, weight, *, augment: bool, img_size: int, repo_root: str):
+def _squash_resize(image, size: int):
+    import tensorflow as tf
+
+    image = tf.cast(image, tf.float32)
+    return tf.image.resize(image, [size, size], method="bilinear")
+
+
+def _letterbox_resize(image, size: int, pad_value: float = LETTERBOX_PAD_VALUE):
+    """Long side -> size, then pad to size x size with `pad_value` (a flat
+    mid-gray), centered. Padding trick: shift by -pad_value, zero-pad (the
+    only value tf.image.pad_to_bounding_box supports), shift back.
+    """
+    import tensorflow as tf
+
+    image = tf.cast(image, tf.float32)
+    shape = tf.shape(image)
+    h = tf.cast(shape[0], tf.float32)
+    w = tf.cast(shape[1], tf.float32)
+    scale = tf.cast(size, tf.float32) / tf.maximum(h, w)
+    new_h = tf.maximum(1, tf.cast(tf.round(h * scale), tf.int32))
+    new_w = tf.maximum(1, tf.cast(tf.round(w * scale), tf.int32))
+    resized = tf.image.resize(image, [new_h, new_w], method="bilinear")
+    top = (size - new_h) // 2
+    left = (size - new_w) // 2
+    padded = tf.image.pad_to_bounding_box(resized - pad_value, top, left, size, size) + pad_value
+    return tf.clip_by_value(padded, 0.0, 255.0)
+
+
+def _load_and_prep(
+    path, label, weight, raw_label, *, augment: bool, img_size: int, mode: str, repo_root: str,
+):
     import tensorflow as tf
 
     from prep.augment import tf_camera_style
@@ -143,14 +192,24 @@ def _load_and_prep(path, label, weight, *, augment: bool, img_size: int, repo_ro
     full_path = tf.strings.join([repo_root, path], separator="/") if repo_root else path
     raw = tf.io.read_file(full_path)
     image = tf.io.decode_jpeg(raw, channels=3)
-    image = _resize_short_side(image)
-    image = tf.cast(tf.clip_by_value(image, 0.0, 255.0), tf.uint8)
-    if augment:
-        image = tf_camera_style(image)
-        image = tf.image.random_crop(image, [img_size, img_size, 3])
-        image = tf.image.random_flip_left_right(image)
+
+    if mode == MODE_CROP:
+        precrop = max(img_size, round(img_size * CROP_PRECROP_RATIO))
+        image = _resize_short_side(image, short_side=precrop)
+        image = tf.cast(tf.clip_by_value(image, 0.0, 255.0), tf.uint8)
+        if augment:
+            image = tf_camera_style(image, raw_label)
+            image = tf.image.random_crop(image, [img_size, img_size, 3])
+            image = tf.image.random_flip_left_right(image)
+        else:
+            image = tf.image.resize_with_crop_or_pad(image, img_size, img_size)
     else:
-        image = tf.image.resize_with_crop_or_pad(image, img_size, img_size)
+        image = _squash_resize(image, img_size) if mode == MODE_SQUASH else _letterbox_resize(image, img_size)
+        image = tf.cast(tf.clip_by_value(image, 0.0, 255.0), tf.uint8)
+        if augment:
+            image = tf_camera_style(image, raw_label)
+            image = tf.image.random_flip_left_right(image)
+
     image = tf.cast(image, tf.float32)
     image.set_shape([img_size, img_size, 3])
     return image, label, weight
@@ -164,6 +223,7 @@ def make_dataset(
     training: bool,
     batch_size: int = 32,
     img_size: int = IMG_SIZE,
+    mode: str = MODE_CROP,
     shuffle_buffer: int = 4096,
     seed: int = 0,
     repo_root: str | None = None,
@@ -174,10 +234,13 @@ def make_dataset(
     sample_weight) from an already-selected rows DataFrame (see
     `select_stage_rows`). `repo_root` lets callers run from any cwd; paths in
     the manifest are relative to flood-ml/, so pass that directory's
-    absolute path when cwd isn't already flood-ml/.
+    absolute path when cwd isn't already flood-ml/. `mode` in MODES picks the
+    input geometry (see the MODE_* constants above).
     """
     import tensorflow as tf
 
+    if mode not in MODES:
+        raise ValueError(f"mode must be one of {MODES}, got {mode!r}")
     if num_parallel_calls is None:
         num_parallel_calls = tf.data.AUTOTUNE
 
@@ -188,15 +251,18 @@ def make_dataset(
 
     paths = rows["path"].astype(str).to_numpy()
     labels = rows["label_bin"].astype("float32").to_numpy()
+    raw_labels = rows["label"].astype(str).to_numpy() if "label" in rows.columns else np.array([""] * len(rows))
 
-    ds = tf.data.Dataset.from_tensor_slices((paths, labels, weights.astype("float32")))
+    ds = tf.data.Dataset.from_tensor_slices((paths, labels, weights.astype("float32"), raw_labels))
     if training:
         ds = ds.shuffle(min(shuffle_buffer, max(len(rows), 1)), seed=seed, reshuffle_each_iteration=True)
 
     root = repo_root or ""
 
-    def _map(path, label, weight):
-        return _load_and_prep(path, label, weight, augment=training, img_size=img_size, repo_root=root)
+    def _map(path, label, weight, raw_label):
+        return _load_and_prep(
+            path, label, weight, raw_label, augment=training, img_size=img_size, mode=mode, repo_root=root,
+        )
 
     ds = ds.map(_map, num_parallel_calls=num_parallel_calls)
     ds = ds.batch(batch_size, drop_remainder=False)
@@ -248,6 +314,8 @@ if __name__ == "__main__":
     parser.add_argument("--variant", choices=VARIANTS, default=VARIANT_SPEC)
     parser.add_argument("--split", choices=("train", "val"), default="train")
     parser.add_argument("--batch-size", type=int, default=32)
+    parser.add_argument("--img-size", type=int, default=IMG_SIZE)
+    parser.add_argument("--mode", choices=MODES, default=MODE_CROP)
     parser.add_argument("--n-batches", type=int, default=30)
     parser.add_argument("--manifest", default=str(MANIFEST_PATH))
     parser.add_argument("--log-file", default="logs/jobs/data_benchmark.log")
@@ -267,12 +335,16 @@ if __name__ == "__main__":
         variant=args.variant,
         training=(args.split == "train"),
         batch_size=args.batch_size,
+        img_size=args.img_size,
+        mode=args.mode,
     )
     result = benchmark_throughput(ds, n_batches=args.n_batches)
     payload = {
         "stage": args.stage,
         "variant": args.variant,
         "split": args.split,
+        "mode": args.mode,
+        "img_size": args.img_size,
         "n_rows": len(rows),
         **result.__dict__,
     }

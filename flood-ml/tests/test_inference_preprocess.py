@@ -6,7 +6,14 @@ import pytest
 from _fake_onnx import uniform_image
 from PIL import Image
 
-from inference.preprocess import CROP_SIZE, preprocess, resize_short_side, to_pil
+from inference.preprocess import (
+    CROP_SIZE,
+    MODE_LETTERBOX,
+    MODE_SQUASH,
+    preprocess,
+    resize_short_side,
+    to_pil,
+)
 
 
 def test_resize_short_side_no_op_when_small():
@@ -54,6 +61,37 @@ def test_jpeg_roundtrip_changes_pixels_slightly_but_keeps_size():
     arr_rt, _ = preprocess(img, do_jpeg_roundtrip=True)
     assert arr_plain.shape == arr_rt.shape
     assert np.abs(arr_plain - arr_rt).max() < 5  # flat image survives q95 almost exactly
+
+
+def test_squash_ignores_aspect_and_fills_the_whole_canvas():
+    img = Image.fromarray(uniform_image(100, size=(500, 200)))  # wide frame
+    arr, geom = preprocess(img, mode=MODE_SQUASH, size=64, do_jpeg_roundtrip=False)
+    assert arr.shape == (64, 64, 3)
+    assert geom["mode"] == "squash"
+    assert geom["orig_size"] == (500, 200)
+    assert "crop_box_orig" not in geom  # nothing was cropped out
+
+
+def test_letterbox_pads_a_wide_frame_top_and_bottom():
+    img = Image.fromarray(uniform_image(200, size=(500, 200)))
+    arr, geom = preprocess(img, mode=MODE_LETTERBOX, size=64, do_jpeg_roundtrip=False)
+    assert arr.shape == (64, 64, 3)
+    left, top, right, bottom = geom["content_box_canvas"]
+    assert right - left == 64  # long side (width) fills the canvas exactly
+    assert bottom - top < 64  # short side is padded
+    assert top > 0  # padding on both sides since it's centered
+
+
+def test_letterbox_pad_region_is_mid_gray():
+    img = Image.fromarray(uniform_image(0, size=(500, 100)))  # flat black content
+    arr, _geom = preprocess(img, mode=MODE_LETTERBOX, size=64, do_jpeg_roundtrip=False)
+    assert arr[0, 0, 0] == pytest.approx(128.0, abs=1.0)  # top-left corner is padding
+
+
+def test_unknown_mode_rejected():
+    img = Image.fromarray(uniform_image(100, size=(100, 100)))
+    with pytest.raises(ValueError):
+        preprocess(img, mode="fisheye")
 
 
 def test_to_pil_accepts_all_types(tmp_path):

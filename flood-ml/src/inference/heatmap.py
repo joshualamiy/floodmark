@@ -35,14 +35,7 @@ def _jet(x: np.ndarray) -> np.ndarray:
     return np.stack([r, g, b], axis=-1)
 
 
-def make_heatmap_png(
-    frame: Image.Image, cam: np.ndarray, geom: dict,
-    alpha: float = ALPHA, max_long_side: int = MAX_LONG_SIDE,
-) -> bytes:
-    w0, h0 = geom["orig_size"]
-    up = _resize_float(np.asarray(cam), (CROP_SIZE, CROP_SIZE))
-    norm = _normalize(up)
-
+def _heat_full_crop(norm: np.ndarray, geom: dict, w0: int, h0: int) -> np.ndarray:
     left, top, right, bottom = geom["crop_box_orig"]
     box_w = max(1, round(right - left))
     box_h = max(1, round(bottom - top))
@@ -56,6 +49,35 @@ def make_heatmap_png(
     src_x1, src_y1 = src_x0 + (dst_x1 - dst_x0), src_y0 + (dst_y1 - dst_y0)
     if dst_x1 > dst_x0 and dst_y1 > dst_y0:
         heat_full[dst_y0:dst_y1, dst_x0:dst_x1] = heat_box[src_y0:src_y1, src_x0:src_x1]
+    return heat_full
+
+
+def _heat_full_letterbox(norm: np.ndarray, geom: dict, w0: int, h0: int) -> np.ndarray:
+    # invert the pad: crop out the real-content sub-box, then resize that
+    # 1:1 back onto the whole original frame (padding never gets any heat).
+    left, top, right, bottom = geom["content_box_canvas"]
+    cw, ch = max(1, right - left), max(1, bottom - top)
+    content = norm[top:top + ch, left:left + cw]
+    return _resize_float(content, (w0, h0))
+
+
+def make_heatmap_png(
+    frame: Image.Image, cam: np.ndarray, geom: dict,
+    alpha: float = ALPHA, max_long_side: int = MAX_LONG_SIDE,
+) -> bytes:
+    w0, h0 = geom["orig_size"]
+    size = geom.get("size", CROP_SIZE)
+    mode = geom.get("mode", "crop")
+    up = _resize_float(np.asarray(cam), (size, size))
+    norm = _normalize(up)
+
+    if mode == "crop":
+        heat_full = _heat_full_crop(norm, geom, w0, h0)
+    elif mode == "squash":
+        # the CAM covers the whole (aspect-ignored) frame directly.
+        heat_full = _resize_float(norm, (w0, h0))
+    else:  # letterbox
+        heat_full = _heat_full_letterbox(norm, geom, w0, h0)
 
     base = np.asarray(frame.convert("RGB"), dtype=np.float32)
     color = _jet(heat_full) * 255.0

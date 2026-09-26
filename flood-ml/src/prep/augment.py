@@ -12,7 +12,11 @@ import, so importing this module never requires TensorFlow).
 Timestamp-style overlays are applied with their own probability to every
 source, including 511GA and NYSDOT, specifically so the *presence* of an
 overlay can't be used by the model to guess which dataset (and therefore
-which label distribution) an image came from.
+which label distribution) an image came from. The optional `label` kwarg
+raises that probability further for wet/flooded rows (511GA's frames are
+100% dry, so "has an overlay" was pushing wet/flooded toward "dry" too --
+improve_v2 problem 2). `_night_style` (gated by P_NIGHT, applied regardless
+of label) pushes dark+grainy off being a dry-only look (improve_v2 problem 1).
 """
 from __future__ import annotations
 
@@ -31,6 +35,10 @@ P_BLUR = 0.30
 P_COLOR_SHIFT = 0.50
 P_PERSPECTIVE_CROP = 0.25
 P_TEXT_OVERLAY = 0.30
+# wet/flooded get overlays more often than dry, so "has a 511GA-style text
+# box" stops being a dry-shortcut cue during training (improve_v2, problem 2)
+P_TEXT_OVERLAY_WET_FLOODED = 0.60
+P_NIGHT = 0.35
 
 DOWNSCALE_RANGE = (0.25, 0.6)
 JPEG_QUALITY_RANGE = (15, 60)
@@ -113,6 +121,38 @@ def _perspective_crop(img: np.ndarray, rng: np.random.Generator) -> np.ndarray:
     return warped
 
 
+def _night_style(img: np.ndarray, rng: np.random.Generator) -> np.ndarray:
+    """Strong dark/gamma push + a sodium or LED color tint + glare blobs with
+    bloom + a couple light streaks + extra noise -- so "dark and grainy" stops
+    being a dry-only look (improve_v2, problem 1: dark=dry shortcut).
+    """
+    h, w = img.shape[:2]
+    out = img.astype(np.float32)
+
+    gamma = rng.uniform(1.8, 3.2)
+    factor = rng.uniform(0.15, 0.45)
+    out = 255.0 * (out / 255.0) ** gamma * factor
+
+    tint = np.array([1.25, 1.05, 0.65]) if rng.random() < 0.5 else np.array([0.85, 0.95, 1.25])
+    out = np.clip(out * tint[np.newaxis, np.newaxis, :], 0, 255)
+
+    yy, xx = np.mgrid[0:h, 0:w]
+    for _ in range(int(rng.integers(0, 3))):  # headlight/streetlight glare blobs
+        cx, cy = rng.uniform(0, w), rng.uniform(h * 0.3, h)
+        r = rng.uniform(min(w, h) * 0.05, min(w, h) * 0.25)
+        bloom = np.exp(-((xx - cx) ** 2 + (yy - cy) ** 2) / (2 * r * r)) * rng.uniform(120, 255)
+        out += bloom[..., np.newaxis]
+
+    for _ in range(int(rng.integers(0, 2))):  # light streaks (headlight trails)
+        y0 = int(rng.integers(int(h * 0.4), h))
+        y1 = max(0, y0 - int(rng.integers(1, 3)))
+        out[y1:y0, :] += rng.uniform(100, 220)
+
+    out = np.clip(out, 0, 255)
+    out += rng.normal(0.0, rng.uniform(5.0, 20.0), size=out.shape)  # extra sensor noise
+    return np.clip(out, 0, 255).astype(np.uint8)
+
+
 _MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 
@@ -154,9 +194,12 @@ def _timestamp_overlay(img: np.ndarray, rng: np.random.Generator) -> np.ndarray:
     return out
 
 
-def camera_style(img: np.ndarray, rng: np.random.Generator) -> np.ndarray:
+def camera_style(img: np.ndarray, rng: np.random.Generator, *, label: str | None = None) -> np.ndarray:
     """Apply the domain-randomization pipeline. `img` must be uint8 HxWx3
-    (RGB). Returns a uint8 HxWx3 array of the same shape.
+    (RGB). Returns a uint8 HxWx3 array of the same shape. `label` (optional,
+    keyword-only, defaults to None so old callers/tests are unaffected) raises
+    the text-overlay probability for "wet"/"flooded" rows -- see
+    P_TEXT_OVERLAY_WET_FLOODED.
     """
     if img.dtype != np.uint8 or img.ndim != 3 or img.shape[2] != 3:
         raise ValueError(f"camera_style expects uint8 HxWx3, got shape={img.shape} dtype={img.dtype}")
@@ -170,11 +213,14 @@ def camera_style(img: np.ndarray, rng: np.random.Generator) -> np.ndarray:
         out = _color_shift(out, rng)
     if rng.random() < P_BLUR:
         out = _blur(out, rng)
+    if rng.random() < P_NIGHT:
+        out = _night_style(out, rng)
     if rng.random() < P_GAUSSIAN_NOISE:
         out = _gaussian_noise(out, rng)
     if rng.random() < P_POISSON_NOISE:
         out = _poisson_noise(out, rng)
-    if rng.random() < P_TEXT_OVERLAY:
+    text_p = P_TEXT_OVERLAY_WET_FLOODED if label in ("wet", "flooded") else P_TEXT_OVERLAY
+    if rng.random() < text_p:
         out = _timestamp_overlay(out, rng)
     if rng.random() < P_JPEG:
         out = _jpeg_recompress(out, rng)
@@ -185,18 +231,22 @@ def camera_style(img: np.ndarray, rng: np.random.Generator) -> np.ndarray:
     return out.astype(np.uint8)
 
 
-def tf_camera_style(image):
-    """`image`: a tf.uint8 tensor, HxWx3, static or dynamic shape. Returns a
-    tf.uint8 tensor of the same shape, via `tf.numpy_function` wrapping
-    `camera_style` with a freshly seeded RNG per call (fine for training-time
-    augmentation, which doesn't need cross-call determinism).
+def tf_camera_style(image, label=None):
+    """`image`: a tf.uint8 tensor, HxWx3, static or dynamic shape. `label`:
+    an optional tf.string scalar tensor (the row's "dry"/"wet"/"flooded"
+    label), forwarded to `camera_style` for its label-aware overlay rate.
+    Returns a tf.uint8 tensor of the same shape, via `tf.numpy_function`
+    wrapping `camera_style` with a freshly seeded RNG per call (fine for
+    training-time augmentation, which doesn't need cross-call determinism).
     """
     import tensorflow as tf
 
-    def _apply(np_img):
+    def _apply(np_img, np_label):
         rng = np.random.default_rng()
-        return camera_style(np_img, rng)
+        lbl = np_label.decode("utf-8") if isinstance(np_label, (bytes, bytearray)) else np_label
+        return camera_style(np_img, rng, label=lbl or None)
 
-    out = tf.numpy_function(func=_apply, inp=[image], Tout=tf.uint8)
+    label_tensor = label if label is not None else tf.constant(b"")
+    out = tf.numpy_function(func=_apply, inp=[image, label_tensor], Tout=tf.uint8)
     out.set_shape(image.shape)
     return out

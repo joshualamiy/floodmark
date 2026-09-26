@@ -37,16 +37,21 @@ logger = logging.getLogger(__name__)
 SMALL_SAMPLE_WARN_N = 30
 
 
-def predict_probs(model, rows: pd.DataFrame, img_size: int, batch_size: int = 64) -> np.ndarray:
+def predict_probs(
+    model, rows: pd.DataFrame, img_size: int, batch_size: int = 64, mode: str = "crop",
+) -> np.ndarray:
     """Runs `model` over `rows["path"]` in order (no shuffling), returning a
-    1-D float32 array of probabilities aligned to `rows`'s row order.
+    1-D float32 array of probabilities aligned to `rows`'s row order. `mode`
+    must match whatever geometry `model` was trained with (improve_v2).
     """
     from train.data import make_dataset
 
     fake = rows.copy()
     fake["label_bin"] = 0.0
     fake["sample_weight"] = 1.0
-    ds = make_dataset(fake, stage="a", variant=None, training=False, batch_size=batch_size, img_size=img_size)
+    ds = make_dataset(
+        fake, stage="a", variant=None, training=False, batch_size=batch_size, img_size=img_size, mode=mode,
+    )
     probs = model.predict(ds, verbose=0).reshape(-1)
     return probs
 
@@ -215,24 +220,26 @@ def run_pipeline_selection(
     *,
     manifest: str = "data/processed/manifest.csv",
     img_size: int = 224,
+    mode: str = "crop",
     models_root: str = "models",
     target_precision: float = 0.90,
 ) -> dict:
     """`stage_b_runs`: e.g. {"spec": "<run_id>", "mixed": "<run_id>"}.
     Evaluates the pipeline for each Stage B variant against the same Stage A
     model, on ALL val rows, and returns a dict with both variants' reports
-    plus the recommended variant (see `variant_selection_key`).
+    plus the recommended variant (see `variant_selection_key`). `mode`/
+    `img_size` must match the geometry both checkpoints were trained with.
     """
     df = load_manifest(manifest)
     val_rows = select_stage_rows(df, "a", split="val")  # all val rows, any label
 
     stage_a_model = load_checkpoint(stage_a_run, models_root)
-    pA = predict_probs(stage_a_model, val_rows, img_size)
+    pA = predict_probs(stage_a_model, val_rows, img_size, mode=mode)
 
     reports = {}
     for variant, run_id in stage_b_runs.items():
         stage_b_model = load_checkpoint(run_id, models_root)
-        pB = predict_probs(stage_b_model, val_rows, img_size)
+        pB = predict_probs(stage_b_model, val_rows, img_size, mode=mode)
         report = evaluate_pipeline(val_rows, pA, pB, target_precision=target_precision)
         reports[variant] = {"run_id": run_id, "report": asdict(report)}
         logger.info("variant=%s report=%s", variant, json.dumps(asdict(report), indent=2))
@@ -262,6 +269,7 @@ if __name__ == "__main__":
     parser.add_argument("--stage-b-mixed-run", default=None)
     parser.add_argument("--manifest", default="data/processed/manifest.csv")
     parser.add_argument("--img-size", type=int, default=224)
+    parser.add_argument("--mode", default="crop", help="input geometry: crop/squash/letterbox")
     parser.add_argument("--models-root", default="models")
     parser.add_argument("--target-precision", type=float, default=0.90)
     parser.add_argument("--out-json", default="reports/pipeline_selection.json")
@@ -276,7 +284,7 @@ if __name__ == "__main__":
         raise SystemExit("pass at least one of --stage-b-spec-run / --stage-b-mixed-run")
 
     result = run_pipeline_selection(
-        args.stage_a_run, stage_b_runs, manifest=args.manifest, img_size=args.img_size,
+        args.stage_a_run, stage_b_runs, manifest=args.manifest, img_size=args.img_size, mode=args.mode,
         models_root=args.models_root, target_precision=args.target_precision,
     )
     Path(args.out_json).parent.mkdir(parents=True, exist_ok=True)

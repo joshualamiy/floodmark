@@ -9,6 +9,9 @@ import pytest
 pytest.importorskip("tensorflow")
 
 from train.data import (
+    MODE_CROP,
+    MODE_LETTERBOX,
+    MODE_SQUASH,
     STAGE_A,
     STAGE_B,
     VARIANT_MIXED,
@@ -135,3 +138,54 @@ def test_make_dataset_val_is_deterministic_center_crop(tmp_path):
     images1, _, _ = next(iter(ds1))
     images2, _, _ = next(iter(ds2))
     assert np.array_equal(images1.numpy(), images2.numpy())
+
+
+@pytest.mark.parametrize("mode", [MODE_CROP, MODE_SQUASH, MODE_LETTERBOX])
+def test_make_dataset_every_mode_yields_expected_shape(tmp_path, mode):
+    df = _manifest_df()
+    rows = select_stage_rows(df, STAGE_A, split="train").iloc[:4].reset_index(drop=True)
+    _write_fixture_images(tmp_path, rows)
+
+    for training in (True, False):
+        ds = make_dataset(
+            rows, stage=STAGE_A, training=training, batch_size=4, img_size=48, mode=mode,
+            repo_root=str(tmp_path),
+        )
+        images, labels, weights = next(iter(ds))
+        assert images.shape[1:] == (48, 48, 3)
+        assert float(images.numpy().min()) >= 0.0
+        assert float(images.numpy().max()) <= 255.0
+        assert labels.shape[0] == images.shape[0] == weights.shape[0]
+
+
+def test_make_dataset_rejects_unknown_mode(tmp_path):
+    df = _manifest_df()
+    rows = select_stage_rows(df, STAGE_A, split="train").iloc[:2].reset_index(drop=True)
+    _write_fixture_images(tmp_path, rows)
+    with pytest.raises(ValueError):
+        make_dataset(rows, stage=STAGE_A, training=False, img_size=32, mode="fisheye", repo_root=str(tmp_path))
+
+
+def test_squash_and_letterbox_val_are_deterministic(tmp_path):
+    df = _manifest_df()
+    rows = select_stage_rows(df, STAGE_A, split="val").iloc[:3].reset_index(drop=True)
+    _write_fixture_images(tmp_path, rows)
+    for mode in (MODE_SQUASH, MODE_LETTERBOX):
+        ds1 = make_dataset(rows, stage=STAGE_A, training=False, img_size=32, mode=mode, repo_root=str(tmp_path))
+        ds2 = make_dataset(rows, stage=STAGE_A, training=False, img_size=32, mode=mode, repo_root=str(tmp_path))
+        images1, _, _ = next(iter(ds1))
+        images2, _, _ = next(iter(ds2))
+        assert np.array_equal(images1.numpy(), images2.numpy())
+
+
+def test_letterbox_pads_a_wide_image_with_mid_gray(tmp_path):
+    # a fixture image is 256x300 (h x w in numpy, so w=300>h=256): letterbox
+    # scales the long side (300) to img_size and pads top/bottom with gray.
+    df = _manifest_df()
+    rows = select_stage_rows(df, STAGE_A, split="val").iloc[:1].reset_index(drop=True)
+    _write_fixture_images(tmp_path, rows)
+    ds = make_dataset(rows, stage=STAGE_A, training=False, img_size=64, mode=MODE_LETTERBOX, repo_root=str(tmp_path))
+    images, _, _ = next(iter(ds))
+    img = images.numpy()[0]
+    assert img.shape == (64, 64, 3)
+    assert img[0, 0, 0] == pytest.approx(128.0, abs=1.0)  # top-left corner is padding, not content

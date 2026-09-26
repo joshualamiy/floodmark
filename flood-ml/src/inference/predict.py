@@ -79,12 +79,15 @@ def predict_batch(
     cfg = m.config
     ta = float(cfg["stage_a"]["threshold_tA"])
     tb = float(cfg["stage_b"]["threshold_tB"])
-    do_jpeg = cfg.get("preprocess", {}).get("jpeg_roundtrip", True)
+    preproc_cfg = cfg.get("preprocess", {})
+    do_jpeg = preproc_cfg.get("jpeg_roundtrip", True)
+    mode = preproc_cfg.get("mode", "crop")  # old configs without "mode" keep working as crop
+    size = int(preproc_cfg.get("size", cfg.get("input", {}).get("size", 224)))
 
     frames = [to_pil(img) for img in images]
     arrs, geoms = [], []
     for f in frames:
-        arr, geom = preprocess(f, do_jpeg_roundtrip=do_jpeg)
+        arr, geom = preprocess(f, mode=mode, size=size, do_jpeg_roundtrip=do_jpeg)
         arrs.append(arr)
         geoms.append(geom)
     x = np.stack(arrs).astype(np.float32)

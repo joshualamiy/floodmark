@@ -77,10 +77,18 @@ Reports: `reports/class_counts.md`, `reports/figures/class_counts.png`,
 
 ```
 PYTHONPATH=src ../my_env/bin/python -m train.train --stage a --backbone mobilenetv3small \
-    --epochs-head 8 --epochs-ft 6 --ft-layers 30
+    --epochs-head 8 --epochs-ft 6 --ft-layers 30 --mode letterbox --img-size 224
 PYTHONPATH=src ../my_env/bin/python -m train.train --stage b --variant mixed \
-    --backbone mobilenetv3small --epochs-head 8 --epochs-ft 6
+    --backbone mobilenetv3small --epochs-head 8 --epochs-ft 6 --mode letterbox --img-size 224
 ```
+
+`--mode` picks the input geometry: `crop` (short-side resize + crop, the
+original behavior), `squash` (whole frame -> SxS, aspect ignored), or
+`letterbox` (long side -> S, pad to SxS with mid-gray -- ships as of
+improve_v2, see `docs/phase_reports/improve_v2.md`, since a crop-only
+pipeline only sees the middle of a wide 511GA frame). `--img-size` (S) must
+match between Stage A and Stage B training, `pipeline_eval`, `export_onnx`,
+and inference (`models/config.json`'s `preprocess` block).
 
 Each run appends a row to `reports/runs.csv` and writes TensorBoard logs to
 `logs/<run_id>/`:

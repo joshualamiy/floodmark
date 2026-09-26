@@ -86,3 +86,34 @@ def test_tf_camera_style_wraps_numpy_function():
     out_np = out.numpy()
     assert out_np.shape == (32, 32, 3)
     assert out_np.dtype == np.uint8
+
+
+def test_tf_camera_style_accepts_a_label_tensor():
+    tf = pytest.importorskip("tensorflow")
+    from prep.augment import tf_camera_style
+
+    img = tf.constant(_img(32, 32))
+    out = tf_camera_style(img, tf.constant(b"flooded"))
+    assert out.numpy().shape == (32, 32, 3)
+
+
+def test_wet_flooded_labels_get_overlays_more_often():
+    from prep.augment import P_TEXT_OVERLAY, P_TEXT_OVERLAY_WET_FLOODED
+    assert P_TEXT_OVERLAY_WET_FLOODED > P_TEXT_OVERLAY
+
+
+def test_label_kwarg_is_optional_and_backward_compatible():
+    # old call sites (positional img, rng only) must still work unchanged
+    img = _img()
+    out = camera_style(img, _rng(3))
+    assert out.shape == img.shape
+
+
+def test_night_style_reachable_and_shape_preserving():
+    from prep.augment import _night_style
+
+    img = _img(64, 96)
+    out = _night_style(img, _rng(7))
+    assert out.shape == img.shape
+    assert out.dtype == np.uint8
+    assert out.min() >= 0 and out.max() <= 255

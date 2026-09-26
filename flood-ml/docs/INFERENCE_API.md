@@ -73,18 +73,24 @@ Every `wet` prediction from `predict()` carries
 
 ## Preprocessing (`src/inference/preprocess.py`)
 
-Matches the training path as closely as a PIL-only pipeline can:
+Matches the training path as closely as a PIL-only pipeline can. `mode` (from
+`models/config.json`'s `preprocess.mode`; **old configs without "mode" keep
+working as "crop"**) picks the input geometry -- see improve_v2
+(`docs/phase_reports/improve_v2.md`) for why a crop-only pipeline misses
+off-center floods on wide frames:
 
-1. Resize so the short side is 256px, `Image.LANCZOS` -- **no-op if the
-   image's short side is already <= 256** (mirrors
-   `src/prep/common.py::resize_short_side`; real 511GA frames are
-   240-253px on the short side and are therefore *not* upscaled).
-2. JPEG q95 round-trip (encode then decode) -- **on by default**
-   (`models/config.json`'s `preprocess.jpeg_roundtrip`).
-3. Center crop to 224x224, zero-padding first if the resized frame is
-   smaller than 224 on a side (matches `tf.image.resize_with_crop_or_pad`).
+- **`"crop"`** (original behavior): resize so the short side is
+  `preprocess.resize_short_side` (default 256px, `Image.LANCZOS`, no-op if
+  already smaller), then center crop/pad to `size` x `size`.
+- **`"squash"`**: resize the whole frame to `size` x `size`, aspect ignored.
+- **`"letterbox"`**: resize the long side to `size`, then pad to `size` x
+  `size` with flat mid-gray (128,128,128), centered.
 
-**Preprocessing agreement**, measured on 100 random val rows
+All three optionally JPEG q95 round-trip first (`preprocess.jpeg_roundtrip`,
+on by default). `size` comes from `preprocess.size` (falls back to
+`input.size`, then 224).
+
+**Preprocessing agreement** (crop mode), measured on 100 random val rows
 (`orig_path` run through this pipeline vs. the stored processed `path`
 JPEG with a plain center crop, both through the real ONNX models):
 
@@ -95,6 +101,13 @@ JPEG with a plain center crop, both through the real ONNX models):
 
 The round-trip measurably tightens agreement, so it's on by default. Numbers
 are also recorded in `models/config.json`'s `preprocess` block.
+
+**Heatmap mapping is mode-specific** (`src/inference/heatmap.py`): for
+`"crop"` the CAM is placed back inside the crop box on the original frame;
+for `"squash"` the CAM covers the *whole* original frame (resized back,
+aspect ignored, same as the forward mapping); for `"letterbox"` the CAM's
+padded borders are cropped out first, then the remaining content box is
+resized back onto the whole original frame.
 
 ## Heatmap (`src/inference/heatmap.py`)
 

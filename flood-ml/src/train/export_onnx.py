@@ -108,20 +108,15 @@ def export_stage_to_onnx(
     return keras_model, out_path
 
 
-def _load_val_images(rows, img_size: int) -> np.ndarray:
-    from PIL import Image
+def _load_val_images(rows, img_size: int, mode: str = "crop") -> np.ndarray:
+    # reuses the shipped inference-side preprocessing (PIL/numpy, no TF) so
+    # the ONNX parity check exercises exactly what inference will do.
+    from inference.preprocess import preprocess as infer_preprocess
 
     imgs = np.zeros((len(rows), img_size, img_size, 3), dtype=np.float32)
     for i, path in enumerate(rows["path"].to_numpy()):
-        img = Image.open(path).convert("RGB")
-        w, h = img.size
-        scale = 256.0 / min(w, h)
-        img = img.resize((max(1, round(w * scale)), max(1, round(h * scale))), Image.BILINEAR)
-        w2, h2 = img.size
-        left = (w2 - img_size) // 2
-        top = (h2 - img_size) // 2
-        img = img.crop((left, top, left + img_size, top + img_size))
-        imgs[i] = np.asarray(img, dtype=np.float32)
+        arr, _geom = infer_preprocess(path, mode=mode, size=img_size, do_jpeg_roundtrip=False)
+        imgs[i] = arr
     return imgs
 
 
@@ -131,6 +126,7 @@ def verify_export(
     val_rows,
     *,
     img_size: int = 224,
+    mode: str = "crop",
     n_images: int = 100,
     seed: int = 0,
 ) -> dict:
@@ -143,7 +139,7 @@ def verify_export(
     n = min(n_images, len(val_rows))
     idx = rng.choice(len(val_rows), size=n, replace=False)
     sample = val_rows.iloc[idx].reset_index(drop=True)
-    images = _load_val_images(sample, img_size)
+    images = _load_val_images(sample, img_size, mode=mode)
 
     keras_prob = keras_model.predict(images, verbose=0).reshape(-1)
 
@@ -223,6 +219,7 @@ if __name__ == "__main__":
     parser.add_argument("--stage", choices=("a", "b"), required=True)
     parser.add_argument("--out", required=True)
     parser.add_argument("--img-size", type=int, default=224)
+    parser.add_argument("--mode", default="crop", help="input geometry: crop/squash/letterbox")
     parser.add_argument("--models-root", default="models")
     parser.add_argument("--manifest", default="data/processed/manifest.csv")
     parser.add_argument("--n-verify", type=int, default=100)
@@ -237,7 +234,9 @@ if __name__ == "__main__":
 
     df = load_manifest(args.manifest)
     val_rows = select_stage_rows(df, "a", split="val")  # all val rows regardless of stage
-    verification = verify_export(keras_model, out_path, val_rows, img_size=args.img_size, n_images=args.n_verify)
+    verification = verify_export(
+        keras_model, out_path, val_rows, img_size=args.img_size, mode=args.mode, n_images=args.n_verify,
+    )
     logger.info("verification: %s", json.dumps(verification, indent=2))
 
     latency_default = benchmark_latency(out_path, args.img_size, intra_op_threads=None)

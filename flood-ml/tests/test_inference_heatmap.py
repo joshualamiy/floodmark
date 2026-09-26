@@ -4,11 +4,13 @@ from __future__ import annotations
 import io
 import json
 
+import numpy as np
 import pytest
 from _fake_onnx import build_stage_onnx, gradient_image, logit, uniform_image
 from PIL import Image
 
 from inference.predict import predict
+from inference.preprocess import preprocess
 from inference.session import clear_cache, load_models
 
 
@@ -65,3 +67,25 @@ def test_blank_cam_returns_valid_png_with_no_error(tmp_path):
 def test_heatmap_none_when_disabled(models):
     pred = predict(Image.fromarray(gradient_image()), models=models, heatmap=False)
     assert pred.heatmap_png is None
+
+
+def test_heatmap_squash_covers_the_whole_frame():
+    from inference.heatmap import make_heatmap_png
+
+    frame = Image.fromarray(gradient_image((400, 300)))
+    cam = np.ones((7, 7), dtype=np.float32)
+    _arr, geom = preprocess(frame, mode="squash", size=64, do_jpeg_roundtrip=False)
+    png = make_heatmap_png(frame, cam, geom)
+    out = Image.open(io.BytesIO(png))
+    assert out.size == (400, 300)
+
+
+def test_heatmap_letterbox_maps_content_box_back():
+    from inference.heatmap import make_heatmap_png
+
+    frame = Image.fromarray(gradient_image((500, 200)))  # wide -> padded top/bottom
+    cam = np.ones((7, 7), dtype=np.float32)
+    _arr, geom = preprocess(frame, mode="letterbox", size=64, do_jpeg_roundtrip=False)
+    png = make_heatmap_png(frame, cam, geom)
+    out = Image.open(io.BytesIO(png))
+    assert out.size == (500, 200)

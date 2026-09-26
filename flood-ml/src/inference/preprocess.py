@@ -1,6 +1,11 @@
-"""Matches the training-time path: resize short side 256 (LANCZOS, no-op if
-already <= 256 -- mirrors src/prep/common.py::resize_short_side) -> optional
-JPEG q95 round-trip -> center crop/pad to 224. See docs/INFERENCE_API.md.
+"""Matches the training-time path. Three `mode`s (improve_v2 problem 1: a
+224 center crop only sees the middle ~49% of a wide 511GA frame):
+
+- "crop" (default, backward compatible): resize short side -> center crop/pad.
+- "squash": resize the whole frame to size x size, aspect ignored.
+- "letterbox": resize the long side to size, pad to size x size with mid-gray.
+
+All three optionally JPEG q95 round-trip first. See docs/INFERENCE_API.md.
 """
 from __future__ import annotations
 
@@ -13,6 +18,13 @@ from PIL import Image
 RESIZE_SHORT_SIDE = 256
 CROP_SIZE = 224
 JPEG_QUALITY = 95
+CROP_PRECROP_RATIO = 256 / 224  # matches train.data's margin at the original 224 crop
+LETTERBOX_PAD_VALUE = (128, 128, 128)
+
+MODE_CROP = "crop"
+MODE_SQUASH = "squash"
+MODE_LETTERBOX = "letterbox"
+MODES = (MODE_CROP, MODE_SQUASH, MODE_LETTERBOX)
 
 
 def to_pil(image) -> Image.Image:
@@ -67,24 +79,58 @@ def _center_crop_pad(img: Image.Image, size: int = CROP_SIZE):
     return canvas, (left, top, left + size, top + size)
 
 
-def preprocess(image, *, do_jpeg_roundtrip: bool = True) -> tuple[np.ndarray, dict]:
-    """raw input -> ((224,224,3) float32 in [0,255], geometry for heatmap mapping)."""
+def _squash_resize(img: Image.Image, size: int) -> Image.Image:
+    return img.resize((size, size), Image.BILINEAR)
+
+
+def _letterbox_resize(img: Image.Image, size: int, pad_value=LETTERBOX_PAD_VALUE):
+    """Long side -> size, pad to size x size with `pad_value`, centered.
+    Returns (canvas, content_box) where content_box is the (left, top, right,
+    bottom) sub-rectangle of the canvas that holds the real (non-pad) image.
+    """
+    w, h = img.size
+    scale = size / max(w, h)
+    nw, nh = max(1, round(w * scale)), max(1, round(h * scale))
+    resized = img.resize((nw, nh), Image.BILINEAR)
+    canvas = Image.new("RGB", (size, size), pad_value)
+    left, top = (size - nw) // 2, (size - nh) // 2
+    canvas.paste(resized, (left, top))
+    return canvas, (left, top, left + nw, top + nh)
+
+
+def preprocess(image, *, mode: str = MODE_CROP, size: int = CROP_SIZE, do_jpeg_roundtrip: bool = True):
+    """raw input -> ((size,size,3) float32 in [0,255], geometry for heatmap mapping)."""
+    if mode not in MODES:
+        raise ValueError(f"mode must be one of {MODES}, got {mode!r}")
+
     orig = to_pil(image)
     w0, h0 = orig.size
-    resized = resize_short_side(orig)
-    if do_jpeg_roundtrip:
-        resized = jpeg_roundtrip(resized)
-    w1, h1 = resized.size
-    cropped, box = _center_crop_pad(resized)
-    arr = np.asarray(cropped, dtype=np.float32)
 
-    scale = w1 / w0  # resize_short_side is uniform, == h1 / h0
-    crop_box_orig = tuple(c / scale for c in box)
-    geom = {
-        "orig_size": (w0, h0),
-        "resized_size": (w1, h1),
-        "crop_box_resized": box,
-        "crop_box_orig": crop_box_orig,
-        "scale": scale,
-    }
+    if mode == MODE_CROP:
+        precrop = max(size, round(size * CROP_PRECROP_RATIO))
+        resized = resize_short_side(orig, precrop)
+        if do_jpeg_roundtrip:
+            resized = jpeg_roundtrip(resized)
+        w1, h1 = resized.size
+        cropped, box = _center_crop_pad(resized, size)
+        arr = np.asarray(cropped, dtype=np.float32)
+        scale = w1 / w0  # resize_short_side is uniform, == h1 / h0
+        crop_box_orig = tuple(c / scale for c in box)
+        geom = {
+            "mode": mode, "size": size, "orig_size": (w0, h0),
+            "resized_size": (w1, h1), "crop_box_resized": box,
+            "crop_box_orig": crop_box_orig, "scale": scale,
+        }
+        return arr, geom
+
+    src = jpeg_roundtrip(orig) if do_jpeg_roundtrip else orig
+    if mode == MODE_SQUASH:
+        out = _squash_resize(src, size)
+        arr = np.asarray(out, dtype=np.float32)
+        geom = {"mode": mode, "size": size, "orig_size": (w0, h0)}
+        return arr, geom
+
+    canvas, content_box = _letterbox_resize(src, size)
+    arr = np.asarray(canvas, dtype=np.float32)
+    geom = {"mode": mode, "size": size, "orig_size": (w0, h0), "content_box_canvas": content_box}
     return arr, geom
