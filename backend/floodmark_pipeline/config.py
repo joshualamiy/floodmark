@@ -3,6 +3,12 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+# 511GA source camera IDs that call dry scenes flooded. From the ML evaluation
+# (11372 hazy lens, 17397 bridge pier, 13750 gated booth) and from live
+# daytime false alarms (13417 GDOT-0272, 17356 GDOT-1342, 13536 GDOT-0676,
+# 14256 GDOT-0675).
+DEFAULT_ALERT_BLOCKLIST = "11372,17397,13750,13417,17356,13536,14256"
+
 
 @dataclass(frozen=True, slots=True)
 class Settings:
@@ -31,6 +37,15 @@ class Settings:
     arq_result_ttl_seconds: int
     debug: bool
     scheduler_run_at_startup: bool
+    alert_streak_frames: int
+    alert_blocklist: frozenset[str]
+    alert_baseline_days: int
+    alert_baseline_min_frames: int
+    alert_baseline_margin: float
+    alert_require_rain: bool
+    alert_min_rain_mm: float
+    alert_rain_window_hours: int
+    weather_timeout_seconds: float
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -79,4 +94,15 @@ class Settings:
             arq_result_ttl_seconds=int(number("ARQ_RESULT_TTL_SECONDS", "900")),
             debug=boolean("DEBUG"),
             scheduler_run_at_startup=boolean("SCHEDULER_RUN_AT_STARTUP"),
+            alert_streak_frames=int(number("ALERT_STREAK_FRAMES", "3")),
+            alert_blocklist=frozenset(
+                item.strip() for item in os.getenv("ALERT_BLOCKLIST", DEFAULT_ALERT_BLOCKLIST).split(",") if item.strip()
+            ),
+            alert_baseline_days=int(number("ALERT_BASELINE_DAYS", "7")),
+            alert_baseline_min_frames=int(number("ALERT_BASELINE_MIN_FRAMES", "24")),
+            alert_baseline_margin=float(number("ALERT_BASELINE_MARGIN", "0.10", float)),
+            alert_require_rain=boolean("ALERT_REQUIRE_RAIN", True),
+            alert_min_rain_mm=float(number("ALERT_MIN_RAIN_MM", "1.0", float)),
+            alert_rain_window_hours=int(number("ALERT_RAIN_WINDOW_HOURS", "6")),
+            weather_timeout_seconds=float(number("WEATHER_TIMEOUT_SECONDS", "5", float)),
         )

@@ -21,7 +21,13 @@ Set `DEBUG=true` to log capture start/completion timing. Failures are always log
 - Frame and heatmap keys use the source view ID and scheduled UTC slot: `captures/{view_id}/YYYYMMDDTHHmmZ.jpg` and `heatmaps/{view_id}/YYYYMMDDTHHmmZ.png`.
 - Downloads stream into an in-memory byte budget and reject unsupported content types or oversized responses.
 - The worker loads the ONNX sessions once per process from `FLOODML_MODEL_DIR` and runs the real flood classifier on each normalized JPEG.
-- Raw model status is stored in `predictions.status`; alert decisions use the three-frame-per-camera smoothed status in the worker. Camera `11372` is blocklisted from flood alerts.
+- Raw model status is stored in `predictions.status`; the alert status in `predictions.alert_status` is decided per camera from its own database history (`alerting.py`), so it is shared between workers and survives restarts. In order:
+  1. Cameras in `ALERT_BLOCKLIST` never alert. The default list holds the cameras the ML evaluation and live daytime frames found calling dry scenes flooded (`11372`, `17397`, `13750`, `13417`, `17356`, `13536`, `14256`).
+  2. A frame byte-identical to the camera's previous capture (a frozen feed) is not counted toward confirmation and does not reset it.
+  3. A water frame counts only when its flood score (`stage_probabilities.flooded`) is at least `ALERT_BASELINE_MARGIN` above the camera's own median over the last `ALERT_BASELINE_DAYS` days (once `ALERT_BASELINE_MIN_FRAMES` exist). A static scene that always looks a little like water cannot confirm itself; a camera that scores near 1.0 all day effectively can never alert, which is intended.
+  4. `ALERT_STREAK_FRAMES` counted water frames in a row are required before `flooded`.
+  5. When `ALERT_REQUIRE_RAIN` is true, a confirmed flood is downgraded to `wet` unless Open-Meteo reports at least `ALERT_MIN_RAIN_MM` of rain at the camera in the last `ALERT_RAIN_WINDOW_HOURS` hours. Rain is looked up only for confirmed floods, cached per 0.1° grid cell for 15 minutes, and a failed lookup lets the alert through. Rain far upstream of a camera is not seen, so this is a filter for dry-day false alarms, not a flood model.
+- Every suppressed `flooded` call is logged as `flood call suppressed camera_id=... reason=...`; use those lines to extend the blocklist.
 - `wet` means possible flooding below the model's flood alert threshold. Heatmap keys are stored alongside predictions so weak overlays are not presented as evidence.
 - A job runs at most three times. ARQ retains its final result for `ARQ_RESULT_TTL_SECONDS` (15 minutes by default), and a database image row is marked `error` with its final message when one exists.
 

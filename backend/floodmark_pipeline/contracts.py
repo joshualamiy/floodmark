@@ -12,6 +12,9 @@ class CaptureJob:
     source_view_id: str
     scheduled_at: datetime
     capture_id: str
+    # optional so jobs queued before coordinates were added still deserialize
+    latitude: float | None = None
+    longitude: float | None = None
 
     def payload(self) -> dict[str, str]:
         data = asdict(self)
