@@ -12,6 +12,8 @@
 	const ROW_HEIGHT = 120;
 	const OVERSCAN = 4;
 
+	let { onCameraSelect }: { onCameraSelect?: () => void } = $props();
+
 	const map = useMapState();
 	let search = $state("");
 	let filter = $state<Filter>("all");
@@ -172,7 +174,10 @@
 					{#each visibleCameras as camera (camera.id)}
 						<button
 							class="group mb-2 h-22 w-full cursor-pointer rounded-2xl border border-transparent bg-muted/50 px-3 py-3 text-left transition hover:border-border hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-							onclick={() => map.setActiveCameraId(camera.id)}
+							onclick={() => {
+								onCameraSelect?.();
+								map.setActiveCameraId(camera.id);
+							}}
 							type="button"
 						>
 							<div class="flex items-start justify-between gap-3">
