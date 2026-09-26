@@ -18,7 +18,7 @@ MANIFEST_PATH = PROCESSED_ROOT / "manifest.csv"
 VERSION_PATH = PROCESSED_ROOT / "VERSION"
 SPLITS_REPORT_PATH = PROCESSED_ROOT / "splits_report.json"
 CAMERA_SPLITS_PATH = PROCESSED_ROOT / "ga511_camera_splits.json"
-LOGS_JOBS = Path("logs/jobs")
+LOGS_JOBS = Path(__file__).resolve().parents[2] / "logs" / "jobs"  # always flood-ml/logs, whatever the cwd
 
 REQUIRED_COLUMNS = [
     "path", "label", "source", "group_id", "camera_id", "view_type",

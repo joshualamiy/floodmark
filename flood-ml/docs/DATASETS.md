@@ -78,3 +78,5 @@ The blanket license is the authors' grant over their curated dataset and
 labels, not a demonstrated redistribution right for every underlying photo.
 European Flood 2013 is the one new source here with real per-image (Wikimedia)
 license provenance.
+
+> Final cleanup (2026-09-26): the local copies of **Water Segmentation** (excluded, license unclear) and **floodimg** (skipped, duplicates/aerial) were deleted. Neither is used by any model. `src/acquire/` can re-download both.

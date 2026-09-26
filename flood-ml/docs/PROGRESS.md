@@ -422,3 +422,22 @@ Details in `reports/EVALUATION.md` (v3 section on top; v1 section kept verbatim)
   - The v1 crop path zero-pads small images, where training upscaled them. v1 is retired.
 
 **Docs updated:** README (limits, datasets, blocklist), the demo limits text, `BACKEND_HANDOFF.md` (blocklist 11372, 17397, 13750), and `INFERENCE_API.md` (v3 preprocessing and latency).
+
+## 2026-09-26: Final cleanup
+
+**Comments.** All comments and docstrings in the 118 Python files were stripped, then replaced with one-line hackathon-style headers plus 11 short inline comments at non-obvious spots: status logic, in-graph CAM, preprocessing parity, the AI-label rule, split pinning, thresholds, and the rate limit. `# noqa` and `# type: ignore` directives were kept.
+
+Verification:
+- The syntax tree of every file is identical with docstrings ignored.
+- 366 tests pass, and ruff is clean.
+- Predictions on 21 frames are identical before and after.
+
+**Files deleted (the user approved each group):**
+- Local datasets Water Segmentation (5.0 GB) and floodimg (747 MB).
+- 12 unused checkpoint folders and `models/candidates`.
+- Review and contact-sheet images, eval review sheets, and finished job logs plus one-off scripts. This includes the local CI-simulation helper; real CI still runs on GitHub.
+- Caches, `.DS_Store` files, stray JSON files, the root `logs/`, and the three `.gitkeep` placeholders.
+
+**Kept:** the shipped v3 model, the v1 backup, the water model, the handoff zip, all training data, the manifest backups, the TensorBoard runs, `errors.html`, the checkpoint grids, and the logs of running tools.
+
+**Bug fixed:** `prep/common.py` now anchors `LOGS_JOBS` to `flood-ml/logs`. Running tests from the repo root had been creating a stray root `logs/` folder.

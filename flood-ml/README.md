@@ -183,8 +183,8 @@ No dataset images live in this repo (`data/` is gitignored). Full detail:
 **Excluded:** Water Segmentation Dataset (V-FloodNet lineage) -- its license
 is unverified (Kaggle says "unknown"; the upstream V-FloodNet repo says all
 rights reserved), and two of its sub-collections carry their own
-non-commercial or no-redistribution terms. Kept internal-only, never used
-for anything that ships. FloodNet (drone imagery) and RSCD were never
+non-commercial or no-redistribution terms. Never used for training, and
+deleted locally in the final cleanup (`acquire.public_datasets` can re-fetch it). FloodNet (drone imagery) and RSCD were never
 downloaded -- out of scope (aerial view) or unverified license,
 respectively. See `docs/DATASETS.md` for the full "not downloaded" table and
 the gap-search candidates.
