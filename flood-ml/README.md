@@ -18,9 +18,9 @@ water depth, or a road-safety assessment. The shipped classifier (v3) sees the w
 frame (letterbox to 320 px); the older center-crop model is kept in `models/v1/`
 (see `docs/phase_reports/v3_retrain.md`).
 
-Full design history: `docs/PLAN.md` and `docs/PROGRESS.md`. The detailed
-`docs/phase_reports/` are kept local (not in the repo). Honest model limits:
-`reports/EVALUATION.md`.
+`docs/` (plan, progress log, dataset notes, inference API, backend handoff,
+phase reports) is kept local and not in the repo; ask the ML side for it. Honest
+model limits: `reports/EVALUATION.md`.
 
 ## Setup
 
