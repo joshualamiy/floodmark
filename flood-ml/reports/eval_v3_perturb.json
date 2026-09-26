@@ -1,0 +1,600 @@
+{
+  "v1": {
+    "flooded": {
+      "base": {
+        "n": 542,
+        "flooded": 412,
+        "dry": 72,
+        "flooded_to_not": 0,
+        "not_to_flooded": 0,
+        "mean_pA": 0.9203575849533081,
+        "mean_pB": 0.8901029229164124,
+        "flooded_by_source": {
+          "alleyfloodnet": 49,
+          "eu_flood_2013": 256,
+          "flood_master_test": 18,
+          "fred": 8,
+          "roadway_flooding": 81
+        }
+      },
+      "dark": {
+        "n": 542,
+        "flooded": 390,
+        "dry": 115,
+        "flooded_to_not": 37,
+        "not_to_flooded": 15,
+        "mean_pA": 0.8803213238716125,
+        "mean_pB": 0.8565457463264465,
+        "flooded_by_source": {
+          "alleyfloodnet": 52,
+          "eu_flood_2013": 250,
+          "flood_master_test": 3,
+          "fred": 5,
+          "roadway_flooding": 80
+        }
+      },
+      "ga511_overlay": {
+        "n": 542,
+        "flooded": 411,
+        "dry": 77,
+        "flooded_to_not": 6,
+        "not_to_flooded": 5,
+        "mean_pA": 0.9204388856887817,
+        "mean_pB": 0.888691246509552,
+        "flooded_by_source": {
+          "alleyfloodnet": 50,
+          "eu_flood_2013": 257,
+          "flood_master_test": 14,
+          "fred": 8,
+          "roadway_flooding": 82
+        }
+      },
+      "dark+overlay": {
+        "n": 542,
+        "flooded": 387,
+        "dry": 116,
+        "flooded_to_not": 38,
+        "not_to_flooded": 13,
+        "mean_pA": 0.8769094944000244,
+        "mean_pB": 0.8514686822891235,
+        "flooded_by_source": {
+          "alleyfloodnet": 51,
+          "eu_flood_2013": 251,
+          "flood_master_test": 1,
+          "fred": 4,
+          "roadway_flooding": 80
+        }
+      },
+      "band_top": {
+        "n": 542,
+        "flooded": 410,
+        "dry": 78,
+        "flooded_to_not": 5,
+        "not_to_flooded": 3,
+        "mean_pA": 0.919111430644989,
+        "mean_pB": 0.8869698643684387,
+        "flooded_by_source": {
+          "alleyfloodnet": 49,
+          "eu_flood_2013": 257,
+          "flood_master_test": 14,
+          "fred": 8,
+          "roadway_flooding": 82
+        }
+      },
+      "band_bottom": {
+        "n": 542,
+        "flooded": 386,
+        "dry": 94,
+        "flooded_to_not": 26,
+        "not_to_flooded": 0,
+        "mean_pA": 0.9000933766365051,
+        "mean_pB": 0.8632893562316895,
+        "flooded_by_source": {
+          "alleyfloodnet": 41,
+          "eu_flood_2013": 248,
+          "flood_master_test": 10,
+          "fred": 6,
+          "roadway_flooding": 81
+        }
+      },
+      "gray_band_top": {
+        "n": 542,
+        "flooded": 407,
+        "dry": 79,
+        "flooded_to_not": 9,
+        "not_to_flooded": 4,
+        "mean_pA": 0.9213538765907288,
+        "mean_pB": 0.8885021805763245,
+        "flooded_by_source": {
+          "alleyfloodnet": 50,
+          "eu_flood_2013": 256,
+          "flood_master_test": 11,
+          "fred": 8,
+          "roadway_flooding": 82
+        }
+      },
+      "logo": {
+        "n": 542,
+        "flooded": 413,
+        "dry": 72,
+        "flooded_to_not": 0,
+        "not_to_flooded": 1,
+        "mean_pA": 0.9206943511962891,
+        "mean_pB": 0.8905405402183533,
+        "flooded_by_source": {
+          "alleyfloodnet": 50,
+          "eu_flood_2013": 256,
+          "flood_master_test": 18,
+          "fred": 8,
+          "roadway_flooding": 81
+        }
+      }
+    },
+    "dry_non_ga511": {
+      "base": {
+        "n": 632,
+        "flooded": 9,
+        "dry": 616,
+        "flooded_to_not": 0,
+        "not_to_flooded": 0,
+        "mean_pA": 0.11026614159345627,
+        "mean_pB": 0.07999227195978165,
+        "flooded_by_source": {
+          "fred": 4,
+          "iowa_rwis": 5,
+          "nysdot_road_surface": 0
+        }
+      },
+      "dark": {
+        "n": 632,
+        "flooded": 7,
+        "dry": 619,
+        "flooded_to_not": 2,
+        "not_to_flooded": 0,
+        "mean_pA": 0.11442102491855621,
+        "mean_pB": 0.09050644189119339,
+        "flooded_by_source": {
+          "fred": 3,
+          "iowa_rwis": 4,
+          "nysdot_road_surface": 0
+        }
+      },
+      "ga511_overlay": {
+        "n": 632,
+        "flooded": 8,
+        "dry": 614,
+        "flooded_to_not": 1,
+        "not_to_flooded": 0,
+        "mean_pA": 0.13192877173423767,
+        "mean_pB": 0.09692633152008057,
+        "flooded_by_source": {
+          "fred": 3,
+          "iowa_rwis": 5,
+          "nysdot_road_surface": 0
+        }
+      }
+    },
+    "flooded_non16x9": {
+      "base": {
+        "n": 305,
+        "flooded": 270,
+        "dry": 17,
+        "flooded_to_not": 0,
+        "not_to_flooded": 0,
+        "mean_pA": 0.9716211557388306,
+        "mean_pB": 0.9528639316558838,
+        "flooded_by_source": {
+          "alleyfloodnet": 13,
+          "eu_flood_2013": 176,
+          "roadway_flooding": 81
+        }
+      },
+      "to_16x9": {
+        "n": 305,
+        "flooded": 250,
+        "dry": 26,
+        "flooded_to_not": 25,
+        "not_to_flooded": 5,
+        "mean_pA": 0.9467276930809021,
+        "mean_pB": 0.9207649827003479,
+        "flooded_by_source": {
+          "alleyfloodnet": 8,
+          "eu_flood_2013": 161,
+          "roadway_flooding": 81
+        }
+      },
+      "to_16x9_ctrl": {
+        "n": 305,
+        "flooded": 264,
+        "dry": 24,
+        "flooded_to_not": 8,
+        "not_to_flooded": 2,
+        "mean_pA": 0.9607577919960022,
+        "mean_pB": 0.9405468702316284,
+        "flooded_by_source": {
+          "alleyfloodnet": 9,
+          "eu_flood_2013": 173,
+          "roadway_flooding": 82
+        }
+      }
+    },
+    "ga511_dry": {
+      "base": {
+        "n": 325,
+        "flooded": 1,
+        "dry": 323,
+        "flooded_to_not": 0,
+        "not_to_flooded": 0,
+        "mean_pA": 0.055167634040117264,
+        "mean_pB": 0.030467746779322624,
+        "flooded_by_source": {
+          "ga511": 1
+        }
+      },
+      "to_4x3": {
+        "n": 325,
+        "flooded": 1,
+        "dry": 323,
+        "flooded_to_not": 0,
+        "not_to_flooded": 0,
+        "mean_pA": 0.0481596477329731,
+        "mean_pB": 0.02571185491979122,
+        "flooded_by_source": {
+          "ga511": 1
+        }
+      },
+      "to_4x3_ctrl": {
+        "n": 325,
+        "flooded": 2,
+        "dry": 321,
+        "flooded_to_not": 0,
+        "not_to_flooded": 1,
+        "mean_pA": 0.06155448779463768,
+        "mean_pB": 0.03517826274037361,
+        "flooded_by_source": {
+          "ga511": 2
+        }
+      }
+    },
+    "not_flooded": {
+      "base": {
+        "n": 112,
+        "flooded": 25,
+        "dry": 64,
+        "flooded_to_not": 0,
+        "not_to_flooded": 0,
+        "mean_pA": 0.6159932017326355,
+        "mean_pB": 0.543449878692627,
+        "flooded_by_source": {
+          "alleyfloodnet": 9,
+          "eu_flood_2013": 16
+        }
+      },
+      "dark": {
+        "n": 112,
+        "flooded": 28,
+        "dry": 62,
+        "flooded_to_not": 1,
+        "not_to_flooded": 4,
+        "mean_pA": 0.6138563752174377,
+        "mean_pB": 0.5454305410385132,
+        "flooded_by_source": {
+          "alleyfloodnet": 12,
+          "eu_flood_2013": 16
+        }
+      },
+      "ga511_overlay": {
+        "n": 112,
+        "flooded": 33,
+        "dry": 61,
+        "flooded_to_not": 0,
+        "not_to_flooded": 8,
+        "mean_pA": 0.6427503228187561,
+        "mean_pB": 0.5675402283668518,
+        "flooded_by_source": {
+          "alleyfloodnet": 15,
+          "eu_flood_2013": 18
+        }
+      }
+    }
+  },
+  "v3": {
+    "flooded": {
+      "base": {
+        "n": 542,
+        "flooded": 483,
+        "dry": 43,
+        "flooded_to_not": 0,
+        "not_to_flooded": 0,
+        "mean_pA": 0.9651725888252258,
+        "mean_pB": 0.8377971053123474,
+        "flooded_by_source": {
+          "alleyfloodnet": 82,
+          "eu_flood_2013": 275,
+          "flood_master_test": 34,
+          "fred": 5,
+          "roadway_flooding": 87
+        }
+      },
+      "dark": {
+        "n": 542,
+        "flooded": 433,
+        "dry": 99,
+        "flooded_to_not": 54,
+        "not_to_flooded": 4,
+        "mean_pA": 0.9129759073257446,
+        "mean_pB": 0.7783439755439758,
+        "flooded_by_source": {
+          "alleyfloodnet": 80,
+          "eu_flood_2013": 261,
+          "flood_master_test": 4,
+          "fred": 3,
+          "roadway_flooding": 85
+        }
+      },
+      "ga511_overlay": {
+        "n": 542,
+        "flooded": 457,
+        "dry": 81,
+        "flooded_to_not": 35,
+        "not_to_flooded": 9,
+        "mean_pA": 0.9364433288574219,
+        "mean_pB": 0.8230910897254944,
+        "flooded_by_source": {
+          "alleyfloodnet": 81,
+          "eu_flood_2013": 275,
+          "flood_master_test": 6,
+          "fred": 7,
+          "roadway_flooding": 88
+        }
+      },
+      "dark+overlay": {
+        "n": 542,
+        "flooded": 429,
+        "dry": 105,
+        "flooded_to_not": 58,
+        "not_to_flooded": 4,
+        "mean_pA": 0.8792755007743835,
+        "mean_pB": 0.7670617699623108,
+        "flooded_by_source": {
+          "alleyfloodnet": 77,
+          "eu_flood_2013": 263,
+          "flood_master_test": 0,
+          "fred": 4,
+          "roadway_flooding": 85
+        }
+      },
+      "band_top": {
+        "n": 542,
+        "flooded": 446,
+        "dry": 88,
+        "flooded_to_not": 38,
+        "not_to_flooded": 1,
+        "mean_pA": 0.935751736164093,
+        "mean_pB": 0.8021337985992432,
+        "flooded_by_source": {
+          "alleyfloodnet": 76,
+          "eu_flood_2013": 273,
+          "flood_master_test": 9,
+          "fred": 1,
+          "roadway_flooding": 87
+        }
+      },
+      "band_bottom": {
+        "n": 542,
+        "flooded": 464,
+        "dry": 61,
+        "flooded_to_not": 23,
+        "not_to_flooded": 4,
+        "mean_pA": 0.9494137763977051,
+        "mean_pB": 0.7980838418006897,
+        "flooded_by_source": {
+          "alleyfloodnet": 77,
+          "eu_flood_2013": 268,
+          "flood_master_test": 31,
+          "fred": 0,
+          "roadway_flooding": 88
+        }
+      },
+      "gray_band_top": {
+        "n": 542,
+        "flooded": 464,
+        "dry": 63,
+        "flooded_to_not": 21,
+        "not_to_flooded": 2,
+        "mean_pA": 0.9562801122665405,
+        "mean_pB": 0.8273422122001648,
+        "flooded_by_source": {
+          "alleyfloodnet": 84,
+          "eu_flood_2013": 272,
+          "flood_master_test": 16,
+          "fred": 5,
+          "roadway_flooding": 87
+        }
+      },
+      "logo": {
+        "n": 542,
+        "flooded": 482,
+        "dry": 47,
+        "flooded_to_not": 5,
+        "not_to_flooded": 4,
+        "mean_pA": 0.9635010957717896,
+        "mean_pB": 0.8328636288642883,
+        "flooded_by_source": {
+          "alleyfloodnet": 85,
+          "eu_flood_2013": 274,
+          "flood_master_test": 31,
+          "fred": 5,
+          "roadway_flooding": 87
+        }
+      }
+    },
+    "dry_non_ga511": {
+      "base": {
+        "n": 632,
+        "flooded": 6,
+        "dry": 625,
+        "flooded_to_not": 0,
+        "not_to_flooded": 0,
+        "mean_pA": 0.04764321446418762,
+        "mean_pB": 0.04332047328352928,
+        "flooded_by_source": {
+          "fred": 0,
+          "iowa_rwis": 6,
+          "nysdot_road_surface": 0
+        }
+      },
+      "dark": {
+        "n": 632,
+        "flooded": 5,
+        "dry": 627,
+        "flooded_to_not": 6,
+        "not_to_flooded": 5,
+        "mean_pA": 0.04935440048575401,
+        "mean_pB": 0.05479491502046585,
+        "flooded_by_source": {
+          "fred": 5,
+          "iowa_rwis": 0,
+          "nysdot_road_surface": 0
+        }
+      },
+      "ga511_overlay": {
+        "n": 632,
+        "flooded": 5,
+        "dry": 627,
+        "flooded_to_not": 1,
+        "not_to_flooded": 0,
+        "mean_pA": 0.10151068866252899,
+        "mean_pB": 0.1188267320394516,
+        "flooded_by_source": {
+          "fred": 0,
+          "iowa_rwis": 5,
+          "nysdot_road_surface": 0
+        }
+      }
+    },
+    "flooded_non16x9": {
+      "base": {
+        "n": 305,
+        "flooded": 297,
+        "dry": 4,
+        "flooded_to_not": 0,
+        "not_to_flooded": 0,
+        "mean_pA": 0.9957036972045898,
+        "mean_pB": 0.9262868165969849,
+        "flooded_by_source": {
+          "alleyfloodnet": 19,
+          "eu_flood_2013": 191,
+          "roadway_flooding": 87
+        }
+      },
+      "to_16x9": {
+        "n": 305,
+        "flooded": 290,
+        "dry": 9,
+        "flooded_to_not": 8,
+        "not_to_flooded": 1,
+        "mean_pA": 0.9894136786460876,
+        "mean_pB": 0.8966981172561646,
+        "flooded_by_source": {
+          "alleyfloodnet": 19,
+          "eu_flood_2013": 183,
+          "roadway_flooding": 88
+        }
+      },
+      "to_16x9_ctrl": {
+        "n": 305,
+        "flooded": 299,
+        "dry": 3,
+        "flooded_to_not": 1,
+        "not_to_flooded": 3,
+        "mean_pA": 0.9964785575866699,
+        "mean_pB": 0.9255006909370422,
+        "flooded_by_source": {
+          "alleyfloodnet": 20,
+          "eu_flood_2013": 191,
+          "roadway_flooding": 88
+        }
+      }
+    },
+    "ga511_dry": {
+      "base": {
+        "n": 325,
+        "flooded": 0,
+        "dry": 325,
+        "flooded_to_not": 0,
+        "not_to_flooded": 0,
+        "mean_pA": 0.018132055178284645,
+        "mean_pB": 0.01611737161874771,
+        "flooded_by_source": {
+          "ga511": 0
+        }
+      },
+      "to_4x3": {
+        "n": 325,
+        "flooded": 3,
+        "dry": 322,
+        "flooded_to_not": 0,
+        "not_to_flooded": 3,
+        "mean_pA": 0.08372797816991806,
+        "mean_pB": 0.051247622817754745,
+        "flooded_by_source": {
+          "ga511": 3
+        }
+      },
+      "to_4x3_ctrl": {
+        "n": 325,
+        "flooded": 3,
+        "dry": 322,
+        "flooded_to_not": 0,
+        "not_to_flooded": 3,
+        "mean_pA": 0.051000624895095825,
+        "mean_pB": 0.04137810692191124,
+        "flooded_by_source": {
+          "ga511": 3
+        }
+      }
+    },
+    "not_flooded": {
+      "base": {
+        "n": 112,
+        "flooded": 46,
+        "dry": 10,
+        "flooded_to_not": 0,
+        "not_to_flooded": 0,
+        "mean_pA": 0.9612966179847717,
+        "mean_pB": 0.3446940779685974,
+        "flooded_by_source": {
+          "alleyfloodnet": 18,
+          "eu_flood_2013": 28
+        }
+      },
+      "dark": {
+        "n": 112,
+        "flooded": 43,
+        "dry": 19,
+        "flooded_to_not": 9,
+        "not_to_flooded": 6,
+        "mean_pA": 0.9325218200683594,
+        "mean_pB": 0.33367905020713806,
+        "flooded_by_source": {
+          "alleyfloodnet": 21,
+          "eu_flood_2013": 22
+        }
+      },
+      "ga511_overlay": {
+        "n": 112,
+        "flooded": 50,
+        "dry": 10,
+        "flooded_to_not": 2,
+        "not_to_flooded": 6,
+        "mean_pA": 0.9586745500564575,
+        "mean_pB": 0.36652928590774536,
+        "flooded_by_source": {
+          "alleyfloodnet": 21,
+          "eu_flood_2013": 29
+        }
+      }
+    }
+  }
+}

@@ -87,14 +87,19 @@ off-center floods on wide frames:
   `preprocess.resize_short_side` (default 256px, `Image.LANCZOS`, no-op if
   already smaller), then center crop/pad to `size` x `size`.
 - **`"squash"`**: resize the whole frame to `size` x `size`, aspect ignored.
-- **`"letterbox"`**: resize the long side to `size`, then pad to `size` x
-  `size` with flat mid-gray (128,128,128), centered.
+- **`"letterbox"`** (**shipped v3: size 320**): resize the long side to `size`,
+  then pad to `size` x `size` with flat mid-gray (128,128,128), centered.
 
-All three optionally JPEG q95 round-trip first (`preprocess.jpeg_roundtrip`,
-on by default). `size` comes from `preprocess.size` (falls back to
-`input.size`, then 224).
+`squash` and `letterbox` first shrink the short side to 256 (LANCZOS, no-op if
+already smaller) and JPEG q95 round-trip, exactly like the stored training
+copies. They then resize with a numpy copy of TF's bilinear (half-pixel
+centers, no antialias) and truncate to uint8, the same as training.
+`tests/test_train_preprocess_parity.py` checks this against TF. On v3 val the
+max |ΔpB| vs. the training pipeline is 0.045. What's left comes from the
+JPEG decoders (PIL vs. TF), and the 511GA median is 0.0004. `size` comes from
+`preprocess.size` (falls back to `input.size`, then 224).
 
-**Preprocessing agreement** (crop mode), measured on 100 random val rows
+**Preprocessing agreement for the old crop model (v1)**, measured on 100 random val rows
 (`orig_path` run through this pipeline vs. the stored processed `path`
 JPEG with a plain center crop, both through the real ONNX models):
 
@@ -203,9 +208,10 @@ see `tests/test_inference_camera_move.py`.
 
 ## Latency
 
-From `reports/onnx_parity.md` (Apple M5 Max, `onnxruntime` CPU, batch 1,
-median/p95 over 100 runs): Stage A ~1.0ms, Stage B ~1.1ms, full pipeline
-~2.6ms at default thread count. 511GA samples about once per view per hour
+Shipped v3 (letterbox 320; Apple M5 Max, `onnxruntime` CPU, batch 1, median
+of 100 runs at default threads): Stage A ~2.0ms, Stage B ~1.6ms. With one
+thread it's ~6ms per stage. Preprocessing and the heatmap PNG add a few ms
+more. The old v1 crop model (`reports/onnx_parity.md`) was ~1.0/1.1ms. 511GA samples about once per view per hour
 by default; even a live demo polling every few seconds has orders of
 magnitude of headroom.
 

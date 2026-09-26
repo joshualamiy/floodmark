@@ -7,7 +7,16 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 
-from eval.common import LOCAL, REPORTS, load_image, stage_probs
+from eval.common import (
+    LOCAL,
+    REPORTS,
+    load_config,
+    load_image,
+    local,
+    model_dir,
+    preproc_spec,
+    stage_probs,
+)
 from eval.viz import b64_jpeg, overlay
 
 ERR_TYPES = [
@@ -17,6 +26,7 @@ ERR_TYPES = [
     ("wet", "flooded", "wet -> flooded (false flood alarm on wet)"),
     ("flooded", "dry", "flooded -> dry (missed flood)"),
     ("flooded", "wet", "flooded -> wet (missed flood)"),
+    ("not_flooded", "flooded", "not_flooded -> flooded (false flood alarm, dry or rain-wet)"),
 ]
 
 
@@ -27,8 +37,8 @@ def error_type(true: str, pred: str) -> str | None:
     return None
 
 
-def card(path: str, cam_a, cam_b, meta: dict) -> str:
-    img = load_image(path)
+def card(path: str, cam_a, cam_b, meta: dict, spec: dict | None = None) -> str:
+    img = load_image(path, spec)
     parts = [img.astype(np.uint8), overlay(img, cam_a), overlay(img, cam_b)]
     strip = Image.fromarray(np.concatenate(parts, axis=1)).resize((3 * 160, 160))
     sp = stage_probs(meta["pA"], meta["pB"])
@@ -46,13 +56,18 @@ background:#fff;width:490px}.card img{width:480px}table{font-size:11px;border-co
 td{padding:1px 6px 1px 0}h2{margin-top:28px}.note{color:#52514e;font-size:13px}"""
 
 
-def build(out=REPORTS / "errors.html", live_wet: bool = True) -> dict:
-    d = pd.read_csv(LOCAL / "test_preds.csv")
-    cams = np.load(LOCAL / "test_cams.npz")
+def build(out=REPORTS / "errors.html", live_wet: bool = True, tag: str | None = None,
+          live_splits=("test",)) -> dict:
+    # tag None = first run (v1); else reports/eval/<tag>/
+    base = local(tag) if tag else LOCAL
+    spec = preproc_spec(load_config(model_dir(tag))) if tag else None
+    d = pd.read_csv(base / "test_preds.csv")
+    cams = np.load(base / "test_cams.npz")
     d["err"] = [error_type(t, p) for t, p in zip(d["label"], d["status"])]
     counts: dict = {}
-    body = ["<h1>Test-split errors (ONNX pipeline)</h1>",
-            ('<p class="note">Local only. Each strip: model input (224 center crop), Stage A CAM, '
+    geo = f"{spec['mode']} {spec['size']}" if spec else "crop 224"
+    body = [f"<h1>Test-split errors ({tag or 'v1'}, ONNX pipeline)</h1>",
+            (f'<p class="note">Local only. Each strip: model input ({geo}), Stage A CAM, '
              "Stage B CAM. CAMs are min-max normalized per image, so a strip always shows some "
              "red even when evidence is weak.</p>")]
     for _, _, name in ERR_TYPES:
@@ -63,22 +78,24 @@ def build(out=REPORTS / "errors.html", live_wet: bool = True) -> dict:
             meta = {"path": r["path"], "source": r["source"], "group": r["boot_group"],
                     "true": r["label"], "pred": r["status"], "conf": f"{r['confidence']:.3f}",
                     "pA": r["pA"], "pB": r["pB"]}
-            body.append(card(r["path"], cams["camA"][i], cams["camB"][i], meta))
-    lp = LOCAL / "live_preds.csv"
+            body.append(card(r["path"], cams["camA"][i], cams["camB"][i], meta, spec))
+    lp = base / "live_preds.csv"
     if lp.exists():
         f = pd.read_csv(lp)
-        lc = np.load(LOCAL / "live_cams.npz")
+        lc = np.load(base / "live_cams.npz")
+        if tag:
+            f = f[f["cam_split"].isin(live_splits)]
         keep = ["flooded", "wet"] if live_wet else ["flooded"]
         for st in keep:
-            sub = f[f["status"] == st]
+            sub = f[f["status"] == st].sort_values("timestamp_utc")
             counts[f"live_{st}"] = len(sub)
-            body.append(f"<h2>(c) live 511GA frames called {st}: {len(sub)} "
-                        "(presumed dry: 0 mm rain)</h2>")
+            body.append(f"<h2>(c) live 511GA frames ({', '.join(live_splits) if tag else 'all'} cameras) "
+                        f"called {st}: {len(sub)} (presumed dry: 0 mm rain)</h2>")
             for i, r in sub.iterrows():
                 meta = {"frame": r["frame_id"], "camera": r["camera_id"], "cam split": r["cam_split"],
-                        "user label": r.get("user_label"), "pred": r["status"],
-                        "conf": f"{r['confidence']:.3f}", "pA": r["pA"], "pB": r["pB"]}
-                body.append(card(r["abs_path"], lc["camA"][i], lc["camB"][i], meta))
+                        "local time": r.get("local_time"), "user label": r.get("user_label"),
+                        "pred": r["status"], "conf": f"{r['confidence']:.3f}", "pA": r["pA"], "pB": r["pB"]}
+                body.append(card(r["abs_path"], lc["camA"][i], lc["camB"][i], meta, spec))
     doc = (f"<!doctype html><html><head><meta charset='utf-8'><title>Test errors</title>"
            f"<style>{CSS}</style></head><body>{''.join(body)}</body></html>")
     out.write_text(doc)
@@ -89,5 +106,6 @@ def build(out=REPORTS / "errors.html", live_wet: bool = True) -> dict:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-live-wet", action="store_true")
+    ap.add_argument("--tag", default=None, choices=["v1", "v3"])
     a = ap.parse_args()
-    build(live_wet=not a.no_live_wet)
+    build(live_wet=not a.no_live_wet, tag=a.tag)

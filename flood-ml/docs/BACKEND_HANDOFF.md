@@ -55,12 +55,12 @@ Notes:
 ```python
 from inference import TemporalSmoother
 
-smoother = TemporalSmoother(n=3, blocklist={"11372"})  # persist with to_dict()/from_dict()
+smoother = TemporalSmoother(n=3, blocklist={"11372", "17397", "13750"})  # persist with to_dict()/from_dict()
 alert_status = smoother.update(camera_id, p).status
 ```
 
 - Store the raw `status` for every frame, but only show "flooded" on the map once `alert_status` says so, i.e. 3 flooded frames in a row.
-- Camera 11372 points at grass and false-alarms, so it's blocklisted.
+- Cameras 11372 (grass), 17397 (bridge pier), and 13750 (gated booth) repeat false alarms, so they are blocklisted.
 
 ## 5. Show honestly on the website
 

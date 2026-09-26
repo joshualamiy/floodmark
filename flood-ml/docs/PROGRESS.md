@@ -397,3 +397,28 @@ The worker found and fixed a real bug on the way: adding new groups was reshuffl
 It now mirrors training exactly, with a numpy TF-bilinear, the 256/JPEG step, and uint8 truncation. A regression test checks it against TF. Measured max |ΔpB| between inference and training fell from 0.186 to 0.045, with the remainder coming from JPEG decoder differences. Only NYSDOT raw files differ more, because training used header-cropped copies.
 
 **Next:** `src/eval` hardcodes crop-224 preprocessing, so it must be made mode-aware before the one test re-run.
+
+## 2026-09-26: Phase 4 re-run. v3 vs v1 on test (the single test run for v3)
+
+Details in `reports/EVALUATION.md` (v3 section on top; v1 section kept verbatim) and `docs/phase_reports/phase4_rerun.md`. The eval now uses the deployed preprocessing (Δp = 0 against `predict_batch`), and v1 reproduces its first-run predictions.
+
+| Test set | v1 | v3 |
+|---|---|---|
+| All test (1,642 rows): recall | 0.760 | **0.891** (Δ +0.131, CI 0.081–0.194) |
+| All test: precision | 0.912 | 0.893 |
+| Legacy test (the same 1,108 rows as the first run): recall | 0.637 | 0.750 |
+| Legacy test: precision | 0.955 | 0.992 |
+| Legacy test: false floods on dry | 5/930 | 0/930 |
+| Greek elevated-camera video (1 video, flagged) | 0.29 | 0.55 |
+
+- **Greek video caveats:** the gain is mostly the lower tB. It breaks under a 511GA-style title bar (6/62) or darkening (4/62), and Grad-CAM on water is at chance.
+- **Worse on "not flooded" street photos:** 25/112 → 46/112 called flooded. EU dry streets account for much of it (a source prior).
+- **Wet:** 1/31 true wet frames get "wet". Real wet traffic-cam frames: 6/30 are called flooded.
+- **Live held-out Atlanta cameras** (dry weather, confirmed with ASOS): night 2/1,094 vs. 2/1,094; day 6/508 vs. 7/508 (about 1.4%). Smoothed alerts on test cameras: 0 vs. 0. Across all cameras: 1 vs. 2 (cameras 17397 and 14187). None of v3's 58 live "flooded" frames show water.
+- **Leakage:** clean. There's 1 legacy pair from the same feed (test camera 17408 vs. train camera 13479), and a few same-scene CLIP pairs. Dropping them barely changes recall.
+- **Reviewer's recommendation:** demo v3, not v1. Don't claim wet detection. Warn that rain-wet roads can read as flooded. Keep N=3 smoothing and blocklist 17397 and 13750.
+- **Other findings:**
+  - The selection-time "label-box" robustness check didn't really test overlays for letterbox models: the box landed on the padding.
+  - The v1 crop path zero-pads small images, where training upscaled them. v1 is retired.
+
+**Docs updated:** README (limits, datasets, blocklist), the demo limits text, `BACKEND_HANDOFF.md` (blocklist 11372, 17397, 13750), and `INFERENCE_API.md` (v3 preprocessing and latency).

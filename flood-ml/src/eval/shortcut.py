@@ -12,7 +12,7 @@ from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-from eval.common import LOCAL, MANIFEST, MODELS, REPORTS, load_config, load_image
+from eval.common import LOCAL, MANIFEST, MODELS, REPORTS, load_config, load_image, model_dir
 from eval.cues import image_cues, jpeg_quality
 
 CUE_COLS = ["brightness", "dark_frac", "clip_frac", "lap_var", "saturation", "green_frac",
@@ -45,7 +45,8 @@ def compute_cues(df: pd.DataFrame) -> pd.DataFrame:
 def embed_stage_a(paths, batch: int = 64) -> np.ndarray:
     import keras
 
-    m = keras.models.load_model(MODELS / load_config()["stage_a"]["run_id"] / "model.keras")
+    # first-run features: v1 model, crop224 input
+    m = keras.models.load_model(MODELS / load_config(model_dir("v1"))["stage_a"]["run_id"] / "model.keras")
     bb = m.get_layer("backbone")
     out = []
     for i in range(0, len(paths), batch):
@@ -210,11 +211,11 @@ def _perturb(x: np.ndarray, kind: str) -> np.ndarray:
 
 
 def perturb(kinds=("dark", "gray", "label_box", "ga511_jpeg")) -> dict:
-    # synthetic stress test: do true floods survive 511-night-like edits?
+    # first-run stress test (v1, edits on the 224 crop); v3 rerun: eval.stress
     from eval.common import Pipeline
 
     d = pd.read_csv(LOCAL / "test_preds.csv")
-    pipe = Pipeline()
+    pipe = Pipeline(model_dir("v1"))
     out = {}
     for lab in ("flooded", "dry"):
         sub = d[d["label"] == lab]

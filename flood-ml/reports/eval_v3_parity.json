@@ -1,0 +1,104 @@
+{
+  "v1": {
+    "tag": "v1",
+    "n": 56,
+    "spec": {
+      "mode": "crop",
+      "size": 224,
+      "jpeg": true
+    },
+    "eval_vs_deployed_predict": {
+      "max_abs_dpA": 0.0,
+      "max_abs_dpB": 0.0,
+      "status_flips": 0
+    },
+    "onnx_vs_keras_stage_a": {
+      "run_id": "20260926-031525_a_mobilenetv3small",
+      "max_abs_dprob": 2.384185791015625e-06
+    },
+    "onnx_vs_keras_stage_b": {
+      "run_id": "20260926-031638_bmixed_mobilenetv3small",
+      "max_abs_dprob": 3.159046173095703e-06
+    },
+    "tf_training_path_vs_deployed": {
+      "status_flips": 31,
+      "n": 1642,
+      "max_abs_dpA": 0.67314869,
+      "max_abs_dpB": 0.772298363
+    },
+    "raw_orig_vs_processed_copy": {
+      "status_flips": 3,
+      "n": 1642,
+      "max_abs_dpA": 0.06026241999999998,
+      "max_abs_dpB": 0.06789761999999999,
+      "flips_by_source": {
+        "alleyfloodnet": 2,
+        "eu_flood_2013": 1
+      }
+    }
+  },
+  "v3": {
+    "tag": "v3",
+    "n": 56,
+    "spec": {
+      "mode": "letterbox",
+      "size": 320,
+      "jpeg": true
+    },
+    "eval_vs_deployed_predict": {
+      "max_abs_dpA": 0.0,
+      "max_abs_dpB": 0.0,
+      "status_flips": 0
+    },
+    "onnx_vs_keras_stage_a": {
+      "run_id": "20260926-041538_a_mobilenetv3small_letterbox320",
+      "max_abs_dprob": 3.6954879760742188e-06
+    },
+    "onnx_vs_keras_stage_b": {
+      "run_id": "20260926-041918_bmixed_mobilenetv3small_letterbox320",
+      "max_abs_dprob": 2.205371856689453e-06
+    },
+    "tf_training_path_vs_deployed": {
+      "status_flips": 7,
+      "n": 1642,
+      "max_abs_dpA": 0.08024827000000001,
+      "max_abs_dpB": 0.060862750000000077
+    },
+    "raw_orig_vs_processed_copy": {
+      "status_flips": 4,
+      "n": 1642,
+      "max_abs_dpA": 0.04075409999999996,
+      "max_abs_dpB": 0.05134569999999994,
+      "flips_by_source": {
+        "alleyfloodnet": 2,
+        "eu_flood_2013": 1,
+        "flood_master_test": 1
+      }
+    }
+  },
+  "v1_reproduces_first_run": {
+    "rows_matched": 1108,
+    "rows_old": 1108,
+    "rows_new": 1642,
+    "same_label": true,
+    "legacy_loader_on_models_v1": {
+      "max_abs_dpA": 2.9730224615498457e-08,
+      "max_abs_dpB": 2.965393064435773e-08,
+      "status_flips": 0
+    },
+    "deployed_loader_vs_old": {
+      "max_abs_dpA": 0.48590827,
+      "mean_abs_dpA": 0.007002571890839352,
+      "max_abs_dpB": 0.47984114,
+      "status_flips": 1,
+      "flips": [
+        {
+          "source_old": "ga511",
+          "label_old": "dry",
+          "status_old": "dry",
+          "status_new": "flooded"
+        }
+      ]
+    }
+  }
+}

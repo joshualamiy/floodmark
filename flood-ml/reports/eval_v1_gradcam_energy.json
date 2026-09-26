@@ -1,0 +1,106 @@
+{
+  "flood_master_test|stageA": {
+    "n": 62,
+    "median_water_area": 0.6405054209183674,
+    "median_water_energy": 0.6846777498722076,
+    "median_energy_over_area": 1.0648520565321382,
+    "median_shuffled_energy": 0.6667481452226638,
+    "frac_energy_gt_area": 0.6612903225806451,
+    "frac_energy_gt_shuffled": 0.5806451612903226,
+    "pointing_game": 0.532258064516129,
+    "correct_vs_missed_median_energy": {
+      "correct": 0.7001515626907349,
+      "missed": 0.6709705889225006
+    }
+  },
+  "flood_master_test|stageB": {
+    "n": 62,
+    "median_water_area": 0.6405054209183674,
+    "median_water_energy": 0.6752738058567047,
+    "median_energy_over_area": 1.0466207571936503,
+    "median_shuffled_energy": 0.6689997427165508,
+    "frac_energy_gt_area": 0.532258064516129,
+    "frac_energy_gt_shuffled": 0.5161290322580645,
+    "pointing_game": 0.5967741935483871,
+    "correct_vs_missed_median_energy": {
+      "correct": 0.6756305396556854,
+      "missed": 0.6752738058567047
+    }
+  },
+  "fred|stageA": {
+    "n": 17,
+    "median_water_area": 0.061623086734693876,
+    "median_water_energy": 0.3043363690376282,
+    "median_energy_over_area": 4.568413872560071,
+    "median_shuffled_energy": 0.23644898496568204,
+    "frac_energy_gt_area": 1.0,
+    "frac_energy_gt_shuffled": 0.8235294117647058,
+    "pointing_game": 0.9411764705882353,
+    "correct_vs_missed_median_energy": {
+      "correct": 0.4948972165584564,
+      "missed": 0.21059353649616241
+    }
+  },
+  "fred|stageB": {
+    "n": 17,
+    "median_water_area": 0.061623086734693876,
+    "median_water_energy": 0.3143623471260071,
+    "median_energy_over_area": 4.817367936335133,
+    "median_shuffled_energy": 0.24847537018358706,
+    "frac_energy_gt_area": 1.0,
+    "frac_energy_gt_shuffled": 0.9411764705882353,
+    "pointing_game": 0.9411764705882353,
+    "correct_vs_missed_median_energy": {
+      "correct": 0.5077905058860779,
+      "missed": 0.22597037255764008
+    }
+  },
+  "roadway_flooding|stageA": {
+    "n": 89,
+    "median_water_area": 0.43997130102040816,
+    "median_water_energy": 0.6593322157859802,
+    "median_energy_over_area": 1.4813419643201327,
+    "median_shuffled_energy": 0.5583499349653721,
+    "frac_energy_gt_area": 1.0,
+    "frac_energy_gt_shuffled": 0.7528089887640449,
+    "pointing_game": 0.8426966292134831,
+    "correct_vs_missed_median_energy": {
+      "correct": 0.6695821285247803,
+      "missed": 0.36280280351638794
+    }
+  },
+  "roadway_flooding|stageB": {
+    "n": 89,
+    "median_water_area": 0.43997130102040816,
+    "median_water_energy": 0.6609506607055664,
+    "median_energy_over_area": 1.534571278646236,
+    "median_shuffled_energy": 0.5572018750011921,
+    "frac_energy_gt_area": 0.9887640449438202,
+    "frac_energy_gt_shuffled": 0.7303370786516854,
+    "pointing_game": 0.8426966292134831,
+    "correct_vs_missed_median_energy": {
+      "correct": 0.6974060535430908,
+      "missed": 0.3717501312494278
+    }
+  },
+  "fred_road|stageA": {
+    "n": 21,
+    "labels": {
+      "flooded": 17,
+      "dry": 4
+    },
+    "median_road_area": 0.3180604272959184,
+    "median_road_energy": 0.5678492188453674,
+    "median_shuffled_energy": 0.526769881695509
+  },
+  "fred_road|stageB": {
+    "n": 21,
+    "labels": {
+      "flooded": 17,
+      "dry": 4
+    },
+    "median_road_area": 0.3180604272959184,
+    "median_road_energy": 0.5793403387069702,
+    "median_shuffled_energy": 0.5297407954931259
+  }
+}

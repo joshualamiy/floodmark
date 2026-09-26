@@ -1,0 +1,248 @@
+{
+  "manifest": "manifest.csv",
+  "data_version": "data_version = v1-7251bbd2",
+  "new_test_vs_v3_trainval": {
+    "n_test": 534,
+    "n_seen": 7695,
+    "group_id": {
+      "count": 0,
+      "examples": []
+    },
+    "camera_id": {
+      "count": 0,
+      "examples": []
+    },
+    "orig_path": {
+      "count": 0,
+      "examples": []
+    },
+    "dup_cluster": {
+      "count": 0,
+      "examples": []
+    },
+    "phash_le6": {
+      "count": 0,
+      "by_source_pair": {},
+      "examples": []
+    }
+  },
+  "legacy_test_vs_v3_trainval": {
+    "n_test": 1108,
+    "n_seen": 7695,
+    "group_id": {
+      "count": 0,
+      "examples": []
+    },
+    "camera_id": {
+      "count": 0,
+      "examples": []
+    },
+    "orig_path": {
+      "count": 0,
+      "examples": []
+    },
+    "dup_cluster": {
+      "count": 1,
+      "examples": [
+        "dc0006471"
+      ]
+    },
+    "phash_le6": {
+      "count": 1,
+      "by_source_pair": {
+        "ga511~ga511": 1
+      },
+      "examples": [
+        {
+          "test": "data/ga511/frames/24818/1790387460.jpg",
+          "seen": "data/ga511/frames/20889/1790404050.jpg",
+          "seen_split": "train",
+          "src": "ga511~ga511",
+          "ham": 6
+        }
+      ]
+    }
+  },
+  "current_manifest_all_splits": {
+    "train~val": {
+      "group_id": {
+        "count": 0,
+        "examples": []
+      },
+      "camera_id": {
+        "count": 0,
+        "examples": []
+      },
+      "dup_cluster": {
+        "count": 6,
+        "examples": [
+          "dc0005507",
+          "dc0005664",
+          "dc0005672",
+          "dc0005684",
+          "dc0005780"
+        ]
+      },
+      "orig_path": {
+        "count": 0,
+        "examples": []
+      },
+      "phash_le6": {
+        "count": 16,
+        "examples": [
+          {
+            "a": "data/processed/images/ga511/ga511_000209.jpg",
+            "b": "data/processed/images/ga511/ga511_001358.jpg",
+            "a_src": "ga511",
+            "b_src": "ga511",
+            "ham": 6
+          },
+          {
+            "a": "data/processed/images/ga511/ga511_000221.jpg",
+            "b": "data/processed/images/ga511/ga511_000201.jpg",
+            "a_src": "ga511",
+            "b_src": "ga511",
+            "ham": 0
+          },
+          {
+            "a": "data/processed/images/ga511/ga511_000221.jpg",
+            "b": "data/processed/images/ga511/ga511_003097.jpg",
+            "a_src": "ga511",
+            "b_src": "ga511",
+            "ham": 0
+          },
+          {
+            "a": "data/processed/images/ga511/ga511_000318.jpg",
+            "b": "data/processed/images/ga511/ga511_003314.jpg",
+            "a_src": "ga511",
+            "b_src": "ga511",
+            "ham": 6
+          },
+          {
+            "a": "data/processed/images/ga511/ga511_000754.jpg",
+            "b": "data/processed/images/ga511/ga511_001739.jpg",
+            "a_src": "ga511",
+            "b_src": "ga511",
+            "ham": 6
+          },
+          {
+            "a": "data/processed/images/ga511/ga511_001018.jpg",
+            "b": "data/processed/images/ga511/ga511_001739.jpg",
+            "a_src": "ga511",
+            "b_src": "ga511",
+            "ham": 6
+          },
+          {
+            "a": "data/processed/images/ga511/ga511_001072.jpg",
+            "b": "data/processed/images/ga511/ga511_000084.jpg",
+            "a_src": "ga511",
+            "b_src": "ga511",
+            "ham": 6
+          },
+          {
+            "a": "data/processed/images/ga511/ga511_002024.jpg",
+            "b": "data/processed/images/ga511/ga511_001039.jpg",
+            "a_src": "ga511",
+            "b_src": "ga511",
+            "ham": 6
+          },
+          {
+            "a": "data/processed/images/ga511/ga511_002024.jpg",
+            "b": "data/processed/images/ga511/ga511_002942.jpg",
+            "a_src": "ga511",
+            "b_src": "ga511",
+            "ham": 4
+          },
+          {
+            "a": "data/processed/images/ga511/ga511_002120.jpg",
+            "b": "data/processed/images/ga511/ga511_001739.jpg",
+            "a_src": "ga511",
+            "b_src": "ga511",
+            "ham": 6
+          }
+        ]
+      }
+    },
+    "train~test": {
+      "group_id": {
+        "count": 0,
+        "examples": []
+      },
+      "camera_id": {
+        "count": 0,
+        "examples": []
+      },
+      "dup_cluster": {
+        "count": 1,
+        "examples": [
+          "dc0006471"
+        ]
+      },
+      "orig_path": {
+        "count": 0,
+        "examples": []
+      },
+      "phash_le6": {
+        "count": 1,
+        "examples": [
+          {
+            "a": "data/processed/images/ga511/ga511_003181.jpg",
+            "b": "data/processed/images/ga511/ga511_001010.jpg",
+            "a_src": "ga511",
+            "b_src": "ga511",
+            "ham": 6
+          }
+        ]
+      }
+    },
+    "val~test": {
+      "group_id": {
+        "count": 0,
+        "examples": []
+      },
+      "camera_id": {
+        "count": 0,
+        "examples": []
+      },
+      "dup_cluster": {
+        "count": 0,
+        "examples": []
+      },
+      "orig_path": {
+        "count": 0,
+        "examples": []
+      },
+      "phash_le6": {
+        "count": 0,
+        "examples": []
+      }
+    }
+  },
+  "clip_near_dup_test_vs_trainval": {
+    "thr": 0.95,
+    "n_test": 1642,
+    "n_test_ge_thr": 19,
+    "by_test_source": {
+      "fred": 19
+    },
+    "by_source_pair": {
+      "fred~fred": 19
+    },
+    "median_nearest_cos_by_source": {
+      "alleyfloodnet": 0.8230000138282776,
+      "eu_flood_2013": 0.8190000057220459,
+      "flood_master_test": 0.8429999947547913,
+      "fred": 0.9319999814033508,
+      "ga511": 0.8410000205039978,
+      "iowa_rwis": 0.8709999918937683,
+      "nysdot_road_surface": 0.8970000147819519,
+      "roadway_flooding": 0.8479999899864197
+    },
+    "cos_quantiles": {
+      "0.5": 0.8811,
+      "0.9": 0.9391,
+      "0.99": 0.9507,
+      "1.0": 0.9594
+    }
+  }
+}

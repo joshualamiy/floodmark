@@ -5,7 +5,18 @@ import json
 import numpy as np
 import pandas as pd
 
-from eval.common import CAM_SPLITS, FRAMES_CSV, LOCAL, MANIFEST, REPORTS, ROOT, TRAIN_MANIFEST
+from eval.common import (
+    CAM_SPLITS,
+    FRAMES_CSV,
+    LOCAL,
+    MANIFEST,
+    NEW_SOURCES,
+    REPORTS,
+    ROOT,
+    TRAIN_MANIFEST,
+    load_pil,
+    local,
+)
 
 HAM = 6
 
@@ -106,6 +117,82 @@ def live_cross_split() -> dict:
             "examples": ex[:10], "camera_pairs_within_30m": len(near), "near_examples": near[:10]}
 
 
+def test_vs_seen(t: pd.DataFrame, seen: pd.DataFrame) -> dict:
+    # shared ids + phash pairs, broken down by test source
+    r = {c: shared(c, t, seen) for c in ("group_id", "camera_id", "orig_path", "dup_cluster")}
+    pairs = hamming_pairs(ph_int(t["phash"]), ph_int(seen["phash"]))
+    ex = [{"test": t.iloc[p]["orig_path"], "seen": seen.iloc[q]["orig_path"], "seen_split": seen.iloc[q]["split"],
+           "src": f"{t.iloc[p]['source']}~{seen.iloc[q]['source']}", "ham": d} for p, q, d in pairs]
+    by = pd.Series([e["src"] for e in ex]).value_counts().to_dict() if ex else {}
+    return {"n_test": len(t), "n_seen": len(seen),
+            **{c: {"count": len(v), "examples": v[:5]} for c, v in r.items()},
+            "phash_le6": {"count": len(pairs), "by_source_pair": by, "examples": ex[:15]}}
+
+
+def clip_embed(df: pd.DataFrame, out) -> np.ndarray:
+    import open_clip
+    import torch
+
+    if out.exists():
+        e = np.load(out)
+        if len(e) == len(df):
+            return e
+    dev = "mps" if torch.backends.mps.is_available() else "cpu"
+    model, _, prep = open_clip.create_model_and_transforms("ViT-B-32", pretrained="laion2b_s34b_b79k")
+    model = model.to(dev).eval()
+    res = []
+    with torch.no_grad():
+        for i in range(0, len(df), 64):
+            ims = [prep(load_pil(p)) for p in df["path"].iloc[i:i + 64]]
+            f = model.encode_image(torch.stack(ims).to(dev))
+            res.append(torch.nn.functional.normalize(f, dim=-1).cpu().numpy())
+    e = np.concatenate(res).astype(np.float32)
+    np.save(out, e)
+    return e
+
+
+def clip_near_dups(cur: pd.DataFrame, thr: float = 0.95) -> dict:
+    # catches crops / rescales / borders that phash misses
+    e = clip_embed(cur, local("v3") / "emb_clip_manifest_v3.npy")
+    ti = np.flatnonzero((cur["split"] == "test").to_numpy())
+    si = np.flatnonzero(cur["split"].isin(["train", "val"]).to_numpy())
+    sim = e[ti] @ e[si].T
+    best = sim.argmax(1)
+    top = sim[np.arange(len(ti)), best]
+    d = pd.DataFrame({"test_idx": ti, "seen_idx": si[best], "cos": top})
+    d["test_src"] = cur["source"].to_numpy()[d["test_idx"]]
+    d["seen_src"] = cur["source"].to_numpy()[d["seen_idx"]]
+    d["test_label"] = cur["label"].to_numpy()[d["test_idx"]]
+    d["seen_label"] = cur["label"].to_numpy()[d["seen_idx"]]
+    d.to_csv(local("v3") / "clip_nearest_seen.csv", index=False)
+    hi = d[d["cos"] >= thr]
+    return {"thr": thr, "n_test": len(ti), "n_test_ge_thr": len(hi),
+            "by_test_source": hi["test_src"].value_counts().to_dict(),
+            "by_source_pair": (hi["test_src"] + "~" + hi["seen_src"]).value_counts().to_dict(),
+            "median_nearest_cos_by_source": d.groupby("test_src")["cos"].median().round(3).to_dict(),
+            "cos_quantiles": d["cos"].quantile([0.5, 0.9, 0.99, 1.0]).round(4).to_dict()}
+
+
+def rerun(clip: bool = True) -> dict:
+    # v3 rerun: current manifest == v3's training manifest (v1-7251bbd2)
+    cur = pd.read_csv(MANIFEST, dtype={"camera_id": str, "group_id": str})
+    t, seen = cur[cur["split"] == "test"], cur[cur["split"].isin(["train", "val"])]
+    res = {"manifest": str(MANIFEST.name), "data_version": (ROOT / "data/processed/VERSION").read_text().strip()}
+    res["new_test_vs_v3_trainval"] = test_vs_seen(t[t["source"].isin(NEW_SOURCES)], seen)
+    res["legacy_test_vs_v3_trainval"] = test_vs_seen(t[~t["source"].isin(NEW_SOURCES)], seen)
+    res.update(split_pairs(cur, "current_manifest_all_splits"))
+    if clip:
+        res["clip_near_dup_test_vs_trainval"] = clip_near_dups(cur)
+    (REPORTS / "eval_v3_leakage.json").write_text(json.dumps(res, indent=2, default=str))
+    for k in ("new_test_vs_v3_trainval", "legacy_test_vs_v3_trainval"):
+        v = res[k]
+        print(k, {c: v[c]["count"] for c in ("group_id", "camera_id", "orig_path", "dup_cluster", "phash_le6")},
+              v["phash_le6"]["by_source_pair"])
+    if clip:
+        print(json.dumps(res["clip_near_dup_test_vs_trainval"], indent=1))
+    return res
+
+
 def main() -> dict:
     cur = pd.read_csv(MANIFEST, dtype={"camera_id": str, "group_id": str})
     old = pd.read_csv(TRAIN_MANIFEST, dtype={"camera_id": str, "group_id": str})
@@ -127,4 +214,10 @@ def main() -> dict:
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--rerun", action="store_true")
+    ap.add_argument("--no-clip", action="store_true")
+    a = ap.parse_args()
+    rerun(not a.no_clip) if a.rerun else main()

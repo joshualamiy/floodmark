@@ -23,13 +23,14 @@ def overlay(img: np.ndarray, cam: np.ndarray, alpha: float = 0.45) -> np.ndarray
     return np.clip(img * (1 - alpha) + heat * alpha, 0, 255).astype(np.uint8)
 
 
-def tile(path, cam=None, caption: str = "", size: int = 224) -> Image.Image:
-    img = load_image(path)
+def tile(path, cam=None, caption: str = "", size: int = 224, spec: dict | None = None) -> Image.Image:
+    # model input (+ cam overlay), shown at `size` px per panel
+    img = load_image(path, spec)
     pair = [img.astype(np.uint8)]
     if cam is not None:
         pair.append(overlay(img, cam))
     arr = np.concatenate(pair, axis=1)
-    im = Image.fromarray(arr)
+    im = Image.fromarray(arr).resize((size * len(pair), size))
     canvas = Image.new("RGB", (im.width, size + 30), (250, 250, 250))
     canvas.paste(im, (0, 0))
     ImageDraw.Draw(canvas).text((4, size + 2), caption[:80], fill=(0, 0, 0))

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
@@ -17,17 +18,43 @@ TRAIN_MANIFEST = ROOT / "data/processed/manifest_train_v1-c7dea35e.csv"
 FRAMES_CSV = ROOT / "data/ga511/frames.csv"
 CAM_SPLITS = ROOT / "data/processed/ga511_camera_splits.json"
 
+# v1 = the model of the first phase 4 run; v3 = shipped letterbox320
+MODEL_DIRS = {"v1": MODELS / "v1", "v3": MODELS}
+LEGACY_SOURCES = ("ga511", "fred", "roadway_flooding", "flood_master_test", "nysdot_road_surface")
+NEW_SOURCES = ("iowa_rwis", "eu_flood_2013", "alleyfloodnet")
+
 LABELS = ("dry", "wet", "flooded")
+TRUE_LABELS = ("dry", "wet", "flooded", "not_flooded")
 SMALL_N, SMALL_G = 30, 5
+CROP224 = {"mode": "crop", "size": 224, "jpeg": True}
 
 
-def load_config() -> dict:
-    return json.loads((MODELS / "config.json").read_text())
+def model_dir(tag: str) -> Path:
+    return MODEL_DIRS[tag]
+
+
+def local(tag: str | None = None) -> Path:
+    # per-model outputs; None = the original v1 run's files
+    p = LOCAL / tag if tag else LOCAL
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+
+def load_config(models_dir: Path = MODELS) -> dict:
+    return json.loads((Path(models_dir) / "config.json").read_text())
 
 
 def thresholds(cfg: dict | None = None) -> tuple[float, float]:
     cfg = cfg or load_config()
     return float(cfg["stage_a"]["threshold_tA"]), float(cfg["stage_b"]["threshold_tB"])
+
+
+def preproc_spec(cfg: dict) -> dict:
+    # same keys/defaults as inference.predict_batch
+    pp = cfg.get("preprocess", {})
+    return {"mode": pp.get("mode", "crop"),
+            "size": int(pp.get("size", cfg.get("input", {}).get("size", 224))),
+            "jpeg": bool(pp.get("jpeg_roundtrip", True))}
 
 
 def load_test(manifest: Path = MANIFEST) -> pd.DataFrame:
@@ -44,7 +71,20 @@ def boot_groups(df: pd.DataFrame) -> pd.Series:
     return df["source"].astype(str) + ":" + pd.Series(unit, index=df.index)
 
 
-def preprocess(img: Image.Image, short: int = 256, size: int = 224) -> np.ndarray:
+def preprocess_geom(img, spec: dict | None = None):
+    # the deployed function itself, so eval input == deployed input
+    from inference.preprocess import preprocess as deployed
+
+    s = spec or CROP224
+    return deployed(img, mode=s["mode"], size=s["size"], do_jpeg_roundtrip=s["jpeg"])
+
+
+def preprocess(img, spec: dict | None = None) -> np.ndarray:
+    return preprocess_geom(img, spec)[0]
+
+
+def preprocess_pil_legacy(img: Image.Image, short: int = 256, size: int = 224) -> np.ndarray:
+    # first phase 4 loader (PIL bilinear, no jpeg); only to check v1 reproduces
     img = img.convert("RGB")
     w, h = img.size
     s = short / min(w, h)
@@ -55,12 +95,19 @@ def preprocess(img: Image.Image, short: int = 256, size: int = 224) -> np.ndarra
     return np.asarray(img, dtype=np.float32)
 
 
-def load_image(path: str | Path) -> np.ndarray:
+def abs_path(path: str | Path) -> Path:
     p = Path(path)
-    if not p.is_absolute():
-        p = ROOT / p
-    with Image.open(p) as im:
-        return preprocess(im)
+    return p if p.is_absolute() else ROOT / p
+
+
+def load_pil(path: str | Path) -> Image.Image:
+    with Image.open(abs_path(path)) as im:
+        im.load()
+        return im.convert("RGB")
+
+
+def load_image(path: str | Path, spec: dict | None = None) -> np.ndarray:
+    return preprocess(load_pil(path), spec)
 
 
 def status_of(pa, pb, ta: float, tb: float) -> np.ndarray:
@@ -90,9 +137,18 @@ class Pipeline:
         if threads:
             so.intra_op_num_threads = threads
         prov = ["CPUExecutionProvider"]
-        self.a = ort.InferenceSession(str(models_dir / "stage_a.onnx"), so, providers=prov)
-        self.b = ort.InferenceSession(str(models_dir / "stage_b.onnx"), so, providers=prov)
-        self.ta, self.tb = thresholds(json.loads((models_dir / "config.json").read_text()))
+        self.dir = Path(models_dir)
+        self.cfg = load_config(self.dir)
+        self.a = ort.InferenceSession(str(self.dir / self.cfg["stage_a"]["onnx_path"]), so, providers=prov)
+        self.b = ort.InferenceSession(str(self.dir / self.cfg["stage_b"]["onnx_path"]), so, providers=prov)
+        self.ta, self.tb = thresholds(self.cfg)
+        self.spec = preproc_spec(self.cfg)
+
+    def load(self, path) -> np.ndarray:
+        return load_image(path, self.spec)
+
+    def prep(self, img: Image.Image) -> np.ndarray:
+        return preprocess(img, self.spec)
 
     @staticmethod
     def _run(sess, x):
@@ -101,6 +157,7 @@ class Pipeline:
         return prob[:, 0], cam
 
     def predict(self, x: np.ndarray) -> dict[str, np.ndarray]:
+        x = np.asarray(x, np.float32)
         pa, cam_a = self._run(self.a, x)
         pb, cam_b = self._run(self.b, x)
         st = status_of(pa, pb, self.ta, self.tb)
@@ -108,14 +165,16 @@ class Pipeline:
                 "confidence": confidence(pa, pb, st)}
 
 
-def predict_paths(pipe: Pipeline, paths, batch: int = 64, loader=load_image) -> dict:
+def predict_paths(pipe: Pipeline, paths, batch: int = 64, loader=None, workers: int = 8) -> dict:
+    loader = loader or pipe.load
     out: dict[str, list] = {}
     paths = list(paths)
-    for i in range(0, len(paths), batch):
-        x = np.stack([loader(p) for p in paths[i:i + batch]])
-        r = pipe.predict(x)
-        for k, v in r.items():
-            out.setdefault(k, []).append(v)
+    with ThreadPoolExecutor(workers) as ex:
+        for i in range(0, len(paths), batch):
+            x = np.stack(list(ex.map(loader, paths[i:i + batch])))
+            r = pipe.predict(x)
+            for k, v in r.items():
+                out.setdefault(k, []).append(v)
     return {k: np.concatenate(v) for k, v in out.items()}
 
 
@@ -145,6 +204,25 @@ def ratio_boot(num: np.ndarray, den: np.ndarray, groups, n_boot: int = 2000, see
     r = sn[sd > 0] / sd[sd > 0]
     lo, hi = np.percentile(r, [2.5, 97.5]) if len(r) else (float("nan"),) * 2
     return float(lo), float(hi), k
+
+
+def paired_delta(num_a, num_b, den, groups, n_boot: int = 2000, seed: int = 0) -> dict:
+    # rate_b - rate_a on the same rows, clusters resampled jointly
+    num_a, num_b, den = (np.asarray(v, float) for v in (num_a, num_b, den))
+    keep = den > 0
+    if keep.sum() == 0:
+        return {"delta": float("nan"), "ci_group": [float("nan")] * 2, "n": 0, "n_groups": 0}
+    g = pd.Series(np.asarray(groups)).astype(str)[keep].values
+    agg = pd.DataFrame({"g": g, "a": num_a[keep] * den[keep], "b": num_b[keep] * den[keep],
+                        "d": den[keep]}).groupby("g").sum()
+    ga, gb, gd = agg["a"].to_numpy(), agg["b"].to_numpy(), agg["d"].to_numpy()
+    k = len(agg)
+    idx = np.random.default_rng(seed).integers(0, k, size=(n_boot, k))
+    sd = gd[idx].sum(1)
+    dl = (gb[idx].sum(1) - ga[idx].sum(1)) / sd
+    lo, hi = np.percentile(dl, [2.5, 97.5])
+    return {"delta": float((gb.sum() - ga.sum()) / gd.sum()), "ci_group": [float(lo), float(hi)],
+            "n": int(gd.sum()), "n_groups": k}
 
 
 def rate(num_mask, den_mask, groups, seed: int = 0) -> dict:

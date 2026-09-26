@@ -14,8 +14,9 @@ Atlanta: is the road surface flooded?
 The demo separates **flood-score attribution** from the optional **experimental
 predicted-water overlay**. Weak classifier evidence leaves the frame uncolored;
 raw attribution is opt-in for debugging. Heatmap colors are not pixel probabilities,
-water depth, or a road-safety assessment. The default classifier remains center-crop;
-full-frame experiments were not promoted (see `docs/phase_reports/improve_v2.md`).
+water depth, or a road-safety assessment. The shipped classifier (v3) sees the whole
+frame (letterbox to 320 px); the older center-crop model is kept in `models/v1/`
+(see `docs/phase_reports/v3_retrain.md`).
 
 Full design history: `docs/PLAN.md`, `docs/PROGRESS.md`,
 `docs/phase_reports/`. Honest model limits: `reports/EVALUATION.md`.
@@ -133,7 +134,7 @@ See the `Reproduce` section of `reports/EVALUATION.md` for every command.
 from inference import load_models, predict, TemporalSmoother, CameraMoveDetector
 
 models = load_models()  # reads models/config.json, caches onnxruntime sessions
-smoother = TemporalSmoother(n=3, blocklist=["11372"])
+smoother = TemporalSmoother(n=3, blocklist=["11372", "17397", "13750"])
 
 pred = predict(frame, models=models, camera_id="11372")  # PIL/ndarray/bytes/path
 status = smoother.update("11372", pred).status
@@ -152,7 +153,7 @@ sequence when `--camera-id` is given):
 ```
 PYTHONPATH=src ../my_env/bin/python -m inference.cli data/ga511/frames/<view_id> \
     --camera-id <camera_id> --smooth-n 3 --json --save-heatmaps /tmp/heatmaps \
-    --blocklist 11372
+    --blocklist 11372,17397,13750
 ```
 
 Gradio demo (local only, `share=False`):
@@ -169,12 +170,15 @@ No dataset images live in this repo (`data/` is gitignored). Full detail:
 | Dataset | License | Role |
 |---|---|---|
 | Roadway Flooding Image Dataset | CC BY 4.0 | flooded/wet road positives |
-| Flood Area Segmentation | CC0 1.0 | flooded positives |
+| Flood Area Segmentation | CC0 1.0 | excluded (almost all aerial) |
 | FRED (Flooded Road Environments Dataset) | CC BY-NC-SA 4.0 | dry/flooded, vehicle-mounted |
 | NYSDOT Road Surface Conditions | CC BY 4.0 | wet-but-not-flooded gap fill |
 | TinyCamML | MIT | reference only (no labeled roadway images used) |
 | Flood Master Database | Non-commercial research, no redistribution (AIIA Lab, AUTH) | cleaned masks + external test videos |
 | 511GA (Georgia DOT) camera feed | Public feed; internal research use | Atlanta-area train/val/test frames |
+| Iowa DOT RWIS webcams (Iowa Environmental Mesonet) | Public domain | real wet/dry DOT camera frames (user-labeled) |
+| European Flood 2013 (cvjena, Wikimedia Commons) | per-image CC BY / CC BY-SA / CC0 | flooded + not-flooded street photos |
+| AlleyFloodNet (Lee & Joo 2025) | CC BY 4.0 (dataset-level; some watermarked photos) | flooded + not-flooded alleys |
 
 **Excluded:** Water Segmentation Dataset (V-FloodNet lineage) -- its license
 is unverified (Kaggle says "unknown"; the upstream V-FloodNet repo says all
@@ -191,25 +195,14 @@ public repo (see "Where the models live" below).
 
 ## Known limits
 
-Full detail and numbers: `reports/EVALUATION.md`. In short:
+Full detail: `reports/EVALUATION.md` (v3 re-evaluation on top, v1 below). In short, for v3 on held-out test data:
 
-- Flooded precision is high (0.96) but recall is only 0.64 on independent
-  test data (vs. 0.98 on validation). Recall drops to 0.29 on elevated fixed
-  cameras and misses small/distant floods (water covering less than about
-  20% of the road).
-- Plain wet pavement is never detected -- Stage A calls every true "wet"
-  test frame dry. In this system, `status == "wet"` means "a flood score
-  between the two thresholds," which in practice is almost always a missed
-  or under-confident flood, not standing water on an otherwise-dry road.
-- Odd, non-road camera views cause repeat false alarms (e.g. 511GA camera
-  11372 fired "flooded" on 2 of its 3 captures on a defocused grass/guardrail
-  view). `TemporalSmoother` (N-consecutive-frame confirmation) and an
-  optional per-camera blocklist exist specifically to manage this.
-- A "looks like 511GA at night, so dry" shortcut can't be ruled out: every
-  511GA frame in the data is dry and at night, so 0 false alarms on that set
-  doesn't prove the model would catch a real Atlanta flood.
-- Grad-CAM localizes water well on the sources the model was trained on, but
-  is near chance on the most traffic-camera-like unseen flood video.
+- Flood recall 0.89 (483/542), precision 0.89. On the original test set (same rows as v1's evaluation): recall 0.75, up from 0.64, and precision 0.99.
+- Elevated fixed-camera flood video: 0.55 recall (34/62, one video). It depends on the low Stage B threshold and breaks when a 511GA-style title bar is overlaid or the frame is darkened.
+- **Wet pavement is not detected** (1/31 true wet frames get status "wet"). Rain-wet streets can read as **flooded**: 41% of test "not flooded" street photos were called flooded, and 6 of 30 real wet traffic-camera frames. Expect false alerts in the first real rain.
+- Live Atlanta cameras (dry weather): 0/325 labeled dry frames called flooded, but about 1.4% of daytime live frames were (hazy lens at sunrise, glare, a gated booth, a bridge pier). Use `TemporalSmoother` (3 in a row) and the blocklist (11372, 17397, 13750).
+- `status == "wet"` means water detected below the flood alert threshold (possible flooding), not wet pavement.
+- Never tested on a real flooded or rain-wet Atlanta frame (none exist yet), and no afternoon/evening light yet.
 
 ## Where the models live
 
@@ -217,7 +210,9 @@ Full detail and numbers: `reports/EVALUATION.md`. In short:
 **not committed** (`models/` is gitignored) -- both stages are fine-tuned in
 part on FRED (CC BY-NC-SA 4.0) and the Flood Master Database (non-commercial,
 no-redistribution), so the weights can't be published in this public repo.
-Get them from the team's private share.
+Get them from the team's private share (`models/handoff/floodmark_models_v3.zip`; see
+`docs/BACKEND_HANDOFF.md`). Some training images are CC BY-SA, which is another reason
+the weights stay private.
 
 `FLOODML_MODEL_DIR` (or `load_models(model_dir=...)`) points `src/inference`
 at wherever you put them; it defaults to `flood-ml/models`.

@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 
-from eval.common import LOCAL, REPORTS, ROOT
+from eval.common import LOCAL, MODELS, REPORTS, ROOT, load_config, local, model_dir, preproc_spec
 from eval.viz import sheet, tile
 
 REVIEW_STRATA = {("ga511", "dry"): 12, ("ga511", "wet"): 1, ("fred", "dry"): 8,
@@ -35,6 +35,25 @@ def to_crop(mask: np.ndarray, size: int = 224, short: int = 256) -> np.ndarray:
     return r[top:top + size, left:left + size].astype(bool)
 
 
+def to_letterbox(mask: np.ndarray, img_wh: tuple[int, int], size: int = 320) -> tuple[np.ndarray, np.ndarray]:
+    # same geometry as inference.preprocess._letterbox_resize; returns (mask, content)
+    w, h = img_wh
+    sc = size / max(w, h)
+    nw, nh = max(1, round(w * sc)), max(1, round(h * sc))
+    left, top = (size - nw) // 2, (size - nh) // 2
+    r = cv2.resize(mask.astype(np.uint8), (nw, nh), interpolation=cv2.INTER_NEAREST).astype(bool)
+    out, content = np.zeros((size, size), bool), np.zeros((size, size), bool)
+    out[top:top + nh, left:left + nw] = r
+    content[top:top + nh, left:left + nw] = True
+    return out, content
+
+
+def to_input(mask: np.ndarray, spec: dict, img_wh: tuple[int, int]):
+    if spec["mode"] == "letterbox":
+        return to_letterbox(mask, img_wh, spec["size"])
+    return to_crop(mask, spec["size"], round(spec["size"] * 256 / 224)), None
+
+
 def energy_in(cam: np.ndarray, region: np.ndarray) -> float:
     c = cv2.resize(cam.astype(np.float32), region.shape[::-1], interpolation=cv2.INTER_LINEAR)
     c = np.maximum(c, 0)
@@ -48,15 +67,20 @@ def peak_in(cam: np.ndarray, region: np.ndarray) -> bool:
     return bool(region[y, x])
 
 
-def mask_energy() -> dict:
-    d = pd.read_csv(LOCAL / "test_preds.csv")
-    cams = np.load(LOCAL / "test_cams.npz")
+def mask_energy(tag: str | None = None) -> dict:
+    # tag None = first run (v1 files in reports/eval/)
+    base = local(tag) if tag else LOCAL
+    spec = preproc_spec(load_config(model_dir(tag) if tag else MODELS / "v1"))
+    d = pd.read_csv(base / "test_preds.csv")
+    cams = np.load(base / "test_cams.npz")
     rows = d[d["mask_path"].notna()]
     recs = []
-    regions = {}
+    regions, content = {}, {}
     for i, r in rows.iterrows():
         w, road = load_masks(r["mask_path"], r["source"])
-        regions[i] = (to_crop(w), None if road is None else to_crop(road))
+        wh = (int(r["width"]), int(r["height"]))
+        wm, content[i] = to_input(w, spec, wh)
+        regions[i] = (wm, None if road is None else to_input(road, spec, wh)[0])
     rng = np.random.default_rng(0)
     for i, r in rows.iterrows():
         wat, road = regions[i]
@@ -70,6 +94,11 @@ def mask_energy() -> dict:
                    "water_peak": peak_in(cam, wat) if wat.any() else None,
                    "water_energy_shuffled": float(np.nanmean(
                        [energy_in(cams[f"cam{st}"][j], wat) for j in others])) if len(others) else None}
+            if content[i] is not None:
+                rec["pad_energy"] = 1 - energy_in(cam, content[i])
+                rec["pad_area"] = float(1 - content[i].mean())
+                rec["water_energy_in_content"] = rec["water_energy"] / max(1e-9, 1 - rec["pad_energy"])
+                rec["water_area_in_content"] = float(wat.sum() / content[i].sum())
             if road is not None:
                 rec["road_area"] = float(road.mean())
                 rec["road_energy"] = energy_in(cam, road) if road.any() else float("nan")
@@ -77,7 +106,7 @@ def mask_energy() -> dict:
                     [energy_in(cams[f"cam{st}"][j], road) for j in others])) if len(others) else None
             recs.append(rec)
     e = pd.DataFrame(recs)
-    e.to_csv(LOCAL / "cam_mask_energy.csv", index=False)
+    e.to_csv(base / "cam_mask_energy.csv", index=False)
     out = {}
     for (src, st), g in e[e["label"] == "flooded"].groupby(["source", "stage"]):
         g = g.dropna(subset=["water_energy"])
@@ -94,6 +123,12 @@ def mask_energy() -> dict:
                 "correct": float(g[g["status"] == "flooded"]["water_energy"].median()),
                 "missed": float(g[g["status"] != "flooded"]["water_energy"].median())},
         }
+        if "pad_energy" in g:
+            out[f"{src}|stage{st}"].update({
+                "median_pad_area": float(g["pad_area"].median()),
+                "median_pad_energy": float(g["pad_energy"].median()),
+                "median_water_area_in_content": float(g["water_area_in_content"].median()),
+                "median_water_energy_in_content": float(g["water_energy_in_content"].median())})
     fr = e[(e["source"] == "fred") & e["road_area"].notna()]
     for st, g in fr.groupby("stage"):
         g = g.dropna(subset=["road_energy"])
@@ -102,7 +137,8 @@ def mask_energy() -> dict:
             "median_road_area": float(g["road_area"].median()),
             "median_road_energy": float(g["road_energy"].median()),
             "median_shuffled_energy": float(g["road_energy_shuffled"].median())}
-    (REPORTS / "eval_gradcam_energy.json").write_text(json.dumps(out, indent=2))
+    name = f"eval_{tag}_gradcam_energy.json" if tag else "eval_gradcam_energy.json"
+    (REPORTS / name).write_text(json.dumps(out, indent=2))
     print(json.dumps(out, indent=2))
     return out
 
@@ -128,5 +164,6 @@ def review_sample(seed: int = 0) -> pd.DataFrame:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("what", choices=["energy", "sample"])
+    ap.add_argument("--tag", default=None, choices=["v1", "v3"])
     a = ap.parse_args()
-    mask_energy() if a.what == "energy" else review_sample()
+    mask_energy(a.tag) if a.what == "energy" else review_sample()

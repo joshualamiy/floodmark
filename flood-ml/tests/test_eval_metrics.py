@@ -26,7 +26,7 @@ def test_set_metrics_counts():
                       "pA": [0.1, 0.9, 0.2, 0.95, 0.9], "pB": [0.0, 0.95, 0.1, 0.99, 0.5],
                       "boot_group": list("abcde")})
     m = set_metrics(d, 0.8, 0.9)
-    assert m["false_alarm"]["flooded|dry"]["k"] == 1 and m["false_alarm"]["flooded|dry"]["n"] == 2
+    assert m["false_flood"]["dry"]["k"] == 1 and m["false_flood"]["dry"]["n"] == 2
     assert m["per_class"]["flooded"]["recall"]["k"] == 1
     assert m["missed_flood"]["wet|flooded"]["k"] == 1
     assert m["stage_a"]["confusion"] == [[1, 1], [1, 2]]
