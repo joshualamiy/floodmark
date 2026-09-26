@@ -441,3 +441,5 @@ Verification:
 **Kept:** the shipped v3 model, the v1 backup, the water model, the handoff zip, all training data, the manifest backups, the TensorBoard runs, `errors.html`, the checkpoint grids, and the logs of running tools.
 
 **Bug fixed:** `prep/common.py` now anchors `LOGS_JOBS` to `flood-ml/logs`. Running tests from the repo root had been creating a stray root `logs/` folder.
+
+**Phase reports moved local-only** (user request): `docs/phase_reports/` is now gitignored and untracked. The files stay on disk. Older commits still contain them.
