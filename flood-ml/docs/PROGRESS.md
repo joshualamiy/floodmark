@@ -77,3 +77,40 @@ Decisions passed to the worker:
 - **Stable splits:** each 511GA camera's split comes from a salted hash of its ID, so new frames never move a camera between splits.
 
 Installed `torch` 2.14, `torchvision` 0.29, and `open-clip-torch` 3.3.0 (MPS works) and pinned them in `requirements-train.txt`.
+
+## 2026-09-25: Checkpoint 2 (data prep done)
+
+The worker was stopped by accident once; a fresh worker resumed from its code. Details in `docs/phase_reports/phase2_prep.md` and `reports/class_counts.md`.
+
+**What the worker built:**
+- Manifest builder, mask rules, CLIP road filter, pHash dedup, group-aware splits, `camera_style` augmentation, the local labeling tool, and 40+ prep tests.
+- Label tool: `cd flood-ml && PYTHONPATH=src ../my_env/bin/python -m prep.label_tool` → http://127.0.0.1:8765/
+
+**Whole sources excluded, confirmed by my own look at contact sheets:**
+- Flood Area Segmentation: almost all aerial drone shots.
+- The Flood Master Italian video: drone footage.
+- The Greek video (a fixed elevated camera over a flooded street) is kept, thinned to 62 frames, and used as external test.
+
+**Split changes after my review:**
+- FRED locations are assigned whole: dairycreek, holmview, and mountcotton → train; pullenvale → val; cambogan → test.
+- NYSDOT cameras are assigned so val and test both get wet and dry frames.
+- CLIP is no longer applied to FRED, where it was removing real dashcam frames.
+
+**Two label fixes I made myself** (the dataset is now at `data_version v1-c7dea35e`, with 107 tests passing):
+1. **511GA wet labels.** 45 of the 46 frames the AI reviewer labeled "wet" had 0.0 mm of rain in the previous 3 hours by the weather data. They were all night frames. The "specular streaks" the reviewer cited are long-exposure headlight trails on dry pavement. New rule in `prep/sources.py`: an `ai_review` wet/flooded label that conflicts with a `likely_dry` weak label is dropped until the user confirms it in the labeling tool. A regression test covers it.
+2. **FRED wet band.** Most of FRED's "wet" frames (water fraction 0.04–0.10 in the road region) show dry near-field pavement with a flooded crossing further ahead, i.e. distant floods, not wet surfaces. Training them as "not flooded" would teach Stage B to miss distant floods, so the bucket is dropped (`WET_BAND_VERIFIED_SOURCES` is now empty).
+
+**Final counts (dry / wet / flooded):**
+
+| Split | Dry | Wet | Flooded |
+|---|---|---|---|
+| Train | 1,694 | 15 | 783 |
+| Val | 491 | 6 | 168 |
+| Test | 812 | 10 | 168 |
+
+**Wet but not flooded is now nearly all NYSDOT (30 of 31).** This is the known gap:
+- Stage B has only 15 wet negatives to train on.
+- The false-alarm rate on wet roads will rest on 10 test frames.
+- Wet is effectively a single-source class, which is a shortcut risk for Phase 4 to test.
+
+More wet data will come from 511GA frames captured during real rain, which the collector keeps sampling, and from any labels the user adds.
