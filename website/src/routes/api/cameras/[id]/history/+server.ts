@@ -107,6 +107,7 @@ export const GET = api({
 			.selectDistinctOn([predictions.imageId], {
 				imageId: predictions.imageId,
 				status: predictions.status,
+				alertStatus: predictions.alertStatus,
 				confidence: predictions.confidence,
 			})
 			.from(predictions)
@@ -133,6 +134,7 @@ export const GET = api({
 				fetchedAt: images.fetchedAt,
 				processingStatus: images.processingStatus,
 				predictionStatus: latestPredictions.status,
+				alertStatus: latestPredictions.alertStatus,
 				predictionConfidence: latestPredictions.confidence,
 			})
 			.from(images)
@@ -146,6 +148,7 @@ export const GET = api({
 			...row,
 			capturedAt: row.capturedAt!,
 			predictionStatus: row.predictionStatus as PredictionStatus | null,
+			alertStatus: (row.alertStatus ?? row.predictionStatus) as PredictionStatus | null,
 		}));
 		const last = entries.at(-1);
 

@@ -32,8 +32,13 @@ export const GET = api({
 			.selectDistinctOn([predictions.imageId], {
 				imageId: predictions.imageId,
 				status: predictions.status,
+				alertStatus: predictions.alertStatus,
+				alertNote: predictions.alertNote,
 				confidence: predictions.confidence,
+				note: predictions.note,
 				heatmapS3Key: predictions.heatmapS3Key,
+				heatmapStatus: predictions.heatmapStatus,
+				heatmapNote: predictions.heatmapNote,
 			})
 			.from(predictions)
 			.orderBy(predictions.imageId, desc(predictions.createdAt))
@@ -50,8 +55,13 @@ export const GET = api({
 					processedAt: latestImages.processedAt,
 					processingError: latestImages.processingError,
 					predictionStatus: latestPredictions.status,
+					alertStatus: latestPredictions.alertStatus,
+					alertNote: latestPredictions.alertNote,
 					predictionConfidence: latestPredictions.confidence,
+					predictionNote: latestPredictions.note,
 					heatmapS3Key: latestPredictions.heatmapS3Key,
+					heatmapStatus: latestPredictions.heatmapStatus,
+					heatmapNote: latestPredictions.heatmapNote,
 				},
 			})
 			.from(cameras)
@@ -71,8 +81,14 @@ export const GET = api({
 						processedAt: result.latestImage.processedAt,
 						processingError: result.latestImage.processingError,
 						predictionStatus: result.latestImage.predictionStatus as PredictionStatus | null,
+						alertStatus: (result.latestImage.alertStatus ??
+							result.latestImage.predictionStatus) as PredictionStatus | null,
+						alertNote: result.latestImage.alertNote,
 						predictionConfidence: result.latestImage.predictionConfidence,
+						predictionNote: result.latestImage.predictionNote,
 						heatmapS3Key: result.latestImage.heatmapS3Key,
+						heatmapStatus: result.latestImage.heatmapStatus,
+						heatmapNote: result.latestImage.heatmapNote,
 					}
 				: null,
 		}));

@@ -78,4 +78,3 @@ def test_cli_blocklist_suppresses_flooded(model_dir, frames_dir, capsys):
               "--blocklist", "cam1", "--json"])
     rows = [json.loads(line) for line in capsys.readouterr().out.strip().splitlines()]
     assert all(r["smoothed_status"] != "flooded" for r in rows)
-

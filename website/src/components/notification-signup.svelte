@@ -39,7 +39,7 @@
 		<Item.Actions>
 			<Dialog.Trigger>
 				{#snippet child({ props })}
-					<Button size="sm" {...props}>Sign up</Button>
+					<Button size="sm" {...props}>Notify me</Button>
 				{/snippet}
 			</Dialog.Trigger>
 		</Item.Actions>
@@ -50,7 +50,7 @@
 			<Dialog.Title>Get flood alerts</Dialog.Title>
 			<Dialog.Description>
 				You will need to verify your email, and an admin must approve your request before you can
-				receive notifications.
+				receive notifications. 
 			</Dialog.Description>
 		</Dialog.Header>
 

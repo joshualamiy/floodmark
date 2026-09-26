@@ -51,7 +51,7 @@
 			const matchesFilter =
 				filter === "all" ||
 				(filter === "clear"
-					? camera.latestImage?.predictionStatus === PredictionStatus.Dry
+					? camera.latestImage?.alertStatus === PredictionStatus.Dry
 					: status === filter);
 
 			return (!term || searchableText.includes(term)) && matchesFilter;
@@ -77,13 +77,14 @@
 	];
 
 	function getStatus(camera: Camera): Exclude<Filter, "all"> {
-		if (camera.latestImage?.predictionStatus === PredictionStatus.Flooded) return "flooded";
-		if (camera.latestImage?.predictionStatus === PredictionStatus.Wet) return "wet";
+		if (camera.latestImage?.alertStatus === PredictionStatus.Flooded) return "flooded";
+		if (camera.latestImage?.alertStatus === PredictionStatus.Wet) return "wet";
 		return "clear";
 	}
 
 	function statusLabel(camera: Camera): string {
-		if (!camera.latestImage?.predictionStatus) return "No data";
+		if (!camera.latestImage?.alertStatus) return "No data";
+		if (getStatus(camera) === "wet") return "Possible flooding";
 		return getStatus(camera)[0].toUpperCase() + getStatus(camera).slice(1);
 	}
 
@@ -91,7 +92,7 @@
 		const status = getStatus(camera);
 		if (status === "flooded") return "destructive";
 		if (status === "wet") return "warning";
-		if (!camera.latestImage?.predictionStatus) return "secondary";
+		if (!camera.latestImage?.alertStatus) return "secondary";
 		return "success";
 	}
 

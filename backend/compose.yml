@@ -11,7 +11,9 @@ services:
       - redis-data:/data
 
   scheduler:
-    build: .
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
     command: arq floodmark_pipeline.scheduler.SchedulerSettings
     env_file: .env
     depends_on:
@@ -20,7 +22,9 @@ services:
     restart: unless-stopped
 
   worker:
-    build: .
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
     command: arq floodmark_pipeline.worker.WorkerSettings
     env_file: .env
     depends_on:

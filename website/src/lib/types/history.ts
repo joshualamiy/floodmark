@@ -7,6 +7,7 @@ export const historyEntrySchema = z.object({
 	fetchedAt: z.date(),
 	processingStatus: z.string(),
 	predictionStatus: z.enum(PredictionStatus).nullable(),
+	alertStatus: z.enum(PredictionStatus).nullable(),
 	predictionConfidence: z.string().nullable(),
 });
 
