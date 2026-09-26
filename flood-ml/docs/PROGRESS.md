@@ -252,3 +252,25 @@ TTA made the model *less* robust to darkening on val (23/168 floods flipped to d
 **Decision: keep the shipped model.** No candidate beat its val recall, and letterbox raised live night false alarms about 20×. Because the model is unchanged, the Phase 4 test results stand, and no test re-run was spent.
 
 **The honest bottleneck is data.** Val has no elevated-camera floods, so the whole-frame fix can't be judged, and letterbox still sees too few off-center floods in training. Next: more wet data (the Iowa RWIS collection, running) and elevated or street-level flood photos. Then one letterbox retrain, then one test run.
+
+## 2026-09-26: Heatmap display checkpoint
+
+The user requested the heatmap improvements discussed in chat. The classifier
+and its thresholds are unchanged; improve_v2 already tested full-frame inputs
+and kept the deployed center-crop model.
+
+- Low-evidence default overlays now show the plain frame with an explicit note.
+- Display requires Stage A to pass its threshold and joint flood score >= 0.5.
+  This is a display policy, not calibrated pixel confidence or a safety claim.
+- Raw per-image-scaled attribution is opt-in and remains available for debugging.
+- A simple transparent warm palette replaces the rainbow map. Display intensity
+  also follows the joint flood score; crop/padding geometry is preserved.
+- 33 focused inference tests pass, including low-score, raw-debug, uniform/invalid
+  maps, and crop/padding regressions. Existing status/confidence behavior is intact.
+- On 674 validation frames, 190 overlays are shown and 484 are suppressed for
+  weak evidence. This is presentation behavior, not increased classification accuracy.
+- Local comparison images: reports/heatmap_display_samples.png (ignored).
+
+A worker is training a separate water segmentation baseline; another worker is
+measuring raw CAM mask overlap and occlusion behavior. Water masks are not road
+flooding extent, and their output will be separate from classifier explanations.

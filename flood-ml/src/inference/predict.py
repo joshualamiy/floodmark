@@ -11,7 +11,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .heatmap import make_heatmap_png
+from .heatmap import heatmap_display, make_heatmap_png
 from .preprocess import preprocess, to_pil
 from .session import load_models
 
@@ -29,6 +29,10 @@ class Prediction:
     thresholds: dict
     model_version: dict
     note: str | None = None
+    heatmap_status: str = "disabled"
+    heatmap_note: str | None = None
+    heatmap_score: float | None = None
+    raw_heatmap_png: bytes | None = None
 
     def to_dict(self, include_heatmap: bool = False) -> dict:
         d = {
@@ -41,9 +45,15 @@ class Prediction:
             "model_version": self.model_version,
             "note": self.note,
             "heatmap_png": None,
+            "heatmap_status": self.heatmap_status,
+            "heatmap_note": self.heatmap_note,
+            "heatmap_score": self.heatmap_score,
+            "raw_heatmap_png": None,
         }
         if include_heatmap and self.heatmap_png is not None:
             d["heatmap_png"] = base64.b64encode(self.heatmap_png).decode("ascii")
+        if include_heatmap and self.raw_heatmap_png is not None:
+            d["raw_heatmap_png"] = base64.b64encode(self.raw_heatmap_png).decode("ascii")
         return d
 
 
@@ -64,17 +74,22 @@ def _run_stage(sess, x: np.ndarray):
     return prob[:, 0], cam
 
 
-def predict(image, models=None, heatmap: bool = True, camera_id: str | None = None) -> Prediction:
-    return predict_batch([image], models=models, heatmap=heatmap, camera_id=camera_id)[0]
+def predict(image, models=None, heatmap: bool = True, camera_id: str | None = None,
+            *, raw_heatmap: bool = False) -> Prediction:
+    return predict_batch([image], models=models, heatmap=heatmap,
+                         camera_id=camera_id, raw_heatmap=raw_heatmap)[0]
 
 
 def predict_batch(
     images, models=None, heatmap: bool = True, camera_id: str | None = None,
+    *, raw_heatmap: bool = False,
 ) -> list[Prediction]:
     """camera_id is accepted for forward compatibility / logging; per-camera
     smoothing and blocklisting live in TemporalSmoother, not here.
     """
     del camera_id
+    if len(images) == 0:
+        return []
     m = models or load_models()
     cfg = m.config
     ta = float(cfg["stage_a"]["threshold_tA"])
@@ -106,7 +121,10 @@ def predict_batch(
     for i, frame in enumerate(frames):
         status, sp, conf = _status_and_probs(float(pa[i]), float(pb[i]), ta, tb)
         note = WET_NOTE if status == "wet" else None
-        hm = make_heatmap_png(frame, cam_b[i], geoms[i]) if heatmap else None
+        display = heatmap_display(float(pa[i]), float(pb[i]), ta, cam_b[i])
+        hm = make_heatmap_png(frame, cam_b[i], geoms[i],
+                              strength=display["strength"]) if heatmap else None
+        raw = make_heatmap_png(frame, cam_b[i], geoms[i]) if raw_heatmap else None
         out.append(Prediction(
             status=status,
             confidence=float(conf),
@@ -117,5 +135,9 @@ def predict_batch(
             thresholds=thresholds,
             model_version=model_version,
             note=note,
+            heatmap_status=display["state"] if heatmap else "disabled",
+            heatmap_note=display["note"] if heatmap else None,
+            heatmap_score=display["score"] if heatmap else None,
+            raw_heatmap_png=raw,
         ))
     return out

@@ -1,6 +1,4 @@
-"""7x7 CAM -> upsampled, normalized, colorized, alpha-blended PNG overlay.
-No cv2/matplotlib: jet colormap and bilinear resize are plain numpy/PIL.
-"""
+"""Render relative flood attribution; colors are not water probabilities."""
 from __future__ import annotations
 
 import io
@@ -12,6 +10,7 @@ CROP_SIZE = 224
 MAX_LONG_SIDE = 640
 ALPHA = 0.45
 BLANK_EPS = 1e-6
+MIN_DISPLAY_SCORE = 0.5
 
 
 def _resize_float(arr: np.ndarray, size) -> np.ndarray:
@@ -21,18 +20,29 @@ def _resize_float(arr: np.ndarray, size) -> np.ndarray:
 
 
 def _normalize(cam: np.ndarray) -> np.ndarray:
+    cam = np.maximum(np.nan_to_num(cam, nan=0.0, posinf=0.0, neginf=0.0), 0.0)
     lo, hi = float(cam.min()), float(cam.max())
     if hi < BLANK_EPS or (hi - lo) < BLANK_EPS:
         return np.zeros_like(cam)  # ~all-zero CAM -> blank heat
     return (cam - lo) / (hi - lo)
 
 
-def _jet(x: np.ndarray) -> np.ndarray:
-    """Cheap analytic jet colormap, x in [0,1] -> (...,3) in [0,1]."""
-    r = np.clip(1.5 - np.abs(4 * x - 3), 0, 1)
-    g = np.clip(1.5 - np.abs(4 * x - 2), 0, 1)
-    b = np.clip(1.5 - np.abs(4 * x - 1), 0, 1)
-    return np.stack([r, g, b], axis=-1)
+def _warm(x: np.ndarray) -> np.ndarray:
+    return np.stack([np.ones_like(x), 1.0 - 0.85 * x, 0.15 * (1.0 - x)], axis=-1)
+
+
+def heatmap_display(pa: float, pb: float, ta: float, cam: np.ndarray) -> dict:
+    score = float(np.clip(pa * pb, 0.0, 1.0))
+    if pa < ta or score < MIN_DISPLAY_SCORE:
+        state, strength = "no_strong_evidence", 0.0
+        note = "No strong flood evidence to highlight. This does not rule out flooding."
+    elif not _normalize(np.asarray(cam, dtype=np.float32)).any():
+        state, strength = "unlocalized", 0.0
+        note = "The flood score has no localized attribution map."
+    else:
+        state, strength = "shown", score
+        note = "Stage B flood evidence; colors show relative contribution, not water boundaries or pixel probabilities."
+    return {"state": state, "strength": strength, "score": score, "note": note}
 
 
 def _heat_full_crop(norm: np.ndarray, geom: dict, w0: int, h0: int) -> np.ndarray:
@@ -64,6 +74,7 @@ def _heat_full_letterbox(norm: np.ndarray, geom: dict, w0: int, h0: int) -> np.n
 def make_heatmap_png(
     frame: Image.Image, cam: np.ndarray, geom: dict,
     alpha: float = ALPHA, max_long_side: int = MAX_LONG_SIDE,
+    *, strength: float = 1.0,
 ) -> bytes:
     w0, h0 = geom["orig_size"]
     size = geom.get("size", CROP_SIZE)
@@ -80,7 +91,8 @@ def make_heatmap_png(
         heat_full = _heat_full_letterbox(norm, geom, w0, h0)
 
     base = np.asarray(frame.convert("RGB"), dtype=np.float32)
-    color = _jet(heat_full) * 255.0
+    heat_full = heat_full * float(np.clip(strength, 0.0, 1.0))
+    color = _warm(heat_full) * 255.0
     a = (heat_full * alpha)[..., None]
     blended = np.clip(base * (1 - a) + color * a, 0, 255).astype(np.uint8)
     out = Image.fromarray(blended, mode="RGB")

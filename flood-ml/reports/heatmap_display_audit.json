@@ -1,0 +1,12 @@
+{
+  "split": "val",
+  "n": 674,
+  "display_status": {
+    "shown": 190,
+    "no_strong_evidence": 484
+  },
+  "scores_unchanged": true,
+  "classifier_changed": false,
+  "rule": "display if pA >= tA and pA*pB >= 0.5; otherwise plain frame",
+  "note": "Presentation audit only; hiding a map is not an accuracy improvement."
+}
