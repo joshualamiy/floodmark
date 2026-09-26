@@ -11,7 +11,7 @@
 <div class="w-screen h-screen absolute flex items-center justify-center">
 	{#if map.loading && !map.error}
 		<div
-			class="rounded-lg bg-white/95 px-4 py-3 shadow-lg"
+			class="rounded-lg bg-accent-foreground text-white px-4 py-3 shadow-lg"
 		>
 			Loading map...
 		</div>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Logo from "$components/logo.svelte";
 	import CameraCard from "$components/camera-card.svelte";
+	import CameraList from "$components/camera-list.svelte";
 	import Map from "$components/map.svelte";
 	import Sidebar from "$components/sidebar.svelte";
 	import { useMapState } from "$lib/state/map.svelte";
@@ -19,6 +20,8 @@
 		{#if map.activeCamera}
 			{@const camera = map.activeCamera}
 			<CameraCard {camera} />
+		{:else}
+			<CameraList />
 		{/if}
 	</Sidebar>
 	<Map />

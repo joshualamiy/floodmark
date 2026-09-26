@@ -11,6 +11,9 @@
 	import "maplibre-gl/dist/maplibre-gl.css";
 	import { api } from "$lib/api";
 	import { useMapState } from "$lib/state/map.svelte";
+	import Button from "./ui/button/button.svelte";
+	import Plus from "@lucide/svelte/icons/plus";
+	import Minus from "@lucide/svelte/icons/minus";
 
 	setWorkerUrl(maplibreWorkerUrl);
 
@@ -73,6 +76,14 @@
 		if (source instanceof GeoJSONSource) void source.setData(cameraData());
 	}
 
+	function zoomIn() {
+		map?.zoomIn({ duration: 200 });
+	}
+
+	function zoomOut() {
+		map?.zoomOut({ duration: 200 });
+	}
+
 	$effect(() => {
 		if (!mapState.loading) updateCameraSource();
 	});
@@ -97,6 +108,20 @@
 
 				source.url = "https://tiles.openfreemap.org/planet";
 				style.glyphs = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf";
+				for (const layer of style.layers) {
+					const layerId = layer.id;
+					const isRoadLayer =
+						layerId.startsWith("highway-") ||
+						layerId.startsWith("bridge-") ||
+						layerId.startsWith("tunnel-") ||
+						layerId.startsWith("road_");
+					if (!isRoadLayer || layer.type !== "line" || !("paint" in layer) || !layer.paint)
+						continue;
+
+					const paint = layer.paint as { "line-color"?: unknown };
+					if (!("line-color" in paint)) continue;
+					paint["line-color"] = layerId.includes("casing") ? "#6f8797" : "#c3d2db";
+				}
 
 				const currentMap = new MapLibreMap({
 					container: mapState.container!,
@@ -252,4 +277,13 @@
 		role="application"
 		aria-label="Interactive map of Atlanta"
 	></div>
+
+	<div class="absolute bottom-6 left-6 flex flex-col gap-2">
+		<Button size="icon" class="rounded-full" aria-label="Zoom in" onclick={zoomIn}>
+			<Plus />
+		</Button>
+		<Button size="icon" class="rounded-full" aria-label="Zoom out" onclick={zoomOut}>
+			<Minus />
+		</Button>
+	</div>
 </div>
