@@ -27,3 +27,6 @@ __pycache__/
 
 # docs stay local
 docs/
+
+# presentation assets (contain dataset images) stay local
+presentation/

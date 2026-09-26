@@ -57,6 +57,7 @@ async def camera_flood_baseline(pool: asyncpg.Pool, image_id: str, days: int, mi
 async def insert_image(
     pool: asyncpg.Pool,
     job: CaptureJob,
+    source_url: str,
     bucket: str,
     key: str,
     byte_size: int,
@@ -73,7 +74,7 @@ async def insert_image(
            ON CONFLICT (s3_bucket, s3_key) DO UPDATE SET s3_key = EXCLUDED.s3_key
            RETURNING id""",
         job.camera_id,
-        f"https://511ga.org/map/Cctv/{job.source_view_id}",
+        source_url,
         bucket,
         key,
         byte_size,

@@ -5,7 +5,6 @@ import logging
 import time
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
-from urllib.parse import quote
 
 import aiohttp
 import asyncpg
@@ -16,6 +15,7 @@ from .alerting import AlertDecision, apply_rain_gate, decide_alert
 from .config import Settings
 from .contracts import CaptureJob, Prediction
 from .database import camera_flood_baseline, camera_frame_history, insert_image, mark_image_error, persist_prediction
+from .demo import demo_note, frame_source_url, is_demo
 from .inference import model_run
 from .image_quality import InvalidImageError, ensure_usable_image
 from .keys import fast_poll_job_id, object_key, skipped_key
@@ -58,7 +58,9 @@ async def resolve_alert(ctx: dict, job: CaptureJob, image_id: str, prediction: P
             baseline = await camera_flood_baseline(
                 ctx["pool"], image_id, settings.alert_baseline_days, settings.alert_baseline_min_frames
             )
-        if settings.alert_require_rain and job.latitude is not None and job.longitude is not None:
+        if is_demo(job):
+            rain_mm = settings.demo_rain_mm  # the demo replays a storm, so treat it as one
+        elif settings.alert_require_rain and job.latitude is not None and job.longitude is not None:
             # cached per grid cell, so this is cheap enough to fetch before deciding
             rain_mm = await ctx["rain"].rain_mm(
                 job.latitude, job.longitude, job.scheduled_at, settings.alert_rain_window_hours
@@ -85,6 +87,8 @@ async def resolve_alert(ctx: dict, job: CaptureJob, image_id: str, prediction: P
             window_hours=settings.alert_rain_window_hours,
             streak_frames=streak_frames,
         )
+    if is_demo(job):
+        decision = replace(decision, note=demo_note(decision.note))
     if prediction.status == "flooded" and decision.status != "flooded":
         # these are the cameras to review for the blocklist
         logger.info(
@@ -131,7 +135,7 @@ async def capture_camera(ctx: dict, payload: dict[str, str]) -> None:
     if settings.debug:
         logger.info("capture started capture_id=%s camera_id=%s", job.capture_id, job.source_camera_id)
     try:
-        source_url = f"{settings.camera_base_url}/{quote(job.source_view_id, safe='')}"
+        source_url = frame_source_url(job, settings.camera_base_url, settings.demo_frame_base_url)
         async with ctx["download_limit"]:
             download_started = time.perf_counter()
             raw = await download_image(ctx["session"], source_url, settings, ctx["byte_budget"])
@@ -157,6 +161,7 @@ async def capture_camera(ctx: dict, payload: dict[str, str]) -> None:
                 await insert_image(
                     ctx["pool"],
                     job,
+                    source_url,
                     settings.s3_bucket,
                     skipped_key(job.source_view_id, job.scheduled_at, seconds=job.fast_poll > 0),
                     len(raw),
@@ -184,7 +189,7 @@ async def capture_camera(ctx: dict, payload: dict[str, str]) -> None:
         async with ctx["database_limit"]:
             database_started = time.perf_counter()
             image_id = await insert_image(
-                ctx["pool"], job, settings.s3_bucket, frame_key, len(normalized), checksum, fetched_at
+                ctx["pool"], job, source_url, settings.s3_bucket, frame_key, len(normalized), checksum, fetched_at
             )
             database_seconds += time.perf_counter() - database_started
 

@@ -136,3 +136,15 @@ def test_frames_api_disputed_filter(server, ga511_root):
         frames = json.loads(resp.read())
     assert [f["frame_id"] for f in frames] == ["f1"]
 
+
+
+def test_frames_api_queue_filter_orders_by_rank(server, ga511_root):
+    with open(ga511_root / "review_queue.csv", "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["rank", "frame_id", "reason"])
+        w.writerow([1, "f2", "high flood score"])
+        w.writerow([2, "f1", "random daytime"])
+    with urllib.request.urlopen(_url(server, "/api/frames?filter=queue")) as resp:
+        frames = json.loads(resp.read())
+    assert [f["frame_id"] for f in frames] == ["f2", "f1"]
+    assert frames[0]["queue_note"] == "high flood score"

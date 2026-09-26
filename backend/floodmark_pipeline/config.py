@@ -49,6 +49,8 @@ class Settings:
     alert_fast_poll_seconds: int
     alert_fast_poll_max: int
     weather_timeout_seconds: float
+    demo_frame_base_url: str
+    demo_rain_mm: float
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -117,4 +119,6 @@ class Settings:
             alert_fast_poll_seconds=int(number("ALERT_FAST_POLL_SECONDS", "60")),
             alert_fast_poll_max=count("ALERT_FAST_POLL_MAX", "0"),
             weather_timeout_seconds=float(number("WEATHER_TIMEOUT_SECONDS", "5", float)),
+            demo_frame_base_url=os.getenv("DEMO_FRAME_BASE_URL", "http://demo:8080").rstrip("/"),
+            demo_rain_mm=float(number("DEMO_RAIN_MM", "25", float)),
         )

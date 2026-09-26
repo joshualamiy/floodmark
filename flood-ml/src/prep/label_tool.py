@@ -36,6 +36,7 @@ INDEX_HTML = """<!doctype html>
     <label>Filter:
       <select id="filter">
         <option value="unlabeled">unlabeled</option>
+        <option value="queue">review queue (daytime hard cases)</option>
         <option value="disputed">disputed (ai wet, weather dry)</option>
         <option value="likely_wet">likely_wet</option>
         <option value="all">all</option>
@@ -102,7 +103,8 @@ function render() {
   document.getElementById('meta').textContent =
     `frame_id=${fr.frame_id} camera=${fr.camera_id} weak_label=${fr.weak_label || '-'} ` +
     `precip_1h=${fr.precip_1h_mm ?? '-'} precip_3h=${fr.precip_3h_mm ?? '-'} ` +
-    `manual=${fr.manual_label || '-'} ai_review=${fr.ai_review_label || '-'} split=${fr.split || '-'}`;
+    `manual=${fr.manual_label || '-'} ai_review=${fr.ai_review_label || '-'} split=${fr.split || '-'}` +
+    (fr.queue_note ? ` · queue: ${fr.queue_note}` : '');
 }
 
 async function label(lab) {
@@ -173,6 +175,9 @@ class FrameStore:
     def _ai_review_csv(self) -> Path:
         return self.ga511_root / "ai_review_labels.csv"
 
+    def _queue_csv(self) -> Path:
+        return self.ga511_root / "review_queue.csv"
+
     def _splits_json(self) -> Path:
         return self.ga511_root.parent / "processed" / "ga511_camera_splits.json"
 
@@ -186,6 +191,8 @@ class FrameStore:
                 splits = json.loads(self._splits_json().read_text())
             except Exception:  # noqa: BLE001
                 splits = {}
+        # review queue: frames ranked by how flood-like the model thinks they are
+        queue = {r["frame_id"]: r for r in _read_csv_dicts(self._queue_csv())} if filt == "queue" else {}
 
         out = []
         for r in raw_rows:
@@ -219,6 +226,8 @@ class FrameStore:
                 and r.get("weak_label") == "likely_dry"
             ):
                 continue
+            if filt == "queue" and (frame_id not in queue or manual_label):
+                continue
 
             out.append({
                 "frame_id": frame_id,
@@ -230,7 +239,10 @@ class FrameStore:
                 "manual_label": manual_label,
                 "ai_review_label": ai_label,
                 "split": frame_split,
+                "queue_note": queue[frame_id].get("reason") if frame_id in queue else None,
             })
+        if filt == "queue":
+            out.sort(key=lambda f: int(queue[f["frame_id"]].get("rank") or 0))
         return out
 
     def append_label(self, frame_id: str, label: str) -> None:

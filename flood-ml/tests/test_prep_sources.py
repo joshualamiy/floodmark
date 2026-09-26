@@ -54,6 +54,31 @@ def test_ai_dry_on_likely_dry_is_kept(tmp_path, monkeypatch):
     assert (out[0]["label"], out[0]["label_source"]) == ("dry", "ai_review")
 
 
+def test_manual_unusable_on_train_camera_becomes_not_flooded(tmp_path, monkeypatch):
+    p = _frames(tmp_path, monkeypatch, [_row("a", "likely_dry")])
+    out = iter_ga511(p, {"a": {"label": "unusable"}}, {}, {"1": "train"})
+    assert (out[0]["label"], out[0]["label_source"]) == ("not_flooded", "manual")
+
+
+def test_manual_unusable_on_val_camera_becomes_not_flooded(tmp_path, monkeypatch):
+    p = _frames(tmp_path, monkeypatch, [_row("a", "likely_dry")])
+    out = iter_ga511(p, {"a": {"label": "unusable"}}, {}, {"1": "val"})
+    assert (out[0]["label"], out[0]["label_source"]) == ("not_flooded", "manual")
+
+
+def test_manual_unusable_on_test_camera_stays_excluded(tmp_path, monkeypatch):
+    p = _frames(tmp_path, monkeypatch, [_row("a", "likely_dry")])
+    out = iter_ga511(p, {"a": {"label": "unusable"}}, {}, {"1": "test"})
+    assert out[0]["label"] is None
+    assert out[0]["label_source"] is None
+
+
+def test_manual_unusable_on_unknown_camera_stays_excluded(tmp_path, monkeypatch):
+    p = _frames(tmp_path, monkeypatch, [_row("a", "likely_dry")])
+    out = iter_ga511(p, {"a": {"label": "unusable"}}, {})
+    assert out[0]["label"] is None
+
+
 IOWA_FIELDS = ["frame_id", "path", "camera_id", "dead_reason", "weak_label"]
 
 

@@ -250,7 +250,13 @@ def iter_fmd_test(include_sources: tuple[str, ...] | None = None) -> list[dict]:
     return rows
 
 
-def iter_ga511(frames_csv: Path, user_labels: dict[str, dict], ai_review_labels: dict[str, dict]) -> list[dict]:
+def iter_ga511(
+    frames_csv: Path,
+    user_labels: dict[str, dict],
+    ai_review_labels: dict[str, dict],
+    camera_splits: dict[str, str] | None = None,
+) -> list[dict]:
+    camera_splits = camera_splits or {}
     rows = []
     with open(frames_csv, newline="") as f:
         text_rows = list(csv.DictReader(f))
@@ -267,6 +273,7 @@ def iter_ga511(frames_csv: Path, user_labels: dict[str, dict], ai_review_labels:
             continue
 
         frame_id = r["frame_id"]
+        camera_id = r["camera_id"]
         label = None
         label_source = None
         notes = ""
@@ -274,6 +281,10 @@ def iter_ga511(frames_csv: Path, user_labels: dict[str, dict], ai_review_labels:
             ul = user_labels[frame_id]["label"]
             if ul in ("dry", "wet", "flooded"):
                 label, label_source = ul, "manual"
+            elif ul == "unusable" and camera_splits.get(camera_id) in ("train", "val"):
+                # unusable on train/val cams -> stage b negative
+                label, label_source = "not_flooded", "manual"
+                notes = "manual unusable on train/val camera -> not_flooded (stage b negative)"
         elif frame_id in ai_review_labels and ai_review_labels[frame_id].get("label"):
             al = ai_review_labels[frame_id]["label"]
             # ai 'wet' on a 0 mm rain frame was night headlight glare, wait for a human label
@@ -286,7 +297,6 @@ def iter_ga511(frames_csv: Path, user_labels: dict[str, dict], ai_review_labels:
             label, label_source = "dry", "weak_precip"
 
         weak_label = r.get("weak_label") or None
-        camera_id = r["camera_id"]
         rows.append({
             "source": "ga511",
             "orig_path": str(img_path),

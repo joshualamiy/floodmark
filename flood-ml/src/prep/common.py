@@ -3,10 +3,14 @@ from __future__ import annotations
 
 import hashlib
 import logging
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import numpy as np
 from PIL import Image
+
+GA511_TZ = ZoneInfo("America/New_York")
 
 REPO_ROOT = Path(".")
 RAW_ROOT = Path("data/raw")
@@ -112,6 +116,23 @@ def phash_hex_to_int(phash_hex: str) -> int:
 
 def hamming(a: int, b: int) -> int:
     return (a ^ b).bit_count()
+
+
+# ga511 frame stem = utc epoch
+def ga511_local_time(orig_path: str) -> datetime | None:
+    try:
+        ts = int(Path(str(orig_path)).stem)
+    except (TypeError, ValueError):
+        return None
+    return datetime.fromtimestamp(ts, tz=GA511_TZ)
+
+
+def ga511_is_daytime(orig_path: str, start_hour: float = 8.0, end_hour: float = 19.0) -> bool | None:
+    dt = ga511_local_time(orig_path)
+    if dt is None:
+        return None
+    hour = dt.hour + dt.minute / 60 + dt.second / 3600
+    return start_hour <= hour < end_hour
 
 
 def road_bottom_trapezoid_mask(height: int, width: int, top_frac: float = 0.40) -> np.ndarray:
