@@ -1,6 +1,7 @@
 # Env
 /.venv/
 /*.egg-info/
+/onnx/
 
 # OS
 .DS_Store

@@ -16,11 +16,21 @@ async def active_cameras(pool: asyncpg.Pool) -> list[asyncpg.Record]:
 
 
 async def insert_image(
-    pool: asyncpg.Pool, job: CaptureJob, bucket: str, key: str, byte_size: int, checksum: str, fetched_at: datetime
+    pool: asyncpg.Pool,
+    job: CaptureJob,
+    bucket: str,
+    key: str,
+    byte_size: int,
+    checksum: str,
+    fetched_at: datetime,
+    processing_status: str = "unprocessed",
+    processing_error: str | None = None,
 ) -> str:
     return await pool.fetchval(
-        """INSERT INTO images (camera_id, source_url, r2_bucket, r2_key, content_type, byte_size, sha256, captured_at, fetched_at)
-           VALUES ($1, $2, $3, $4, 'image/jpeg', $5, $6, $7, $8)
+        """INSERT INTO images (
+             camera_id, source_url, r2_bucket, r2_key, content_type, byte_size, sha256,
+             captured_at, fetched_at, processing_status, processing_error
+           ) VALUES ($1, $2, $3, $4, 'image/jpeg', $5, $6, $7, $8, $9::image_processing_status, $10)
            ON CONFLICT (r2_bucket, r2_key) DO UPDATE SET r2_key = EXCLUDED.r2_key
            RETURNING id""",
         job.camera_id,
@@ -31,6 +41,8 @@ async def insert_image(
         checksum,
         job.scheduled_at,
         fetched_at,
+        processing_status,
+        processing_error,
     )
 
 
