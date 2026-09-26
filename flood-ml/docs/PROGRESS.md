@@ -210,3 +210,19 @@ Full write-up in `reports/EVALUATION.md`. The reviewer (Opus) tested only on `sp
 - Pin inference preprocessing to exactly the training path.
 - Thresholds unchanged until new data exists.
 - Re-run the live check on daylight frames once the collector has them.
+
+## 2026-09-26: Phase 5 (integration package) done
+
+Details in `README.md`, `docs/INFERENCE_API.md`, and `docs/phase_reports/phase5_integration.md`.
+
+**What was built:**
+- `src/inference/`: `load_models`, `predict`, `predict_batch`, `Prediction`, `TemporalSmoother` (N=3 plus a blocklist), and `CameraMoveDetector`. It imports only numpy, PIL, and onnxruntime.
+- The CLI (`python -m inference.cli`) and the Gradio demo (`src/demo_app.py`, http://127.0.0.1:7860).
+- 56 new tests using tiny fake ONNX models built on the fly.
+
+**Numbers:**
+- **Preprocessing** matches training: LANCZOS resize to a 256 short side, a JPEG q95 round-trip, then a 224 center crop. On 100 val rows there were 0 status flips, with max |ΔpA| 0.038. The settings are recorded in the `models/config.json` `preprocess` block.
+- **Camera-move threshold 0.35**, calibrated on real 511GA pairs: 4.4% false triggers on the same camera, 90% detection on a different camera.
+- **CLI on camera 11372** (the repeat false alarm): with N=3 smoothing it never reaches "flooded", and the blocklist suppresses it entirely.
+
+**CI fix (my miss).** PR #1 CI had been failing since the first code push, and I hadn't checked it. CI installs only `requirements.txt`, so 11 test files that need the training stack (requests, imagehash, cv2, pandas, keras) crashed at collection. Fix: `tests/conftest.py` skips those files when their deps are missing and prints which ones were skipped. With CI's package set simulated locally: 121 passed, 3 skipped. The full local run: 226 passed.
