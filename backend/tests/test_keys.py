@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 import unittest
 
-from floodmark_pipeline.keys import capture_job_id, capture_slot, object_key
+from floodmark_pipeline.keys import capture_job_id, capture_slot, object_key, skipped_key
 
 
 class KeyTests(unittest.TestCase):
@@ -16,6 +16,7 @@ class KeyTests(unittest.TestCase):
 
         self.assertEqual(object_key("captures", "18558", captured_at), "captures/18558/20260926T2115Z.jpg")
         self.assertEqual(object_key("heatmaps", "18558", captured_at), "heatmaps/18558/20260926T2115Z.png")
+        self.assertEqual(skipped_key("18558", captured_at), "skipped/18558/20260926T2115Z.jpg")
 
     def test_invalid_view_id_is_rejected(self):
         with self.assertRaises(ValueError):

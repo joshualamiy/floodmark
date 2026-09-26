@@ -20,3 +20,10 @@ def object_key(kind: str, view_id: str, captured_at: datetime) -> str:
     timestamp = captured_at.astimezone(timezone.utc)
     extension = "jpg" if kind == "captures" else "png"
     return f"{kind}/{view_id}/{timestamp:%Y%m%dT%H%MZ}.{extension}"
+
+
+def skipped_key(view_id: str, captured_at: datetime) -> str:
+    if not view_id or "/" in view_id:
+        raise ValueError("view ID must be a non-empty path segment")
+    timestamp = captured_at.astimezone(timezone.utc)
+    return f"skipped/{view_id}/{timestamp:%Y%m%dT%H%MZ}.jpg"

@@ -15,7 +15,8 @@ from .config import Settings
 from .contracts import CaptureJob
 from .database import insert_image, mark_image_error, persist_prediction
 from .inference import model_run
-from .keys import object_key
+from .image_quality import InvalidImageError, ensure_usable_image
+from .keys import object_key, skipped_key
 from .queues import CAPTURE_QUEUE_NAME
 from .resources import ByteBudget, content_sha256, download_image, normalize_jpeg, r2_client, upload_object
 
@@ -58,14 +59,43 @@ async def capture_camera(ctx: dict, payload: dict[str, str]) -> None:
             raw = await download_image(ctx["session"], source_url, settings, ctx["byte_budget"])
             download_seconds = time.perf_counter() - download_started
         try:
-            processing_started = time.perf_counter()
-            normalized = await normalize_jpeg(raw)
-            processing_seconds += time.perf_counter() - processing_started
-            await ctx["byte_budget"].acquire(len(normalized))
+            quality_error: str | None = None
+            try:
+                ensure_usable_image(raw)
+            except InvalidImageError as error:
+                quality_error = str(error)
+            if quality_error is None:
+                processing_started = time.perf_counter()
+                normalized = await normalize_jpeg(raw)
+                processing_seconds += time.perf_counter() - processing_started
+                await ctx["byte_budget"].acquire(len(normalized))
         finally:
             await ctx["byte_budget"].release(len(raw))
 
         fetched_at = datetime.now(timezone.utc)
+        if quality_error is not None:
+            async with ctx["database_limit"]:
+                database_started = time.perf_counter()
+                await insert_image(
+                    ctx["pool"],
+                    job,
+                    settings.r2_bucket,
+                    skipped_key(job.source_view_id, job.scheduled_at),
+                    len(raw),
+                    content_sha256(raw),
+                    fetched_at,
+                    processing_status="skipped",
+                    processing_error=quality_error,
+                )
+                database_seconds += time.perf_counter() - database_started
+            logger.info(
+                "capture skipped capture_id=%s camera_id=%s reason=%s",
+                job.capture_id,
+                job.source_camera_id,
+                quality_error,
+            )
+            return
+
         frame_key = object_key("captures", job.source_view_id, job.scheduled_at)
         async with ctx["upload_limit"]:
             upload_started = time.perf_counter()
