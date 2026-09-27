@@ -27,7 +27,7 @@
 		{ value: "flooded", label: "Flooded" },
 		{ value: "wet", label: "Wet" },
 		{ value: "clear", label: "Clear" },
-		{ value: "no-data", label: "No data" },
+		{ value: "no-data", label: "No feed" },
 	];
 	const freshnessFilters: Array<{ value: MapFreshnessFilter; label: string }> = [
 		{ value: "all", label: "Any capture age" },

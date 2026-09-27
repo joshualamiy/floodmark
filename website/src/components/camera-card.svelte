@@ -87,7 +87,7 @@
 
 {#snippet captureStatus()}
 	{#if minutesSinceCapture === null}
-		<Badge variant="secondary">No data</Badge>
+		<Badge variant="secondary">No feed</Badge>
 	{:else if minutesSinceCapture < 20}
 		<Badge variant="success">
 			<Radio /> Live
@@ -105,7 +105,7 @@
 
 {#snippet predictionStatus()}
 	{#if !camera.latestImage?.alertStatus}
-		<Badge variant="secondary" class="p-3">No data</Badge>
+		<Badge variant="secondary" class="p-3">No feed</Badge>
 	{:else if isFlooded}
 		<Badge variant="destructive" class="p-3">Flood detected</Badge>
 	{:else if isWet}
@@ -129,7 +129,7 @@
 			</Button>
 			{@render captureStatus()}
 		</div>
-		<div class="flex flex-1 flex-col justify-between px-4 py-3 sm:px-5">
+		<div class="flex flex-1 flex-col justify-between px-4 sm:px-5">
 			<div
 				class="relative mx-auto aspect-5/3 w-4/5 overflow-hidden rounded-2xl bg-slate-100 shadow-inner ring-1 ring-accent-foreground/10 sm:w-full"
 			>

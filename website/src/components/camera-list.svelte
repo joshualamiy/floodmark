@@ -83,7 +83,7 @@
 	}
 
 	function statusLabel(camera: Camera): string {
-		if (!camera.latestImage?.alertStatus) return "No data";
+		if (!camera.latestImage?.alertStatus) return "No feed";
 		if (getStatus(camera) === "wet") return "Possible flooding";
 		return getStatus(camera)[0].toUpperCase() + getStatus(camera).slice(1);
 	}
@@ -103,7 +103,7 @@
 	}
 </script>
 
-<div class="flex min-h-0 flex-1 flex-col">
+<div class="flex h-full min-h-0 flex-1 flex-col">
 	<div class="border-b px-4 py-4 sm:px-5">
 		<div class="mb-4 flex items-start justify-between gap-3">
 			<div>
@@ -149,8 +149,9 @@
 		<ScrollArea
 			bind:viewportRef={scrollViewport}
 			class="size-full"
+			data-vaul-no-drag
 			scrollbarYClasses="w-2.5"
-			viewportClass="scroll-fade pr-3 sm:pr-4"
+			viewportClass="scroll-fade touch-pan-y pr-3 sm:pr-4"
 		>
 			{#if map.camerasQuery.isPending}
 				<div
