@@ -19,7 +19,7 @@ TRAIN_MANIFEST = ROOT / "data/processed/manifest_train_v1-c7dea35e.csv"
 FRAMES_CSV = ROOT / "data/ga511/frames.csv"
 CAM_SPLITS = ROOT / "data/processed/ga511_camera_splits.json"
 
-MODEL_DIRS = {"v1": MODELS / "v1", "v3": MODELS}
+MODEL_DIRS = {"v1": MODELS / "v1", "v3": MODELS / "v3", "v4": MODELS}
 LEGACY_SOURCES = ("ga511", "fred", "roadway_flooding", "flood_master_test", "nysdot_road_surface")
 NEW_SOURCES = ("iowa_rwis", "eu_flood_2013", "alleyfloodnet")
 

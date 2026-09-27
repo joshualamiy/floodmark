@@ -7,6 +7,8 @@
 		GeoJSONSource,
 		type StyleSpecification,
 	} from "maplibre-gl";
+ 	// ?worker&url bundles the worker with its "./maplibre-gl-shared.mjs" import into one file;
+	// a plain ?url copied only the worker, so it failed to load once deployed.
 	import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 	import "maplibre-gl/dist/maplibre-gl.css";
 	import { api } from "$lib/api";

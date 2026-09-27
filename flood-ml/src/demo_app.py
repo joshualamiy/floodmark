@@ -9,11 +9,12 @@ from PIL import Image
 from inference import predict
 
 LIMITS = (
-    "**Known limits** (reports/EVALUATION.md, v3): test flood recall 0.89 overall and 0.55 on an "
+    "**Known limits** (reports/EVALUATION.md, v4): test flood recall 0.85 overall and 0.34 on an "
     "elevated fixed-camera flood video (fragile to overlays and darkness). Wet pavement is not "
-    "detected, and rain-wet streets can be called flooded. About 1.4% of daytime Atlanta frames "
-    "were false floods, so alerts need 3 flooded frames in a row. A dry prediction does not prove "
-    "a road is safe. The water overlay is a separate model and does not establish road flooding."
+    "detected, and rain-wet streets can be called flooded. On held-out Atlanta cameras on one dry "
+    "day, 0 of 1,099 daytime frames were false floods; alerts still need 3 flooded frames in a row. "
+    "A dry prediction does not prove a road is safe. The water overlay is a separate model and does "
+    "not establish road flooding."
 )
 
 
