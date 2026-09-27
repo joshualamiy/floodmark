@@ -12,14 +12,16 @@
 {#if isMobile.current}
 	<Drawer.Root bind:open>
 		<Drawer.Trigger
-			class="fixed flex items-center gap-0.5 bottom-10 left-1/2 z-30 -translate-x-1/2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-lg ring-1 shadow-slate-950/15 ring-slate-950/10"
+			class="fixed bottom-10 left-1/2 z-30 flex -translate-x-1/2 items-center gap-0.5 rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-lg ring-1 shadow-slate-950/15 ring-slate-950/10"
 		>
 			<ChevronsUp class="-ml-1" />
 			Cameras
 		</Drawer.Trigger>
-		<Drawer.Content class="h-[80dvh] max-h-[80dvh] overflow-hidden rounded-t-3xl bg-white">
+		<Drawer.Content
+			class="flex h-[80dvh] max-h-[80dvh] flex-col overflow-hidden rounded-t-3xl bg-white"
+		>
 			<Drawer.Title class="sr-only">Cameras</Drawer.Title>
-			<div class="min-h-0 flex-1 overflow-hidden">
+			<div class="h-full min-h-0 flex-1 overflow-hidden">
 				{@render children?.()}
 			</div>
 		</Drawer.Content>

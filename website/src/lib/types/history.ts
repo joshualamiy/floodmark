@@ -3,6 +3,7 @@ import { PredictionStatus } from "./image-processing";
 
 export const historyEntrySchema = z.object({
 	id: z.uuid(),
+	s3Key: z.string(),
 	capturedAt: z.date(),
 	fetchedAt: z.date(),
 	processingStatus: z.string(),

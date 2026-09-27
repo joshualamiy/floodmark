@@ -130,6 +130,7 @@ export const GET = api({
 		const rows = await db
 			.select({
 				id: images.id,
+				s3Key: images.s3Key,
 				capturedAt: images.capturedAt,
 				fetchedAt: images.fetchedAt,
 				processingStatus: images.processingStatus,

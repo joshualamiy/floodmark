@@ -86,6 +86,7 @@
 	}
 
 	function historyStatus(entry: (typeof historyEntries)[number]): string {
+		if (entry.s3Key.startsWith("skipped/")) return "Feed unavailable";
 		if (entry.alertStatus === PredictionStatus.Flooded) return "Flooded";
 		if (entry.alertStatus === PredictionStatus.Wet) return "Possible flooding";
 		if (entry.alertStatus === PredictionStatus.Dry) return "Clear";
@@ -168,7 +169,7 @@
 		</p>
 	{/if}
 
-	<div class="mt-3 max-h-64 overflow-y-auto pr-1" onscroll={loadMoreHistory}>
+	<div class="mt-3 max-h-60 overflow-y-auto pr-1" onscroll={loadMoreHistory}>
 		{#if historyQuery.isPending}
 			<div class="flex justify-center py-6"><Spinner /></div>
 		{:else if historyQuery.isError}
